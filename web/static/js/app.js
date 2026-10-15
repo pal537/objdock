@@ -1085,12 +1085,18 @@ async function wizardSave(testOnly) {
       errBox.innerHTML = `${ic('check', 14)} 连接成功：` + showResults(t);
       return;
     }
-    // 添加/保存：先落库再测（编辑）或逐个桶创建（新建）
+    // 添加/保存：先落库（编辑的测试仅做提示，不阻塞保存）
     if (wiz.editId) {
       await apiPut(`/api/accounts/${wiz.editId}`, payload);
       await refreshAccounts();
-      const t = await apiPost(`/api/accounts/${wiz.editId}/test`, {});
-      if (!t.ok) throw new Error((t.results || []).map(r => r.ok ? '' : `${r.bucket}：${r.error}`).filter(Boolean).join('；') || '连接失败');
+      try {
+        const t = await apiPost(`/api/accounts/${wiz.editId}/test`, {});
+        if (!t.ok) toast('已保存，但连接测试失败：' + (t.results || []).map(r => r.ok ? '' : `${r.bucket}：${r.error}`).filter(Boolean).join('；'));
+        else toast('已保存，连接正常');
+      } catch (e) { toast('已保存，连接测试失败：' + e.message); }
+      $('#wizModal').hidden = true;
+      if (typeof loadAcctList === 'function' && $('#acctList')) loadAcctList();
+      return;
     } else {
       // 新建：每个桶一个账户
       const created = [], failed = [];
