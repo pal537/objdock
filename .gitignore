@@ -1,0 +1,22 @@
+# Binaries and build output
+/objdock
+/bin/
+
+# Go module cache artifacts
+/vendor/
+
+# Local data (database lives in a Docker volume, never in the repo)
+/data/
+*.db
+*.db-wal
+*.db-shm
+
+# Environment files (may contain the encryption key)
+/.env
+.env.*
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

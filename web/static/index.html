@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ObjDock — 对象存储的码头</title>
+<link rel="stylesheet" href="/static/css/app.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚓</text></svg>">
+</head>
+<body>
+<div id="app"></div>
+
+<!-- 通用确认弹窗 -->
+<div class="modal-backdrop" id="confirmModal" hidden>
+  <div class="modal">
+    <h3 id="confirmTitle">确认</h3>
+    <p id="confirmMsg"></p>
+    <div class="modal-actions">
+      <button class="btn" id="confirmCancel">取消</button>
+      <button class="btn btn-danger" id="confirmOk">确认</button>
+    </div>
+  </div>
+</div>
+
+<!-- 通用输入弹窗 -->
+<div class="modal-backdrop" id="promptModal" hidden>
+  <div class="modal">
+    <h3 id="promptTitle">输入</h3>
+    <p id="promptMsg" class="muted"></p>
+    <input class="input" id="promptInput" style="width:100%;box-sizing:border-box">
+    <div class="modal-actions">
+      <button class="btn" id="promptCancel">取消</button>
+      <button class="btn btn-primary" id="promptOk">确认</button>
+    </div>
+  </div>
+</div>
+
+<!-- 文件预览弹窗 -->
+<div class="modal-backdrop" id="previewModal" hidden>
+  <div class="modal modal-large">
+    <div class="preview-head">
+      <h3 id="previewTitle">预览</h3>
+      <div>
+        <button class="btn btn-sm" id="previewDownload">下载</button>
+        <button class="btn btn-sm" id="previewClose">关闭</button>
+      </div>
+    </div>
+    <div id="previewBody" class="preview-body"></div>
+  </div>
+</div>
+
+<!-- 分享链接弹窗 -->
+<div class="modal-backdrop" id="shareModal" hidden>
+  <div class="modal">
+    <h3>分享链接</h3>
+    <p class="muted">链接在有效期内任何人可下载，无需登录。</p>
+    <label class="fld"><span>有效期</span>
+      <select id="shareExpiry" class="input">
+        <option value="3600">1 小时</option>
+        <option value="86400">1 天</option>
+        <option value="604800" selected>7 天</option>
+        <option value="2592000">30 天</option>
+      </select>
+    </label>
+    <div id="shareResult" hidden>
+      <input class="input" id="shareUrl" readonly style="width:100%;box-sizing:border-box" onclick="this.select()">
+      <button class="btn btn-primary" id="shareCopy" style="margin-top:8px">复制链接</button>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" id="shareCancel">关闭</button>
+      <button class="btn btn-primary" id="shareGen">生成链接</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+<input type="file" id="filePicker" multiple hidden>
+
+<script src="/static/js/app.js"></script>
+</body>
+</html>

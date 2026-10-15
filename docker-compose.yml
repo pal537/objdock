@@ -1,0 +1,21 @@
+services:
+  objdock:
+    build: .
+    image: objdock:latest
+    container_name: objdock
+    restart: unless-stopped
+    ports:
+      # Bind to localhost only; put nginx/Caddy in front for HTTPS.
+      - "127.0.0.1:8080:8080"
+    environment:
+      # REQUIRED: base64-encoded 32-byte key. Generate one with:
+      #   docker run --rm objdock:latest /objdock genkey
+      # Then paste it below (keep this file private!).
+      - OBJDOCK_ENCRYPTION_KEY=${OBJDOCK_ENCRYPTION_KEY:?set OBJDOCK_ENCRYPTION_KEY in .env}
+      # Set to 1 when serving over HTTPS (so cookies get the Secure flag).
+      - OBJDOCK_SECURE_COOKIES=1
+    volumes:
+      - objdock-data:/data
+
+volumes:
+  objdock-data:
