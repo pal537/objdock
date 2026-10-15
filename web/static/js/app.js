@@ -313,6 +313,7 @@ async function renderDash() {
     <button class="btn btn-sm" id="dashRefresh">↻ 重新统计</button></div>
     <div id="dashBody"><div class="empty">统计中…</div></div>`;
   $('#dashRefresh').onclick = () => { delete state.statsCache[state.accountId + '/' + state.bucket]; renderDash(); };
+  await refreshAccounts();
   await loadDash();
 }
 async function loadDash() {
@@ -854,6 +855,13 @@ function renderSettings() {
     };
   }
 }
+async function refreshAccounts() {
+  try {
+    const d = await apiGet('/api/accounts');
+    state.accounts = d.accounts || [];
+    updateSwitcherLabel();
+  } catch (e) { /* ignore */ }
+}
 async function loadAcctList() {
   const box = $('#acctList');
   try {
@@ -1059,6 +1067,7 @@ async function wizardSave(testOnly) {
     // 添加/保存：先落库再测（编辑）或逐个桶创建（新建）
     if (wiz.editId) {
       await apiPut(`/api/accounts/${wiz.editId}`, payload);
+      await refreshAccounts();
       const t = await apiPost(`/api/accounts/${wiz.editId}/test`, {});
       if (!t.ok) throw new Error((t.results || []).map(r => r.ok ? '' : `${r.bucket}：${r.error}`).filter(Boolean).join('；') || '连接失败');
     } else {
@@ -1078,7 +1087,7 @@ async function wizardSave(testOnly) {
       }
       wiz.createdNames = created;
       if (!created.length) throw new Error('全部添加失败：' + failed.join('；'));
-      if (failed.length) { errBox.style.color = '#d97706'; errBox.textContent = `已添加 ${created.join('、')}；失败：${failed.join('；')}`; await loadAccounts(); return; }
+      if (failed.length) { errBox.style.color = '#d97706'; errBox.textContent = `已添加 ${created.join('、')}；失败：${failed.join('；')}`; await refreshAccounts(); return; }
     }
     wiz.step = 3;
     renderWizard();
