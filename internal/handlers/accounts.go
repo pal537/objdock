@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"log"
 	"context"
 	"net/http"
 	"strconv"
@@ -205,6 +206,7 @@ func (s *Server) handleTestAccount(w http.ResponseWriter, r *http.Request) {
 	}
 	buckets, err := client.ListBuckets(ctx)
 	if err != nil {
+		log.Printf("test account %d (%s): ListBuckets failed: %v", a.ID, a.Endpoint, err)
 		// Listing failed — maybe a scoped key. Try the explicit bucket instead.
 		if a.Bucket != "" {
 			if herr := client.HeadBucket(ctx, a.Bucket); herr == nil {
