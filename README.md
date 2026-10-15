@@ -19,7 +19,7 @@ Supports Cloudflare R2, Amazon S3, Alibaba Cloud OSS, Tencent Cloud COS, Qiniu, 
 
 ```bash
 # 1. Generate an encryption key (used to encrypt stored cloud credentials)
-docker run --rm ghcr.io/<you>/objdock:latest /objdock genkey
+docker run --rm --entrypoint /objdock ghcr.io/<you>/objdock:latest genkey
 
 # 2. Put it in .env
 echo "OBJDOCK_ENCRYPTION_KEY=<paste-key-here>" > .env

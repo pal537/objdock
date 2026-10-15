@@ -17,7 +17,7 @@ Cloudflare 代理已开启，边缘 HTTPS 由 Cloudflare 提供；源站走 HTTP
 mkdir -p /opt/objdock && cd /opt/objdock
 
 # 2. 生成加密密钥（只做一次，妥善保存）
-docker run --rm objdock:latest /objdock genkey
+docker run --rm --entrypoint /objdock objdock:latest genkey
 # 写入 .env：OBJDOCK_ENCRYPTION_KEY=<key>
 
 # 3. 启动
