@@ -11,7 +11,8 @@ COPY . .
 RUN go build -trimpath -ldflags="-s -w" -o /objdock .
 
 # ---- runtime ----
-FROM gcr.io/distroless/static-debian12:nonroot
+# Note: runs as root so it can write to the /data volume on any host.
+FROM gcr.io/distroless/static-debian12
 COPY --from=builder /objdock /objdock
 # Frontend is embedded in the binary via go:embed; no extra files needed.
 EXPOSE 8080
