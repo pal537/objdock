@@ -250,3 +250,6 @@ select.input { appearance: auto; }
 .di .avatar .ic-svg { width: 20px; height: 20px; margin-right: 0; }
 .prov-ic { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 9px; background: #eef2ff; color: #4f46e5; flex: none; }
 .prov-ic .ic-svg { width: 20px; height: 20px; }
+.modal-x { position: absolute; top: 10px; right: 12px; width: 30px; height: 30px; border: none; background: transparent; font-size: 22px; line-height: 1; color: #94a3b8; cursor: pointer; border-radius: 8px; transition: background-color .15s ease, color .15s ease, transform .08s ease; }
+.modal-x:hover { background: #f1f5f9; color: #334155; }
+.modal-x:active { transform: scale(.9); }

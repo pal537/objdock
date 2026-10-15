@@ -51,6 +51,7 @@ const _P = {
   cloud: '<path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/>',
   lock: '<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
   check: '<path d="M20 6 9 17l-5-5"/>',
+  x: '<path d="M18 6 6 18M6 6l12 12"/>',
   checkCircle: '<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>',
   monitor: '<rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>',
   server: '<rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/>',
@@ -732,7 +733,7 @@ function renderWizard() {
   if (!modal) {
     const div = document.createElement('div');
     div.className = 'modal-backdrop'; div.id = 'wizModal';
-    div.innerHTML = `<div class="modal" style="width:520px"><div id="wizBody"></div></div>`;
+    div.innerHTML = `<div class="modal" style="width:520px;position:relative"><button class="modal-x" id="wizX" title="关闭">\u00d7</button><div id="wizBody"></div></div>`;
     document.body.appendChild(div);
     modal = div;
   }
@@ -763,16 +764,17 @@ function renderWizard() {
       <input class="input" id="wAK" value="${esc(ex.accessKey || '')}" autocomplete="off"></label>
       <label class="fld"><span>Secret Key（机密访问密钥${wiz.existing ? '，留空则不修改' : ''}）</span>
       <input class="input" id="wSK" type="password" autocomplete="new-password"></label>
-      <label class="fld"><span>储存桶（必填，储存桶名称）</span>
-      <input class="input" id="wBucket" value="${esc(ex.bucket || '')}" placeholder="my-bucket"></label>
+      <label class="fld"><span>储存桶（必填，可填多个）</span>
+      <input class="input" id="wBucket" value="${esc(ex.bucket || '')}" placeholder="pic, assets —— 多个用英文逗号分隔"></label>
       <div id="wizErr" style="color:#ef4444;font-size:13px;min-height:20px"></div>
       <div class="modal-actions">
         <button class="btn" id="wizBack">上一步</button>
         <button class="btn" id="wizTest">测试连接</button>
         <button class="btn btn-primary" id="wizSave">${wiz.existing ? '保存' : '添加'}</button></div>`;
   } else {
+    const names = (wiz.createdNames && wiz.createdNames.length ? wiz.createdNames : []).map(esc).join('、');
     body += `<div class="empty"><div class="big">${ic('checkCircle', 56)}</div><h3>添加成功！</h3>
-      <p class="muted">去左上角切换到新账户，开始管理你的对象存储吧</p></div>
+      <p class="muted">${names ? `已添加：${names}<br>` : ''}去左上角切换到新账户，开始管理你的对象存储吧</p></div>
       <div class="modal-actions"><button class="btn btn-primary" id="wizDone">开始使用</button></div>`;
   }
   $('#wizBody').innerHTML = body;
@@ -787,8 +789,16 @@ function regionOptions(provider, sel) {
   }[provider] || [];
   return regions.map(([v, n]) => `<option value="${v}" ${v === sel ? 'selected' : ''}>${n}</option>`).join('');
 }
+function closeWizard() { $('#wizModal').hidden = true; }
 function bindWizard() {
-  const cancel = $('#wizCancel'); if (cancel) cancel.onclick = () => $('#wizModal').hidden = true;
+  const cancel = $('#wizCancel'); if (cancel) cancel.onclick = closeWizard;
+  const x = $('#wizX'); if (x) x.onclick = closeWizard;
+  const mb = $('#wizModal');
+  if (mb && !mb._bound) {
+    mb._bound = true;
+    mb.addEventListener('mousedown', e => { if (e.target === mb) closeWizard(); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#wizModal').hidden) closeWizard(); });
+  }
   const next = $('#wizNext');
   if (next) next.onclick = () => { wiz.step = 2; renderWizard(); };
   $$('.prov-card').forEach(c => c.onclick = () => {
@@ -823,52 +833,64 @@ function wizardPayload() {
 async function wizardSave(testOnly) {
   const errBox = $('#wizErr');
   const payload = wizardPayload();
+  const buckets = payload.bucket.split(',').map(b => b.trim()).filter(Boolean);
   if (!payload.name) { errBox.textContent = '请起个名字'; return; }
   if (!payload.accessKey) { errBox.textContent = '请填写 Access Key'; return; }
-  if (!payload.bucket) { errBox.textContent = '请填写储存桶名称'; const bf=$('#wBucket'); if(bf){bf.style.borderColor='#ef4444';bf.focus();} return; }
+  if (!buckets.length) { errBox.textContent = '请填写储存桶名称'; const bf=$('#wBucket'); if(bf){bf.style.borderColor='#ef4444';bf.focus();} return; }
   if (!payload.secretKey && !wiz.existing) { errBox.textContent = '请填写 Secret Key'; return; }
   errBox.textContent = testOnly ? '测试连接中…' : '保存中…';
+  errBox.style.color = '';
+  const showResults = (t) => {
+    // per-bucket results: ✓ pic  ✗ backup(不存在)
+    const parts = (t.results || []).map(r =>
+      r.ok ? `${ic('check', 13)} ${esc(r.bucket)}`
+           : `${ic('x', 13)} ${esc(r.bucket)}（${esc(r.error || '失败')}）`);
+    return parts.join('&nbsp;&nbsp;');
+  };
   try {
-    // 测试连接（不落库）：新账户用草稿接口，已有账户先保存再测
-    let t;
-    if (testOnly && !wiz.editId) {
-      t = await apiPost('/api/accounts/test', payload);
-    } else {
-      let id = wiz.editId;
-      if (wiz.editId) {
-        await apiPut(`/api/accounts/${wiz.editId}`, payload);
-      } else {
-        const d = await apiPost('/api/accounts', payload);
-        id = d.account.id; wiz.newId = id;
-      }
-      t = await apiPost(`/api/accounts/${id}/test`, {});
-    }
-    if (testOnly) {
+    if (testOnly && !wiz.existing) {
+      // 测试连接（不落库）
+      const t = await apiPost('/api/accounts/test', payload);
       if (!t.ok) {
         errBox.style.color = '#ef4444';
-        errBox.textContent = '失败：' + (t.error || '连接失败');
-        if (t.needBucket) {
-          const bf = $('#wBucket');
-          if (bf) { bf.style.borderColor = '#ef4444'; bf.focus(); }
-        }
-        setTimeout(() => errBox.style.color = '', 100);
+        errBox.innerHTML = '失败：' + showResults(t);
         return;
       }
       errBox.style.color = '#10b981';
-      errBox.textContent = t.listable ? `${ic('check', 14)} 连接成功，找到 ${t.buckets.length} 个存储桶` : `${ic('check', 14)} 连接成功（已用指定桶验证）`;
-      errBox.style.color = '';
-      if (wiz.editId) id = null; // 测试模式不跳转
+      errBox.innerHTML = `${ic('check', 14)} 连接成功：` + showResults(t);
       return;
+    }
+    // 添加/保存：先落库再测（编辑）或逐个桶创建（新建）
+    if (wiz.editId) {
+      await apiPut(`/api/accounts/${wiz.editId}`, payload);
+      const t = await apiPost(`/api/accounts/${wiz.editId}/test`, {});
+      if (!t.ok) throw new Error((t.results || []).map(r => r.ok ? '' : `${r.bucket}：${r.error}`).filter(Boolean).join('；') || '连接失败');
+    } else {
+      // 新建：每个桶一个账户
+      const created = [], failed = [];
+      for (const b of buckets) {
+        const p = Object.assign({}, payload, {
+          name: buckets.length > 1 ? `${payload.name} · ${b}` : payload.name,
+          bucket: b,
+        });
+        try {
+          const d = await apiPost('/api/accounts', p);
+          const t = await apiPost(`/api/accounts/${d.account.id}/test`, {});
+          if (t.ok) created.push(b);
+          else { failed.push(`${b}（${(t.results || []).map(r => r.error).filter(Boolean).join(',') || '验证失败'}）`); await apiDel(`/api/accounts/${d.account.id}`); }
+        } catch (e) { failed.push(`${b}（${e.message}）`); }
+      }
+      wiz.createdNames = created;
+      if (!created.length) throw new Error('全部添加失败：' + failed.join('；'));
+      if (failed.length) { errBox.style.color = '#d97706'; errBox.textContent = `已添加 ${created.join('、')}；失败：${failed.join('；')}`; await loadAccounts(); return; }
     }
     wiz.step = 3;
     renderWizard();
   } catch (e) {
     errBox.style.color = '#ef4444';
     errBox.textContent = '失败：' + e.message;
-    setTimeout(() => errBox.style.color = '', 100);
   }
 }
-
 /* ---------- profile ---------- */
 function renderProfile() {
   const u = state.user;

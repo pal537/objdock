@@ -192,6 +192,7 @@ func (s *Server) handleDeleteAccount(w http.ResponseWriter, r *http.Request) {
 
 // POST /api/accounts/test — verifies inline credentials WITHOUT saving.
 // Body: {provider, endpoint, region, accessKey, secretKey, bucket}.
+// bucket may be comma-separated for multiple buckets; each is verified.
 func (s *Server) handleTestDraft(w http.ResponseWriter, r *http.Request) {
 	var in struct {
 		Provider  string `json:"provider"`
@@ -209,19 +210,34 @@ func (s *Server) handleTestDraft(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "access key and secret key are required")
 		return
 	}
+	buckets := splitBuckets(in.Bucket)
+	if len(buckets) == 0 {
+		writeErr(w, http.StatusBadRequest, "bucket is required")
+		return
+	}
 	a := &db.Account{
 		Provider:  in.Provider,
 		Endpoint:  in.Endpoint,
 		Region:    in.Region,
 		AccessKey: in.AccessKey,
-		Bucket:    in.Bucket,
 	}
-	s.testS3(w, r, a, in.SecretKey)
+	s.testS3Multi(w, r, a, in.SecretKey, buckets)
 }
 
-// testS3 runs ListBuckets (falling back to HeadBucket) and writes the result.
-func (s *Server) testS3(w http.ResponseWriter, r *http.Request, a *db.Account, secret string) {
-	ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
+// splitBuckets splits a comma-separated bucket string.
+func splitBuckets(s string) []string {
+	var out []string
+	for _, b := range strings.Split(s, ",") {
+		if b = strings.TrimSpace(b); b != "" {
+			out = append(out, b)
+		}
+	}
+	return out
+}
+
+// testS3Multi verifies each bucket and writes per-bucket results.
+func (s *Server) testS3Multi(w http.ResponseWriter, r *http.Request, a *db.Account, secret string, buckets []string) {
+	ctx, cancel := context.WithTimeout(r.Context(), 20*time.Second)
 	defer cancel()
 	client := objs3.New(objs3.Config{
 		Endpoint:     a.Endpoint,
@@ -230,45 +246,57 @@ func (s *Server) testS3(w http.ResponseWriter, r *http.Request, a *db.Account, s
 		SecretKey:    secret,
 		UsePathStyle: usePathStyle(a.Provider),
 	})
-	buckets, err := client.ListBuckets(ctx)
-	if err != nil {
-		log.Printf("test account %d (%s): ListBuckets failed: %v", a.ID, a.Endpoint, err)
-		// Listing failed — maybe a scoped key. Try the explicit bucket instead.
-		if a.Bucket != "" {
-			if herr := client.HeadBucket(ctx, a.Bucket); herr == nil {
-				writeJSON(w, http.StatusOK, map[string]any{
-					"ok":       true,
-					"listable": false,
-					"buckets":  []string{a.Bucket},
-					"note":     "key cannot list all buckets, but the specified bucket is reachable",
-				})
-				return
+	type br struct {
+		Bucket string `json:"bucket"`
+		OK     bool   `json:"ok"`
+		Error  string `json:"error,omitempty"`
+	}
+	results := make([]br, 0, len(buckets))
+	allOK := true
+
+	listed, err := client.ListBuckets(ctx)
+	if err == nil {
+		// Admin-like key: validate each bucket against the listing.
+		have := map[string]bool{}
+		names := make([]string, 0, len(listed))
+		for _, b := range listed {
+			have[b.Name] = true
+			names = append(names, b.Name)
+		}
+		for _, b := range buckets {
+			if have[b] {
+				results = append(results, br{Bucket: b, OK: true})
+			} else {
+				results = append(results, br{Bucket: b, OK: false, Error: "bucket not found"})
+				allOK = false
 			}
-			writeErr(w, http.StatusBadGateway, "connection failed: "+friendlyS3Err(err))
-			return
 		}
-		// No bucket given and the key may not list buckets: guide the user.
-		if strings.Contains(err.Error(), "AccessDenied") {
-			writeJSON(w, http.StatusOK, map[string]any{
-				"ok":         false,
-				"needBucket": true,
-				"error":      "密钥有效，但它无权列出存储桶。请在上方填写存储桶名称，或换用管理员权限的密钥",
-			})
-			return
-		}
+		writeJSON(w, http.StatusOK, map[string]any{
+			"ok": allOK, "listable": true, "buckets": names, "results": results,
+		})
+		return
+	}
+	log.Printf("test draft (%s): ListBuckets failed: %v", a.Endpoint, err)
+	if !strings.Contains(err.Error(), "AccessDenied") {
 		writeErr(w, http.StatusBadGateway, "connection failed: "+friendlyS3Err(err))
 		return
 	}
-	names := make([]string, 0, len(buckets))
+	// Scoped key: verify each bucket with HeadBucket.
 	for _, b := range buckets {
-		names = append(names, b.Name)
+		if herr := client.HeadBucket(ctx, b); herr == nil {
+			results = append(results, br{Bucket: b, OK: true})
+		} else {
+			results = append(results, br{Bucket: b, OK: false, Error: friendlyS3Err(herr)})
+			allOK = false
+		}
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
-		"ok":       true,
-		"listable": true,
-		"buckets":  names,
+		"ok": allOK, "listable": false, "results": results,
+		"note": "key cannot list all buckets, verified each bucket directly",
 	})
 }
+
+// testS3 runs ListBuckets (falling back to HeadBucket) and writes the result.
 
 // accountOrDraft resolves the account for object APIs. It accepts either a
 // POST /api/accounts/{id}/test — verifies credentials of a saved account.
@@ -283,7 +311,16 @@ func (s *Server) handleTestAccount(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusInternalServerError, "cannot decrypt secret")
 		return
 	}
-	s.testS3(w, r, a, secret)
+	buckets := []string{a.Bucket}
+	if a.Bucket == "" {
+		buckets = nil
+	}
+	if buckets == nil {
+		// No default bucket: just check the key can list.
+		s.testS3Multi(w, r, a, secret, []string{})
+		return
+	}
+	s.testS3Multi(w, r, a, secret, buckets)
 }
 
 // saved account id or an inline draft (for the wizard's "test before save").
