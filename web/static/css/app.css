@@ -360,6 +360,37 @@ table.ftable { width: 100%; border-collapse: collapse; font-size: 13.5px; }
   border-radius: 11px; background: #eef2ff; color: #4f46e5; flex: none;
 }
 .prov-ic .ic-svg { width: 22px; height: 22px; }
+/* 向导步骤条 */
+.wiz-steps { display: flex; gap: 8px; margin-bottom: 20px; }
+.wiz-steps .ws {
+  flex: 1; text-align: center; font-size: 12.5px; color: var(--muted); font-weight: 500;
+  padding: 8px 4px; border-radius: 9px; background: #f1f5f9;
+}
+.wiz-steps .ws.active { background: var(--primary-soft); color: var(--primary-dark); font-weight: 600; }
+/* 服务商卡片 */
+.prov-card .pi {
+  display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px;
+  border-radius: 11px; background: #eef2ff; color: #4f46e5; flex: none; font-size: 20px;
+}
+.prov-card .pi .ic-svg { width: 22px; height: 22px; }
+.prov-card.sel { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(59, 130, 246, .25); background: #f8fbff; }
+.prov-card .pd { font-size: 12px; color: var(--muted); margin-top: 2px; }
+/* 向导表单 */
+.wiz-field { margin-bottom: 15px; }
+.wiz-field label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 7px; color: #334155; }
+.wiz-field label .req { color: var(--danger); margin-left: 2px; }
+.wiz-field .input { width: 100%; }
+.wiz-field .hint { font-size: 12px; color: var(--muted); margin-top: 5px; line-height: 1.5; }
+.wiz-err {
+  display: none; margin-top: 14px; padding: 11px 14px; border-radius: 10px; font-size: 13px;
+  background: var(--danger-soft); color: #b91c1c; border: 1px solid #fecaca; line-height: 1.6;
+}
+.wiz-err.show { display: block; }
+.wiz-ok {
+  display: none; margin-top: 14px; padding: 11px 14px; border-radius: 10px; font-size: 13px;
+  background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; line-height: 1.6;
+}
+.wiz-ok.show { display: block; }
 
 /* ================= 设置页 ================= */
 .set-row {
