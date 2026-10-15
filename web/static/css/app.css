@@ -255,8 +255,8 @@ table.ftable { width: 100%; border-collapse: collapse; font-size: 13.5px; }
 .ftable .fname .fic-sm img { width: 100%; height: 100%; object-fit: cover; }
 .ftable .fname .fic-sm.folder { background: var(--primary-soft); color: var(--primary); }
 .ftable .fname .nm { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 340px; }
-.ftable .fname .nm.clickable { cursor: pointer; }
-.ftable .fname .nm.clickable:hover { color: var(--primary-dark); }
+.ftable .fname.clickable { cursor: pointer; }
+.ftable .fname.clickable:hover .nm { color: var(--primary-dark); }
 .ftable .fsize { color: #475569; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .ftable .ftime { color: var(--muted); white-space: nowrap; font-size: 12.5px; font-variant-numeric: tabular-nums; }
 .ftable .row-actions { display: flex; gap: 2px; justify-content: flex-end; opacity: .55; transition: opacity .15s ease; }

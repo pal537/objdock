@@ -623,8 +623,8 @@ function renderFileList(d) {
     let h = `<div class="ftable-wrap"><table class="ftable"><thead><tr>${checkCol}<th>名称</th><th style="width:110px">大小</th><th style="width:170px">修改时间</th><th style="width:170px;text-align:right">操作</th></tr></thead><tbody>`;
     d.folders.slice().sort((a, b) => a.name.localeCompare(b.name, 'zh-CN')).forEach(f => {
       h += `<tr>${state.selectMode ? '<td class="check-cell"></td>' : ''}
-        <td><div class="fname"><div class="fic-sm folder">${ic('folder')}</div>
-          <span class="nm clickable" data-folder="${esc(f.prefix)}">${esc(f.name)}</span></div></td>
+        <td><div class="fname clickable" data-folder="${esc(f.prefix)}"><div class="fic-sm folder">${ic('folder')}</div>
+          <span class="nm">${esc(f.name)}</span></div></td>
         <td class="fsize muted">—</td><td class="ftime">—</td><td></td></tr>`;
     });
     sortFiles(d.files).forEach(f => {
