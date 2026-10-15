@@ -198,6 +198,7 @@ func (s *Server) handleTestDraft(w http.ResponseWriter, r *http.Request) {
 		Provider  string `json:"provider"`
 		Endpoint  string `json:"endpoint"`
 		Region    string `json:"region"`
+		AccountID string `json:"accountId"`
 		AccessKey string `json:"accessKey"`
 		SecretKey string `json:"secretKey"`
 		Bucket    string `json:"bucket"`
@@ -215,9 +216,17 @@ func (s *Server) handleTestDraft(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "bucket is required")
 		return
 	}
+	endpoint := in.Endpoint
+	if endpoint == "" {
+		endpoint = providerEndpoint(in.Provider, in.AccountID, in.Region)
+	}
+	if endpoint == "" {
+		writeErr(w, http.StatusBadRequest, "endpoint is required")
+		return
+	}
 	a := &db.Account{
 		Provider:  in.Provider,
-		Endpoint:  in.Endpoint,
+		Endpoint:  endpoint,
 		Region:    in.Region,
 		AccessKey: in.AccessKey,
 	}
@@ -278,7 +287,12 @@ func (s *Server) testS3Multi(w http.ResponseWriter, r *http.Request, a *db.Accou
 	}
 	log.Printf("test draft (%s): ListBuckets failed: %v", a.Endpoint, err)
 	if !strings.Contains(err.Error(), "AccessDenied") {
-		writeErr(w, http.StatusBadGateway, "connection failed: "+friendlyS3Err(err))
+		msg := friendlyS3Err(err)
+		writeJSON(w, http.StatusOK, map[string]any{
+			"ok": false, "listable": false,
+			"results": []map[string]any{{"bucket": buckets[0], "ok": false, "error": msg}},
+			"error": "connection failed: " + msg,
+		})
 		return
 	}
 	// Scoped key: verify each bucket with HeadBucket.
