@@ -15,6 +15,53 @@ const state = {
   statsCache: {},
 };
 
+
+/* ---------- SVG icon set (linear, 24x24, stroke=currentColor) ---------- */
+const _P = {
+  anchor: '<circle cx="12" cy="5" r="3"/><line x1="12" y1="8" x2="12" y2="22"/><path d="M5 12H2a10 10 0 0 0 20 0h-3"/>',
+  image: '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/>',
+  video: '<path d="m22 8-6 4 6 4V8Z"/><rect x="2" y="6" width="14" height="12" rx="2"/>',
+  audio: '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',
+  pdf: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h4"/>',
+  text: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h6"/>',
+  archive: '<rect x="2" y="3" width="20" height="5" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/>',
+  sheet: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/>',
+  file: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>',
+  folder: '<path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/>',
+  folderOpen: '<path d="m6 14 1.45-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.8 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2"/>',
+  folderPlus: '<path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/><path d="M12 10v6M9 13h6"/>',
+  bucket: '<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/><path d="M3 12a9 3 0 0 0 18 0"/>',
+  dash: '<rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/>',
+  settings: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
+  box: '<path d="M16.5 9.4 7.55 4.24"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="M3.29 7 12 12l8.71-5M12 22V12"/>',
+  user: '<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
+  logout: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><line x1="21" y1="12" x2="9" y2="12"/>',
+  drive: '<line x1="22" y1="12" x2="2" y2="12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/><line x1="6" y1="16" x2="6.01" y2="16"/><line x1="10" y1="16" x2="10.01" y2="16"/>',
+  clock: '<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
+  trend: '<path d="m22 7-8.5 8.5-5-5L2 17"/><path d="M16 7h6v6"/>',
+  calendar: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
+  grid: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>',
+  list: '<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>',
+  upload: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><line x1="12" y1="3" x2="12" y2="15"/>',
+  download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><line x1="12" y1="15" x2="12" y2="3"/>',
+  trash: '<path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
+  eye: '<path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>',
+  link: '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>',
+  pencil: '<path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>',
+  cloud: '<path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/>',
+  lock: '<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
+  check: '<path d="M20 6 9 17l-5-5"/>',
+  checkCircle: '<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>',
+  monitor: '<rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>',
+  server: '<rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/>',
+  layers: '<path d="m12 2 8.5 4.5L12 11 3.5 6.5 12 2z"/><path d="m3.5 12 8.5 4.5 8.5-4.5"/><path d="m3.5 17 8.5 4.5 8.5-4.5"/>',
+  zap: '<path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/>',
+};
+function ic(n, size) {
+  const s = size || 18;
+  return `<svg class="ic-svg" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${_P[n] || _P.file}</svg>`;
+}
+
 /* ---------- tiny helpers ---------- */
 function fmtSize(b) {
   if (b == null) return '-';
@@ -86,7 +133,7 @@ function renderAuth(mode) {
   mode = mode || 'login';
   $('#app').innerHTML = `
   <div class="auth-wrap"><div class="auth-card">
-    <div class="logo">⚓</div>
+    <div class="logo">${ic('anchor', 30)}</div>
     <h1>ObjDock</h1>
     <div class="sub">对象存储的码头 · 自托管，密钥不出你的服务器</div>
     <div class="auth-tabs">
@@ -122,7 +169,7 @@ function renderAuthForm(mode) {
 
 /* ---------- app shell ---------- */
 function iconFor(kind, name) {
-  const m = { image: '🖼️', video: '🎬', audio: '🎵', pdf: '📄', text: '📝', archive: '🗜️', office: '📊', file: '📄', folder: '📁' };
+  const m = { image: ic('image'), video: ic('video'), audio: ic('audio'), pdf: ic('pdf'), text: ic('text'), archive: ic('archive'), office: ic('sheet'), file: ic('file'), folder: ic('folder') };
   return m[kind] || m.file;
 }
 function renderShell() {
@@ -131,15 +178,15 @@ function renderShell() {
   <div class="layout">
     <aside class="sidebar">
       <div class="side-switch" id="switcher">
-        <div class="avatar" id="swAvatar">🪣</div>
+        <div class="avatar" id="swAvatar">${ic('bucket', 26)}</div>
         <div><div class="sname" id="swName">选择账户</div><div class="ssub" id="swSub">点击切换</div></div>
       </div>
-      <div class="nav-item active" data-nav="dash">📊 仪表盘</div>
-      <div class="nav-item" data-nav="files">📁 全部文件</div>
+      <div class="nav-item active" data-nav="dash">${ic('dash')}仪表盘</div>
+      <div class="nav-item" data-nav="files">${ic('folder')}全部文件</div>
       <div class="nav-sec">文件夹</div>
       <div id="sideFolders"></div>
       <div class="side-foot">
-        <div class="nav-item" data-nav="settings">⚙️ 设置</div>
+        <div class="nav-item" data-nav="settings">${ic('settings')}设置</div>
         <div class="acct-card" id="acctCard">
           <div class="avatar">${esc((u.displayName || u.username)[0].toUpperCase())}</div>
           <div><div class="sname">${esc(u.displayName || u.username)}</div><div class="ssub">${esc(u.username)}</div></div>
@@ -177,7 +224,7 @@ function toggleSwitcher() {
   let html = '<div class="dsec">账户</div>';
   if (!state.accounts.length) html += '<div class="di" onclick="nav(\'settings\')">＋ 去设置里添加账户</div>';
   state.accounts.forEach(a => {
-    html += `<div class="di ${a.id === state.accountId ? 'sel' : ''}" data-acct="${a.id}">🪣 ${esc(a.name)}</div>`;
+    html += `<div class="di ${a.id === state.accountId ? 'sel' : ''}" data-acct="${a.id}">${ic('bucket', 16)} ${esc(a.name)}</div>`;
   });
   html += '<div class="dsec">存储桶</div><div id="ddBuckets"><div class="di muted">先选择账户…</div></div>';
   dd.innerHTML = html;
@@ -199,7 +246,7 @@ async function toggleSwitcherRefreshBuckets() {
     let names = d.buckets.map(b => b.name);
     if (cur && cur.bucket && !names.includes(cur.bucket)) names.unshift(cur.bucket);
     box.innerHTML = names.map(n =>
-      `<div class="di ${n === state.bucket ? 'sel' : ''}" data-bucket="${esc(n)}">📦 ${esc(n)}</div>`).join('')
+      `<div class="di ${n === state.bucket ? 'sel' : ''}" data-bucket="${esc(n)}">${ic('box', 15)} ${esc(n)}</div>`).join('')
       || '<div class="di muted">没有存储桶</div>';
     $$('[data-bucket]', box).forEach(el => el.onclick = (e) => {
       e.stopPropagation();
@@ -229,8 +276,8 @@ function toggleAcctMenu() {
   const r = $('#acctCard').getBoundingClientRect();
   dd.style.left = r.left + 'px'; dd.style.top = (r.top - 130) + 'px';
   dd.innerHTML = `
-    <div class="di" id="mProfile">👤 修改登录信息</div>
-    <div class="di" id="mLogout">🚪 退出登录</div>`;
+    <div class="di" id="mProfile">${ic('user')}修改登录信息</div>
+    <div class="di" id="mLogout">${ic('logout')}退出登录</div>`;
   dd.hidden = false;
   $('#mProfile').onclick = (e) => { e.stopPropagation(); dd.hidden = true; renderProfile(); };
   $('#mLogout').onclick = async (e) => { e.stopPropagation(); await apiPost('/api/logout'); location.reload(); };
@@ -241,13 +288,13 @@ const DONUT_COLORS = ['#8b5cf6', '#f59e0b', '#10b981', '#3b82f6', '#ef4444', '#6
 async function renderDash() {
   const main = $('#main');
   if (!state.accountId || !state.bucket) {
-    main.innerHTML = `<div class="card"><h3>📊 仪表盘</h3>
-      <div class="empty"><div class="big">🪣</div>
+    main.innerHTML = `<div class="card"><h3>${ic('dash')}仪表盘</h3>
+      <div class="empty"><div class="big">${ic('bucket', 56)}</div>
       ${state.accounts.length ? '请先在左上角选择账户和存储桶' : '还没有绑定任何账户，去 <a href="javascript:nav(\'settings\')">设置</a> 添加第一个吧'}
       </div></div>`;
     return;
   }
-  main.innerHTML = `<div class="topbar"><h2>📊 仪表盘</h2><div class="spacer"></div>
+  main.innerHTML = `<div class="topbar"><h2>${ic('dash')}仪表盘</h2><div class="spacer"></div>
     <button class="btn btn-sm" id="dashRefresh">↻ 重新统计</button></div>
     <div id="dashBody"><div class="empty">统计中…</div></div>`;
   $('#dashRefresh').onclick = () => { delete state.statsCache[state.accountId + '/' + state.bucket]; renderDash(); };
@@ -302,10 +349,10 @@ async function loadDash() {
   }
   $('#dashBody').innerHTML = `
     <div class="stat-grid">
-      <div class="stat"><div class="ic" style="background:#dbeafe">💾</div><div><div class="v">${fmtSize(d.totalSize)}</div><div class="l">总存储量</div><div class="s">${d.truncated ? '约 ' : ''}${d.fileCount} 个文件${d.truncated ? '（仅扫描前 ' + d.scanned + ' 个）' : ''}</div></div></div>
-      <div class="stat"><div class="ic" style="background:#ede9fe">📁</div><div><div class="v">${d.fileCount}</div><div class="l">文件</div><div class="s">文件夹 ${d.byFolder.length} 个</div></div></div>
-      <div class="stat"><div class="ic" style="background:#fef3c7">📏</div><div><div class="v">${fmtSize(d.avgSize)}</div><div class="l">平均文件大小</div><div class="s">最大 ${fmtSize(d.largest.size)}</div></div></div>
-      <div class="stat"><div class="ic" style="background:#dcfce7">🕐</div><div><div class="v">${d.weekCount}</div><div class="l">最近 7 天修改</div><div class="s">最活跃 ${Object.keys(act).sort().pop() || '-'}</div></div></div>
+      <div class="stat"><div class="ic" style="background:#dbeafe;color:#2563eb">${ic('drive')}</div><div><div class="v">${fmtSize(d.totalSize)}</div><div class="l">总存储量</div><div class="s">${d.truncated ? '约 ' : ''}${d.fileCount} 个文件${d.truncated ? '（仅扫描前 ' + d.scanned + ' 个）' : ''}</div></div></div>
+      <div class="stat"><div class="ic" style="background:#ede9fe;color:#7c3aed">${ic('file')}</div><div><div class="v">${d.fileCount}</div><div class="l">文件</div><div class="s">文件夹 ${d.byFolder.length} 个</div></div></div>
+      <div class="stat"><div class="ic" style="background:#fef3c7;color:#d97706">${ic('layers')}</div><div><div class="v">${fmtSize(d.avgSize)}</div><div class="l">平均文件大小</div><div class="s">最大 ${fmtSize(d.largest.size)}</div></div></div>
+      <div class="stat"><div class="ic" style="background:#dcfce7;color:#059669">${ic('clock')}</div><div><div class="v">${d.weekCount}</div><div class="l">最近 7 天修改</div><div class="s">最活跃 ${Object.keys(act).sort().pop() || '-'}</div></div></div>
     </div>
     <div class="panels">
       <div class="panel"><h4>按文件夹统计存储</h4>
@@ -323,8 +370,8 @@ async function loadDash() {
         </div></div>
       </div>
     </div>
-    <div class="card"><h3>📈 存储增长趋势</h3><p class="desc">每天统计一次，记录总用量变化</p>${trendSvg}</div>
-    <div class="card"><h3>🗓️ 文件活跃度（近一年）</h3><div class="heat">${hm}</div></div>`;
+    <div class="card"><h3>${ic('trend')}存储增长趋势</h3><p class="desc">每天统计一次，记录总用量变化</p>${trendSvg}</div>
+    <div class="card"><h3>${ic('calendar')}文件活跃度（近一年）</h3><div class="heat">${hm}</div></div>`;
 }
 
 /* ---------- file browser ---------- */
@@ -332,25 +379,25 @@ let selKeys = new Set();
 async function renderFiles() {
   const main = $('#main');
   if (!state.accountId || !state.bucket) {
-    main.innerHTML = `<div class="card"><h3>📁 全部文件</h3>
-      <div class="empty"><div class="big">🪣</div>请先在左上角选择账户和存储桶</div></div>`;
+    main.innerHTML = `<div class="card"><h3>${ic('folder')}全部文件</h3>
+      <div class="empty"><div class="big">${ic('bucket', 56)}</div>请先在左上角选择账户和存储桶</div></div>`;
     return;
   }
   selKeys = new Set();
   main.innerHTML = `
-    <div class="topbar"><h2>📁 全部文件</h2><div class="spacer"></div>
+    <div class="topbar"><h2>${ic('folder')}全部文件</h2><div class="spacer"></div>
       <div class="view-toggle">
-        <button id="vGrid" class="${state.view === 'grid' ? 'active' : ''}">🔲 缩略图</button>
-        <button id="vList" class="${state.view === 'list' ? 'active' : ''}">📋 列表</button>
+        <button id="vGrid" class="${state.view === 'grid' ? 'active' : ''}">${ic('grid', 15)}缩略图</button>
+        <button id="vList" class="${state.view === 'list' ? 'active' : ''}">${ic('list', 15)}列表</button>
       </div>
-      <button class="btn btn-sm" id="btnUpload">⬆️ 上传</button>
-      <button class="btn btn-sm" id="btnMkdir">📁 新建文件夹</button>
+      <button class="btn btn-sm" id="btnUpload">${ic('upload', 15)}上传</button>
+      <button class="btn btn-sm" id="btnMkdir">${ic('folderPlus', 15)}新建文件夹</button>
       <button class="btn btn-sm" id="btnRefresh">↻</button>
     </div>
     <div class="crumbs" id="crumbs"></div>
     <div class="toolbar" id="selBar" hidden>
       <span id="selCount"></span>
-      <button class="btn btn-sm" id="btnDelSel">🗑️ 删除所选</button>
+      <button class="btn btn-sm" id="btnDelSel">${ic('trash', 15)}删除所选</button>
       <button class="btn btn-sm" id="btnClearSel">取消选择</button>
     </div>
     <div id="fileBody"><div class="empty">加载中…</div></div>`;
@@ -378,7 +425,7 @@ function setView(v) {
 }
 function crumbsHtml() {
   const parts = state.prefix.split('/').filter(Boolean);
-  let h = `<span class="c" data-p="">📦 ${esc(state.bucket)}</span>`;
+  let h = `<span class="c" data-p="">${ic('box', 15)}${esc(state.bucket)}</span>`;
   let acc = '';
   parts.forEach(p => {
     acc += p + '/';
@@ -400,13 +447,13 @@ function renderFileList(d) {
   const body = $('#fileBody');
   updateSelBar();
   if (!d.folders.length && !d.files.length) {
-    body.innerHTML = `<div class="empty"><div class="big">📂</div>空文件夹，把文件拖进来上传吧</div>`;
+    body.innerHTML = `<div class="empty"><div class="big">${ic('folderOpen', 56)}</div>空文件夹，把文件拖进来上传吧</div>`;
     return;
   }
   if (state.view === 'grid') {
     let h = '<div class="fgrid">';
     d.folders.forEach(f => {
-      h += `<div class="fitem" data-folder="${esc(f.prefix)}"><div class="fic">📁</div><div class="fn">${esc(f.name)}</div></div>`;
+      h += `<div class="fitem" data-folder="${esc(f.prefix)}"><div class="fic">${ic('folder')}</div><div class="fn">${esc(f.name)}</div></div>`;
     });
     d.files.forEach(f => {
       const sel = selKeys.has(f.key) ? ' sel' : '';
@@ -440,7 +487,7 @@ function renderFileList(d) {
   } else {
     let h = `<table class="ftable"><thead><tr><th style="width:34px"></th><th>名称</th><th>大小</th><th>修改时间</th><th style="width:190px">操作</th></tr></thead><tbody>`;
     d.folders.forEach(f => {
-      h += `<tr><td></td><td><span class="rname" data-folder="${esc(f.prefix)}">📁 ${esc(f.name)}</span></td>
+      h += `<tr><td></td><td><span class="rname" data-folder="${esc(f.prefix)}">${ic('folder', 16)} ${esc(f.name)}</span></td>
         <td class="muted">—</td><td class="muted">—</td><td></td></tr>`;
     });
     d.files.forEach(f => {
@@ -448,11 +495,11 @@ function renderFileList(d) {
         <td><span class="rname" data-key="${esc(f.key)}" data-kind="${f.kind}" data-name="${esc(f.name)}">${iconFor(f.kind)} ${esc(f.name)}</span></td>
         <td>${fmtSize(f.size)}</td><td class="muted">${fmtDate(f.lastModified)}</td>
         <td><div class="row-actions">
-          <button class="icon-btn" data-act="preview" title="预览">👁️</button>
-          <button class="icon-btn" data-act="download" title="下载">⬇️</button>
-          <button class="icon-btn" data-act="share" title="分享">🔗</button>
-          <button class="icon-btn" data-act="rename" title="重命名">✏️</button>
-          <button class="icon-btn" data-act="delete" title="删除">🗑️</button>
+          <button class="icon-btn" data-act="preview" title="预览">${ic('eye')}</button>
+          <button class="icon-btn" data-act="download" title="下载">${ic('download')}</button>
+          <button class="icon-btn" data-act="share" title="分享">${ic('link')}</button>
+          <button class="icon-btn" data-act="rename" title="重命名">${ic('pencil')}</button>
+          <button class="icon-btn" data-act="delete" title="删除">${ic('trash')}</button>
         </div></td></tr>`;
     });
     body.innerHTML = h + '</tbody></table>';
@@ -591,7 +638,7 @@ async function loadSideFolders(topData) {
   try {
     const d = topData || await apiGet(`/api/accounts/${state.accountId}/objects?bucket=${encodeURIComponent(state.bucket)}&prefix=`);
     box.innerHTML = d.folders.map(f =>
-      `<div class="folder-item" data-p="${esc(f.prefix)}">📁 ${esc(f.name)}</div>`).join('')
+      `<div class="folder-item" data-p="${esc(f.prefix)}">${ic('folder', 15)} ${esc(f.name)}</div>`).join('')
       || '<div class="muted" style="padding:4px 12px;font-size:12px">无文件夹</div>';
     $$('.folder-item', box).forEach(el => el.onclick = () => {
       state.prefix = el.dataset.p;
@@ -602,22 +649,22 @@ async function loadSideFolders(topData) {
 
 /* ---------- settings ---------- */
 const PROVIDERS = [
-  { id: 'r2', name: 'Cloudflare R2', icon: '☁️', hint: '填写 Account ID，地址自动生成' },
-  { id: 's3', name: 'Amazon S3', icon: '🟧', hint: '全球/区域 endpoint 自动处理' },
-  { id: 'oss', name: '阿里云 OSS', icon: '🟦', hint: '选择地域，地址自动生成' },
-  { id: 'cos', name: '腾讯云 COS', icon: '🟩', hint: '选择地域，地址自动生成' },
-  { id: 'qiniu', name: '七牛云', icon: '🐧', hint: 'S3 兼容接口' },
-  { id: 'minio', name: 'MinIO / 自建', icon: '🖥️', hint: '填写你的网关地址' },
+  { id: 'r2', name: 'Cloudflare R2', icon: ic('cloud'), hint: '填写 Account ID，地址自动生成' },
+  { id: 's3', name: 'Amazon S3', icon: ic('server'), hint: '全球/区域 endpoint 自动处理' },
+  { id: 'oss', name: '阿里云 OSS', icon: ic('bucket'), hint: '选择地域，地址自动生成' },
+  { id: 'cos', name: '腾讯云 COS', icon: ic('layers'), hint: '选择地域，地址自动生成' },
+  { id: 'qiniu', name: '七牛云', icon: ic('zap'), hint: 'S3 兼容接口' },
+  { id: 'minio', name: 'MinIO / 自建', icon: ic('monitor'), hint: '填写你的网关地址' },
 ];
 function renderSettings() {
   const main = $('#main');
   main.innerHTML = `
-    <div class="topbar"><h2>⚙️ 设置</h2></div>
-    <div class="card"><h3>🪣 存储账户</h3><p class="desc">绑定多个对象存储账户，左上角一键切换</p>
+    <div class="topbar"><h2>${ic('settings')}设置</h2></div>
+    <div class="card"><h3>${ic('bucket')}存储账户</h3><p class="desc">绑定多个对象存储账户，左上角一键切换</p>
       <div id="acctList"></div>
       <button class="btn btn-primary" id="btnAddAcct" style="margin-top:12px">＋ 添加账户</button>
     </div>
-    <div class="card" id="regCard" hidden><h3>🔐 注册设置</h3><p class="desc">关闭后将无法注册新用户（仅管理员可见）</p>
+    <div class="card" id="regCard" hidden><h3>${ic('lock')}注册设置</h3><p class="desc">关闭后将无法注册新用户（仅管理员可见）</p>
       <label style="display:flex;gap:8px;align-items:center;cursor:pointer">
         <input type="checkbox" id="regToggle" style="width:18px;height:18px"> 允许新用户注册
       </label>
@@ -642,9 +689,9 @@ async function loadAcctList() {
     if (!d.accounts.length) { box.innerHTML = '<div class="empty" style="padding:20px">还没有账户，点击下方按钮添加</div>'; return; }
     box.innerHTML = d.accounts.map(a => `
       <div class="acct-row" style="display:flex;align-items:center;gap:10px;padding:10px;border:1px solid var(--line);border-radius:10px;margin-bottom:8px">
-        <span style="font-size:22px">${(PROVIDERS.find(p => p.id === a.provider) || {}).icon || '🪣'}</span>
+        <span class="prov-ic">${(PROVIDERS.find(p => p.id === a.provider) || {}).icon || ic('bucket')}</span>
         <div style="flex:1"><div style="font-weight:600">${esc(a.name)}</div>
-          <div class="muted">${esc(a.provider)} · ${esc(a.endpoint)}${a.bucket ? ' · 📦 ' + esc(a.bucket) : ''}</div></div>
+          <div class="muted">${esc(a.provider)} · ${esc(a.endpoint)}${a.bucket ? ' · ' + ic('box', 13) + ' ' + esc(a.bucket) : ''}</div></div>
         <button class="btn btn-sm" data-edit="${a.id}">编辑</button>
         <button class="btn btn-sm" data-test="${a.id}">测试</button>
         <button class="btn btn-sm" data-del="${a.id}" style="color:#ef4444">删除</button>
@@ -705,7 +752,7 @@ function renderWizard() {
     body += `<h3 style="margin-top:0">${p.icon} ${p.name}</h3><p class="muted">${p.hint}</p>`;
     body += `<label class="fld"><span>起个名字（比如"我的 R2"）</span>
       <input class="input" id="wName" value="${esc(ex.name || '')}" placeholder="我的 R2"></label>`;
-    if (wiz.provider === 'r2') body += `<label class="fld"><span>Account ID</span>
+    if (wiz.provider === 'r2') body += `<label class="fld"><span>Account ID（账户ID）</span>
       <input class="input" id="wAccountId" placeholder="Cloudflare 面板右下角的 Account ID"></label>`;
     if (wiz.provider === 'oss' || wiz.provider === 'cos' || wiz.provider === 'qiniu')
       body += `<label class="fld"><span>地域</span><select class="input" id="wRegion">${regionOptions(wiz.provider, ex.region)}</select></label>`;
@@ -714,9 +761,9 @@ function renderWizard() {
       <input class="input" id="wEndpoint" value="${esc(ex.endpoint || '')}" placeholder="https://minio.example.com"></label>`;
     body += `<label class="fld"><span>Access Key（访问密钥 ID）</span>
       <input class="input" id="wAK" value="${esc(ex.accessKey || '')}" autocomplete="off"></label>
-      <label class="fld"><span>Secret Key（访问密钥${wiz.existing ? '，留空则不修改' : ''}）</span>
+      <label class="fld"><span>Secret Key（机密访问密钥${wiz.existing ? '，留空则不修改' : ''}）</span>
       <input class="input" id="wSK" type="password" autocomplete="new-password"></label>
-      <label class="fld"><span>默认存储桶（可选，不填则每次手动选）</span>
+      <label class="fld"><span>储存桶（必填，储存桶名称）</span>
       <input class="input" id="wBucket" value="${esc(ex.bucket || '')}" placeholder="my-bucket"></label>
       <div id="wizErr" style="color:#ef4444;font-size:13px;min-height:20px"></div>
       <div class="modal-actions">
@@ -724,7 +771,7 @@ function renderWizard() {
         <button class="btn" id="wizTest">测试连接</button>
         <button class="btn btn-primary" id="wizSave">${wiz.existing ? '保存' : '添加'}</button></div>`;
   } else {
-    body += `<div class="empty"><div class="big">🎉</div><h3>添加成功！</h3>
+    body += `<div class="empty"><div class="big">${ic('checkCircle', 56)}</div><h3>添加成功！</h3>
       <p class="muted">去左上角切换到新账户，开始管理你的对象存储吧</p></div>
       <div class="modal-actions"><button class="btn btn-primary" id="wizDone">开始使用</button></div>`;
   }
@@ -778,18 +825,24 @@ async function wizardSave(testOnly) {
   const payload = wizardPayload();
   if (!payload.name) { errBox.textContent = '请起个名字'; return; }
   if (!payload.accessKey) { errBox.textContent = '请填写 Access Key'; return; }
+  if (!payload.bucket) { errBox.textContent = '请填写储存桶名称'; const bf=$('#wBucket'); if(bf){bf.style.borderColor='#ef4444';bf.focus();} return; }
   if (!payload.secretKey && !wiz.existing) { errBox.textContent = '请填写 Secret Key'; return; }
   errBox.textContent = testOnly ? '测试连接中…' : '保存中…';
   try {
-    let id = wiz.editId;
-    if (wiz.editId) {
-      await apiPut(`/api/accounts/${wiz.editId}`, payload);
+    // 测试连接（不落库）：新账户用草稿接口，已有账户先保存再测
+    let t;
+    if (testOnly && !wiz.editId) {
+      t = await apiPost('/api/accounts/test', payload);
     } else {
-      const d = await apiPost('/api/accounts', payload);
-      id = d.account.id; wiz.newId = id;
+      let id = wiz.editId;
+      if (wiz.editId) {
+        await apiPut(`/api/accounts/${wiz.editId}`, payload);
+      } else {
+        const d = await apiPost('/api/accounts', payload);
+        id = d.account.id; wiz.newId = id;
+      }
+      t = await apiPost(`/api/accounts/${id}/test`, {});
     }
-    // 测试连接
-    const t = await apiPost(`/api/accounts/${id}/test`, {});
     if (testOnly) {
       if (!t.ok) {
         errBox.style.color = '#ef4444';
@@ -802,7 +855,7 @@ async function wizardSave(testOnly) {
         return;
       }
       errBox.style.color = '#10b981';
-      errBox.textContent = t.listable ? `✓ 连接成功，找到 ${t.buckets.length} 个存储桶` : '✓ 连接成功（已用指定桶验证）';
+      errBox.textContent = t.listable ? `${ic('check', 14)} 连接成功，找到 ${t.buckets.length} 个存储桶` : `${ic('check', 14)} 连接成功（已用指定桶验证）`;
       errBox.style.color = '';
       if (wiz.editId) id = null; // 测试模式不跳转
       return;
@@ -822,7 +875,7 @@ function renderProfile() {
   const main = $('#main');
   $$('.nav-item[data-nav]').forEach(el => el.classList.remove('active'));
   main.innerHTML = `
-    <div class="topbar"><h2>👤 修改登录信息</h2></div>
+    <div class="topbar"><h2>${ic('user')}修改登录信息</h2></div>
     <div class="card" style="max-width:480px">
       <label class="fld"><span>用户名（不可修改）</span><input class="input" value="${esc(u.username)}" disabled></label>
       <label class="fld"><span>昵称</span><input class="input" id="pName" value="${esc(u.displayName || '')}"></label>

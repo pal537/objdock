@@ -10,6 +10,7 @@ import (
 
 	"github.com/pal537/objdock/internal/crypto"
 	"github.com/pal537/objdock/internal/db"
+	objs3 "github.com/pal537/objdock/internal/s3"
 )
 
 // decryptSecret decrypts an account's stored secret key.
@@ -189,21 +190,46 @@ func (s *Server) handleDeleteAccount(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
 }
 
-// POST /api/accounts/{id}/test {bucket?} — verifies credentials.
-// Tries ListBuckets; reports whether listing worked and which buckets were found.
-func (s *Server) handleTestAccount(w http.ResponseWriter, r *http.Request) {
-	u := s.currentUser(r)
-	a := s.accountOrDraft(w, r, u)
-	if a == nil {
+// POST /api/accounts/test — verifies inline credentials WITHOUT saving.
+// Body: {provider, endpoint, region, accessKey, secretKey, bucket}.
+func (s *Server) handleTestDraft(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Provider  string `json:"provider"`
+		Endpoint  string `json:"endpoint"`
+		Region    string `json:"region"`
+		AccessKey string `json:"accessKey"`
+		SecretKey string `json:"secretKey"`
+		Bucket    string `json:"bucket"`
+	}
+	if err := decodeJSON(r, &in); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad request")
 		return
 	}
+	if in.AccessKey == "" || in.SecretKey == "" {
+		writeErr(w, http.StatusBadRequest, "access key and secret key are required")
+		return
+	}
+	a := &db.Account{
+		Provider:  in.Provider,
+		Endpoint:  in.Endpoint,
+		Region:    in.Region,
+		AccessKey: in.AccessKey,
+		Bucket:    in.Bucket,
+	}
+	s.testS3(w, r, a, in.SecretKey)
+}
+
+// testS3 runs ListBuckets (falling back to HeadBucket) and writes the result.
+func (s *Server) testS3(w http.ResponseWriter, r *http.Request, a *db.Account, secret string) {
 	ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
 	defer cancel()
-	client, err := s.s3Client(a)
-	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "cannot decrypt secret")
-		return
-	}
+	client := objs3.New(objs3.Config{
+		Endpoint:     a.Endpoint,
+		Region:       a.Region,
+		AccessKey:    a.AccessKey,
+		SecretKey:    secret,
+		UsePathStyle: usePathStyle(a.Provider),
+	})
 	buckets, err := client.ListBuckets(ctx)
 	if err != nil {
 		log.Printf("test account %d (%s): ListBuckets failed: %v", a.ID, a.Endpoint, err)
@@ -245,6 +271,21 @@ func (s *Server) handleTestAccount(w http.ResponseWriter, r *http.Request) {
 }
 
 // accountOrDraft resolves the account for object APIs. It accepts either a
+// POST /api/accounts/{id}/test — verifies credentials of a saved account.
+func (s *Server) handleTestAccount(w http.ResponseWriter, r *http.Request) {
+	u := s.currentUser(r)
+	a := s.accountOrDraft(w, r, u)
+	if a == nil {
+		return
+	}
+	secret, err := decryptSecret(s.EncKey, a.SecretEnc)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "cannot decrypt secret")
+		return
+	}
+	s.testS3(w, r, a, secret)
+}
+
 // saved account id or an inline draft (for the wizard's "test before save").
 func (s *Server) accountOrDraft(w http.ResponseWriter, r *http.Request, u *db.User) *db.Account {
 	id, _ := strconv.ParseInt(r.PathValue("id"), 10, 64)

@@ -59,6 +59,7 @@ body {
 .side-switch .sname { font-weight: 600; font-size: 13px; }
 .side-switch .ssub { font-size: 11px; color: var(--muted); }
 .nav-item {
+  transition: background-color .15s ease, color .15s ease;
   display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px;
   cursor: pointer; color: var(--text); font-size: 14px; margin-bottom: 2px;
 }
@@ -144,21 +145,26 @@ body {
 .ftable .rname { cursor: pointer; display: flex; align-items: center; gap: 8px; }
 .row-actions { display: flex; gap: 6px; }
 .icon-btn {
+  transition: background-color .15s ease, color .15s ease, transform .08s ease;
   border: none; background: none; cursor: pointer; font-size: 15px; padding: 4px 6px;
   border-radius: 6px; color: #64748b;
 }
 .icon-btn:hover { background: #e8eefb; color: var(--primary-dark); }
+.icon-btn:active { transform: scale(.9); }
 .check { position: absolute; top: 8px; left: 8px; width: 18px; height: 18px; }
 .toolbar { display: flex; gap: 8px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
 
 /* ---------- buttons & inputs ---------- */
 .btn {
+  transition: background-color .18s ease, border-color .18s ease, color .18s ease, transform .08s ease, box-shadow .18s ease;
   border: 1.5px solid var(--line); background: #fff; border-radius: 9px;
   padding: 8px 16px; cursor: pointer; font-size: 13px;
 }
 .btn:hover { border-color: var(--primary); color: var(--primary-dark); }
 .btn-primary { background: var(--primary); border-color: var(--primary); color: #fff; }
 .btn-primary:hover { background: var(--primary-dark); color: #fff; }
+.btn:active { transform: scale(.96); }
+.btn-primary:active { transform: scale(.96); }
 .btn-danger { background: var(--danger); border-color: var(--danger); color: #fff; }
 .btn-danger:hover { background: #dc2626; color: #fff; }
 .btn-sm { padding: 5px 10px; font-size: 12px; }
@@ -228,3 +234,19 @@ select.input { appearance: auto; }
   .panels { grid-template-columns: 1fr; }
   .sidebar { width: 200px; }
 }
+
+/* ---------- SVG icons ---------- */
+.ic-svg { display: inline-block; vertical-align: -3px; flex: none; }
+.nav-item .ic-svg, .di .ic-svg { margin-right: 8px; }
+.topbar h2 .ic-svg, .card h3 .ic-svg { margin-right: 6px; }
+.stat .ic { display: flex; align-items: center; justify-content: center; }
+.fic .ic-svg { width: 40px; height: 40px; }
+.empty .big .ic-svg { width: 56px; height: 56px; opacity: .45; }
+.avatar .ic-svg { width: 26px; height: 26px; }
+.logo .ic-svg { width: 30px; height: 30px; }
+.icon-btn .ic-svg { width: 17px; height: 17px; }
+.seg button .ic-svg { margin-right: 4px; }
+.btn .ic-svg { margin-right: 5px; }
+.di .avatar .ic-svg { width: 20px; height: 20px; margin-right: 0; }
+.prov-ic { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 9px; background: #eef2ff; color: #4f46e5; flex: none; }
+.prov-ic .ic-svg { width: 20px; height: 20px; }

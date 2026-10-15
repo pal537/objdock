@@ -74,6 +74,7 @@ func (s *Server) routes() {
 	m.HandleFunc("PUT /api/accounts/{id}", s.requireLogin(s.handleUpdateAccount))
 	m.HandleFunc("DELETE /api/accounts/{id}", s.requireLogin(s.handleDeleteAccount))
 	m.HandleFunc("POST /api/accounts/{id}/test", s.requireLogin(s.handleTestAccount))
+	m.HandleFunc("POST /api/accounts/test", s.requireLogin(s.handleTestDraft))
 	m.HandleFunc("GET /api/accounts/{id}/buckets", s.requireLogin(s.handleListBuckets))
 	// Objects
 	m.HandleFunc("GET /api/accounts/{id}/objects", s.requireLogin(s.handleListObjects))
