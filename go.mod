@@ -6,8 +6,8 @@ require (
 	github.com/aws/aws-sdk-go-v2 v1.47.3
 	github.com/aws/aws-sdk-go-v2/credentials v1.20.9
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.114.3
-	golang.org/x/crypto v0.58.0
-	modernc.org/sqlite v1.60.1
+	golang.org/x/crypto v0.37.0
+	modernc.org/sqlite v1.34.5
 )
 
 require (
