@@ -66,6 +66,7 @@ func (d *DB) migrate() error {
 			access_key TEXT NOT NULL,
 			secret_enc TEXT NOT NULL,
 			bucket TEXT NOT NULL DEFAULT '',
+			quota_bytes INTEGER NOT NULL DEFAULT 0,
 			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 		)`,
 		`CREATE INDEX IF NOT EXISTS idx_accounts_user ON accounts(user_id)`,
@@ -84,9 +85,36 @@ func (d *DB) migrate() error {
 			return fmt.Errorf("db migrate: %w", err)
 		}
 	}
+	// 已存在的 accounts 表补 quota_bytes 列
+	if !d.hasColumn("accounts", "quota_bytes") {
+		if _, err := d.Exec(`ALTER TABLE accounts ADD COLUMN quota_bytes INTEGER NOT NULL DEFAULT 0`); err != nil {
+			return fmt.Errorf("db migrate quota_bytes: %w", err)
+		}
+	}
 	// Defaults
 	d.SetSetting("registration_enabled", "0")
 	return nil
+}
+
+func (d *DB) hasColumn(table, col string) bool {
+	rows, err := d.Query(fmt.Sprintf("PRAGMA table_info(%s)", table))
+	if err != nil {
+		return false
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var cid int
+		var name, ctype string
+		var notnull, pk int
+		var dflt sql.NullString
+		if err := rows.Scan(&cid, &name, &ctype, &notnull, &dflt, &pk); err != nil {
+			continue
+		}
+		if name == col {
+			return true
+		}
+	}
+	return false
 }
 
 // GetSetting reads a setting value, returning "" when missing.
@@ -222,13 +250,14 @@ type Account struct {
 	AccessKey string
 	SecretEnc string
 	Bucket    string
+	QuotaBytes int64
 	CreatedAt time.Time
 }
 
 func (d *DB) CreateAccount(a *Account) (int64, error) {
-	res, err := d.Exec(`INSERT INTO accounts(user_id, name, provider, endpoint, region, access_key, secret_enc, bucket)
-		VALUES(?, ?, ?, ?, ?, ?, ?, ?)`,
-		a.UserID, a.Name, a.Provider, a.Endpoint, a.Region, a.AccessKey, a.SecretEnc, a.Bucket)
+	res, err := d.Exec(`INSERT INTO accounts(user_id, name, provider, endpoint, region, access_key, secret_enc, bucket, quota_bytes)
+		VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		a.UserID, a.Name, a.Provider, a.Endpoint, a.Region, a.AccessKey, a.SecretEnc, a.Bucket, a.QuotaBytes)
 	if err != nil {
 		return 0, err
 	}
@@ -268,9 +297,9 @@ func (d *DB) AccountByID(id, userID int64) (*Account, error) {
 
 func (d *DB) UpdateAccount(a *Account) error {
 	_, err := d.Exec(`UPDATE accounts SET name=?, provider=?, endpoint=?, region=?,
-		access_key=?, secret_enc=?, bucket=? WHERE id=? AND user_id=?`,
+		access_key=?, secret_enc=?, bucket=?, quota_bytes=? WHERE id=? AND user_id=?`,
 		a.Name, a.Provider, a.Endpoint, a.Region, a.AccessKey, a.SecretEnc,
-		a.Bucket, a.ID, a.UserID)
+		a.Bucket, a.QuotaBytes, a.ID, a.UserID)
 	return err
 }
 

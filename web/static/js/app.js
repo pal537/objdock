@@ -228,7 +228,9 @@ function toggleSwitcher() {
   const dd = $('#dropdown');
   if (!dd.hidden) { dd.hidden = true; return; }
   const r = $('#switcher').getBoundingClientRect();
-  dd.style.left = r.left + 'px'; dd.style.top = (r.bottom + 6) + 'px';
+  dd.style.left = r.left + 'px';
+  dd.style.top = ''; dd.style.bottom = '';
+  dd.style.visibility = 'hidden'; dd.hidden = false;
   let html = '<div class="dsec">账户</div>';
   if (!state.accounts.length) html += '<div class="di" onclick="nav(\'settings\')">＋ 去设置里添加账户</div>';
   state.accounts.forEach(a => {
@@ -236,7 +238,12 @@ function toggleSwitcher() {
   });
   html += '<div class="dsec">存储桶</div><div id="ddBuckets"><div class="di muted">先选择账户…</div></div>';
   dd.innerHTML = html;
-  dd.hidden = false;
+  // 向上弹出：先显示测量高度，再定位到切换器上方
+  const h = dd.offsetHeight;
+  let top = r.top - h - 8;
+  if (top < 8) top = Math.min(r.bottom + 8, window.innerHeight - h - 8); // 空间不足则向下
+  dd.style.top = Math.max(8, top) + 'px';
+  dd.style.visibility = '';
   $$('[data-acct]', dd).forEach(el => el.onclick = async (e) => {
     e.stopPropagation();
     await selectAccount(parseInt(el.dataset.acct, 10));
@@ -358,7 +365,20 @@ async function loadDash() {
       <polyline points="${pts}" fill="none" stroke="#3b82f6" stroke-width="2"/></svg>
       <div class="muted">${esc(trend[0].day)} → ${esc(trend[trend.length - 1].day)}，${fmtSize(trend[0].totalSize)} → ${fmtSize(trend[trend.length - 1].totalSize)}</div>`;
   }
-  $('#dashBody').innerHTML = `
+  const acct = state.accounts.find(x => x.id === state.accountId) || {};
+  const quota = acct.quotaBytes || 0;
+  let quotaHtml = '';
+  if (quota > 0) {
+    const pct = Math.min(100, (d.totalSize / quota * 100));
+    const left = Math.max(0, quota - d.totalSize);
+    const barColor = pct >= 90 ? '#ef4444' : pct >= 70 ? '#f59e0b' : '#3b82f6';
+    quotaHtml = `<div class="card"><h3>${ic('drive')}空间使用</h3>
+      <p class="desc">已用 ${fmtSize(d.totalSize)} / 总计 ${fmtSize(quota)}（${pct.toFixed(1)}%），剩余 ${fmtSize(left)}</p>
+      <div style="height:12px;background:#f1f5f9;border-radius:6px;overflow:hidden">
+        <div style="height:100%;width:${pct.toFixed(1)}%;background:${barColor};border-radius:6px;transition:width .5s ease"></div>
+      </div></div>`;
+  }
+  $('#dashBody').innerHTML = quotaHtml + `
     <div class="stat-grid">
       <div class="stat"><div class="ic" style="background:#dbeafe;color:#2563eb">${ic('drive')}</div><div><div class="v">${fmtSize(d.totalSize)}</div><div class="l">总存储量</div><div class="s">${d.truncated ? '约 ' : ''}${d.fileCount} 个文件${d.truncated ? '（仅扫描前 ' + d.scanned + ' 个）' : ''}</div></div></div>
       <div class="stat"><div class="ic" style="background:#ede9fe;color:#7c3aed">${ic('file')}</div><div><div class="v">${d.fileCount}</div><div class="l">文件</div><div class="s">文件夹 ${d.byFolder.length} 个</div></div></div>
@@ -386,9 +406,9 @@ async function loadDash() {
       <p class="desc">每天有文件新增或修改的天数统计，共 ${totalAct} 次变动</p>
       <div class="activity-chart">${bars}</div>
       <div class="activity-legend"><span>${days[0].label}</span><span>${days[29].label}</span></div></div>
-    <div class="card"><h3>${ic('drive')}存储空间说明</h3>
-      <p class="desc" style="margin-bottom:0">S3 兼容协议（R2 / OSS / COS / MinIO）不提供查询总配额的接口，因此无法显示「总空间 / 剩余空间」。
-      上方「总存储量」为本桶实际已用空间。如需查看配额，请前往对应云服务商控制台。</p></div>`;
+    ${quota > 0 ? '' : `<div class="card"><h3>${ic('drive')}存储空间说明</h3>
+      <p class="desc" style="margin-bottom:0">S3 兼容协议（R2 / OSS / COS / MinIO）不提供查询总配额的接口，因此无法自动显示「总空间 / 剩余空间」。
+      可在设置 → 编辑账户中手动填写空间配额，仪表盘即会显示使用率。</p></div>`}`;
 }
 
 /* ---------- file browser ---------- */
@@ -919,6 +939,16 @@ function renderWizard() {
       <input class="input" id="wSK" type="password" autocomplete="new-password"></label>
       <label class="fld"><span>储存桶（必填，可填多个）</span>
       <input class="input" id="wBucket" value="${esc(ex.bucket || '')}" placeholder="pic, assets —— 多个用英文逗号分隔"></label>
+      <label class="fld"><span>空间配额（可选）</span>
+        <div style="display:flex;gap:8px">
+          <input class="input" id="wQuota" type="number" min="0" step="any" placeholder="留空则不显示"
+            value="${ex.quotaBytes ? (ex.quotaBytes >= 1099511627776 ? (ex.quotaBytes / 1099511627776).toFixed(2).replace(/\.?0+$/, '') : (ex.quotaBytes / 1073741824).toFixed(2).replace(/\.?0+$/, '')) : ''}" style="flex:1">
+          <select class="input" id="wQuotaUnit" style="width:90px;flex:none">
+            <option value="1073741824">GB</option>
+            <option value="1099511627776" ${ex.quotaBytes >= 1099511627776 ? 'selected' : ''}>TB</option>
+          </select>
+        </div>
+        <div class="hint">S3 协议查不到总空间，填了后仪表盘会显示使用率（仅用于展示）</div></label>
       <div id="wizErr" style="color:#ef4444;font-size:13px;min-height:20px"></div>
       <div class="modal-actions">
         <button class="btn" id="wizBack">上一步</button>
@@ -981,6 +1011,11 @@ function wizardPayload() {
     accessKey: $('#wAK').value.trim(),
     secretKey: $('#wSK').value,
     bucket: $('#wBucket').value.trim(),
+    quotaBytes: (() => {
+      const v = parseFloat(($('#wQuota') || {}).value);
+      const u = parseInt((($('#wQuotaUnit') || {}).value) || '1073741824', 10);
+      return (!isNaN(v) && v > 0) ? Math.round(v * u) : 0;
+    })(),
   };
 }
 async function wizardSave(testOnly) {

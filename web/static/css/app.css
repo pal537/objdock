@@ -99,6 +99,10 @@ select.input-sm { cursor: pointer; }
 .field { margin-bottom: 14px; }
 .field label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px; color: #475569; }
 .field .input { width: 100%; }
+.fld { display: block; margin-bottom: 15px; }
+.fld > span { display: block; font-size: 13px; font-weight: 600; margin-bottom: 7px; color: #334155; }
+.fld .input { width: 100%; }
+.fld .hint { font-size: 12px; color: var(--muted); margin-top: 5px; line-height: 1.5; }
 
 /* ================= 布局 ================= */
 .layout { display: flex; height: 100vh; }
@@ -426,7 +430,8 @@ table.ftable { width: 100%; border-collapse: collapse; font-size: 13.5px; }
 @keyframes toastUp { from { opacity: 0; transform: translateX(-50%) translateY(10px); } }
 .dropdown {
   position: fixed; background: #fff; border-radius: 13px; box-shadow: var(--shadow-lg);
-  border: 1px solid var(--line); z-index: 90; min-width: 230px; padding: 6px;
+  border: 1px solid var(--line); z-index: 90; min-width: 230px; max-width: 300px; padding: 6px;
+  max-height: 60vh; overflow-y: auto;
   animation: pop .15s ease;
 }
 .dropdown .di {

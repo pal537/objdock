@@ -32,6 +32,7 @@ func accountJSON(a *db.Account) map[string]any {
 		"region":    a.Region,
 		"accessKey": a.AccessKey,
 		"bucket":    a.Bucket,
+		"quotaBytes": a.QuotaBytes,
 		"createdAt": a.CreatedAt.Format(time.RFC3339),
 	}
 }
@@ -90,6 +91,7 @@ type accountInput struct {
 	AccessKey string `json:"accessKey"`
 	SecretKey string `json:"secretKey"`
 	Bucket    string `json:"bucket"`
+	QuotaBytes int64 `json:"quotaBytes"`
 }
 
 func (s *Server) buildAccount(u *db.User, in accountInput, existing *db.Account) (*db.Account, string) {
@@ -110,6 +112,9 @@ func (s *Server) buildAccount(u *db.User, in accountInput, existing *db.Account)
 	a.Endpoint = strings.TrimSuffix(a.Endpoint, "/")
 	a.AccessKey = strings.TrimSpace(in.AccessKey)
 	a.Bucket = strings.TrimSpace(in.Bucket)
+	if in.QuotaBytes >= 0 {
+		a.QuotaBytes = in.QuotaBytes
+	}
 	if a.Name == "" {
 		return nil, "name is required"
 	}
