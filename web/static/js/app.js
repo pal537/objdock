@@ -11,6 +11,9 @@ const state = {
   bucket: '',
   prefix: '',
   view: localStorage.getItem('objdock_view') || 'grid',
+  thumbSize: localStorage.getItem('objdock_thumb') || 'medium',
+  sort: localStorage.getItem('objdock_sort') || 'time-desc',
+  selectMode: false,
   settings: {},
   statsCache: {},
 };
@@ -387,10 +390,24 @@ async function renderFiles() {
   selKeys = new Set();
   main.innerHTML = `
     <div class="topbar"><h2>${ic('folder')}全部文件</h2><div class="spacer"></div>
+      <select class="input input-sm" id="sortSel" title="排序">
+        <option value="time-desc">时间 ↓ 新到旧</option>
+        <option value="time-asc">时间 ↑ 旧到新</option>
+        <option value="size-desc">大小 ↓ 大到小</option>
+        <option value="size-asc">大小 ↑ 小到大</option>
+        <option value="name-asc">名称 A-Z</option>
+        <option value="name-desc">名称 Z-A</option>
+      </select>
+      <div class="view-toggle" id="sizeSeg">
+        <button data-sz="small" class="${state.thumbSize === 'small' ? 'active' : ''}">小</button>
+        <button data-sz="medium" class="${state.thumbSize === 'medium' ? 'active' : ''}">中</button>
+        <button data-sz="large" class="${state.thumbSize === 'large' ? 'active' : ''}">大</button>
+      </div>
       <div class="view-toggle">
         <button id="vGrid" class="${state.view === 'grid' ? 'active' : ''}">${ic('grid', 15)}缩略图</button>
         <button id="vList" class="${state.view === 'list' ? 'active' : ''}">${ic('list', 15)}列表</button>
       </div>
+      <button class="btn btn-sm" id="btnSelect">${ic('check', 15)}选择</button>
       <button class="btn btn-sm" id="btnUpload">${ic('upload', 15)}上传</button>
       <button class="btn btn-sm" id="btnMkdir">${ic('folderPlus', 15)}新建文件夹</button>
       <button class="btn btn-sm" id="btnRefresh">↻</button>
@@ -398,8 +415,9 @@ async function renderFiles() {
     <div class="crumbs" id="crumbs"></div>
     <div class="toolbar" id="selBar" hidden>
       <span id="selCount"></span>
+      <button class="btn btn-sm" id="btnSelAll">全选</button>
       <button class="btn btn-sm" id="btnDelSel">${ic('trash', 15)}删除所选</button>
-      <button class="btn btn-sm" id="btnClearSel">取消选择</button>
+      <button class="btn btn-sm" id="btnClearSel">退出选择</button>
     </div>
     <div id="fileBody"><div class="empty">加载中…</div></div>`;
   $('#vGrid').onclick = () => setView('grid');
@@ -415,7 +433,23 @@ async function renderFiles() {
   });
   $('#btnRefresh').onclick = () => loadFiles();
   $('#btnDelSel').onclick = deleteSelected;
-  $('#btnClearSel').onclick = () => { selKeys.clear(); loadFiles(); };
+  $('#btnClearSel').onclick = () => { state.selectMode = false; selKeys.clear(); loadFiles(); };
+  $('#btnSelAll').onclick = () => {
+    const all = $$('.fitem[data-key]', $('#fileBody')).map(el => el.dataset.key);
+    const every = all.every(k => selKeys.has(k));
+    all.forEach(k => every ? selKeys.delete(k) : selKeys.add(k));
+    loadFiles();
+  };
+  $('#sortSel').value = state.sort;
+  $('#sortSel').onchange = (e) => { state.sort = e.target.value; localStorage.setItem('objdock_sort', state.sort); loadFiles(); };
+  $$('#sizeSeg button').forEach(b => b.onclick = () => {
+    state.thumbSize = b.dataset.sz; localStorage.setItem('objdock_thumb', state.thumbSize);
+    $$('#sizeSeg button').forEach(x => x.classList.toggle('active', x === b));
+    const g = $('.fgrid'); if (g) g.className = 'fgrid sz-' + state.thumbSize[0];
+  });
+  const bs = $('#btnSelect');
+  bs.classList.toggle('active', state.selectMode);
+  bs.onclick = () => { state.selectMode = !state.selectMode; selKeys.clear(); loadFiles(); };
   await loadFiles();
 }
 function setView(v) {
@@ -444,6 +478,19 @@ async function loadFiles() {
     loadSideFolders(d);
   } catch (e) { body.innerHTML = `<div class="empty">加载失败：${esc(e.message)}</div>`; }
 }
+function sortFiles(files) {
+  const arr = files.slice();
+  const by = {
+    'name-asc': (a, b) => a.name.localeCompare(b.name, 'zh-CN'),
+    'name-desc': (a, b) => b.name.localeCompare(a.name, 'zh-CN'),
+    'size-desc': (a, b) => (b.size || 0) - (a.size || 0),
+    'size-asc': (a, b) => (a.size || 0) - (b.size || 0),
+    'time-desc': (a, b) => new Date(b.lastModified || 0) - new Date(a.lastModified || 0),
+    'time-asc': (a, b) => new Date(a.lastModified || 0) - new Date(b.lastModified || 0),
+  }[state.sort] || (() => 0);
+  arr.sort(by);
+  return arr;
+}
 function renderFileList(d) {
   const body = $('#fileBody');
   updateSelBar();
@@ -452,25 +499,32 @@ function renderFileList(d) {
     return;
   }
   if (state.view === 'grid') {
-    let h = '<div class="fgrid">';
-    d.folders.forEach(f => {
-      h += `<div class="fitem" data-folder="${esc(f.prefix)}"><div class="fic">${ic('folder')}</div><div class="fn">${esc(f.name)}</div></div>`;
+    const sz = { small: 's', medium: 'm', large: 'l' }[state.thumbSize] || 'm';
+    let h = `<div class="fgrid sz-${sz}">`;
+    const folders = d.folders.slice().sort((a, b) => a.name.localeCompare(b.name, 'zh-CN'));
+    folders.forEach(f => {
+      h += `<div class="fitem folder-card" data-folder="${esc(f.prefix)}">
+        <div class="fic folder-ic">${ic('folder')}</div>
+        <div class="fmeta"><div class="fn">${esc(f.name)}</div><div class="fs">文件夹</div></div></div>`;
     });
-    d.files.forEach(f => {
+    sortFiles(d.files).forEach(f => {
       const sel = selKeys.has(f.key) ? ' sel' : '';
+      const check = state.selectMode ? `<input type="checkbox" class="check" ${selKeys.has(f.key) ? 'checked' : ''} data-check="${esc(f.key)}">` : '';
       h += `<div class="fitem${sel}" data-key="${esc(f.key)}" data-kind="${f.kind}" data-name="${esc(f.name)}">
-        <input type="checkbox" class="check" ${selKeys.has(f.key) ? 'checked' : ''} data-check="${esc(f.key)}">
+        ${check}
         <div class="fic" data-thumb="${esc(f.key)}|${f.kind}">${iconFor(f.kind)}</div>
-        <div class="fn">${esc(f.name)}</div><div class="fs">${fmtSize(f.size)}</div></div>`;
+        <div class="fmeta"><div class="fn" title="${esc(f.name)}">${esc(f.name)}</div><div class="fs">${fmtSize(f.size)} · ${fmtDate(f.lastModified).slice(0, 10)}</div></div></div>`;
     });
     body.innerHTML = h + '</div>';
-    $$('.fitem[data-folder]', body).forEach(el => el.ondblclick = () => { state.prefix = el.dataset.folder; loadFiles(); });
+    // 文件夹单击进入
+    $$('.fitem[data-folder]', body).forEach(el => el.onclick = () => { state.prefix = el.dataset.folder; loadFiles(); });
     $$('.fitem[data-key]', body).forEach(el => {
       el.onclick = (e) => {
-        if (e.target.dataset.check !== undefined) {
-          const k = e.target.dataset.check;
-          e.target.checked ? selKeys.add(k) : selKeys.delete(k);
-          el.classList.toggle('sel', e.target.checked);
+        if (state.selectMode) {
+          const k = el.dataset.key;
+          selKeys.has(k) ? selKeys.delete(k) : selKeys.add(k);
+          el.classList.toggle('sel', selKeys.has(k));
+          const cb = $('[data-check]', el); if (cb) cb.checked = selKeys.has(k);
           updateSelBar(); return;
         }
         openPreview(el.dataset.key, el.dataset.name, el.dataset.kind);
@@ -506,13 +560,14 @@ function renderFileList(d) {
       }
     }
   } else {
-    let h = `<table class="ftable"><thead><tr><th style="width:34px"></th><th>名称</th><th>大小</th><th>修改时间</th><th style="width:190px">操作</th></tr></thead><tbody>`;
-    d.folders.forEach(f => {
-      h += `<tr><td></td><td><span class="rname" data-folder="${esc(f.prefix)}">${ic('folder', 16)} ${esc(f.name)}</span></td>
+    const checkCol = state.selectMode ? '<th style="width:34px"></th>' : '';
+    let h = `<table class="ftable"><thead><tr>${checkCol}<th>名称</th><th>大小</th><th>修改时间</th><th style="width:190px">操作</th></tr></thead><tbody>`;
+    d.folders.slice().sort((a, b) => a.name.localeCompare(b.name, 'zh-CN')).forEach(f => {
+      h += `<tr>${state.selectMode ? '<td></td>' : ''}<td><span class="rname" data-folder="${esc(f.prefix)}">${ic('folder', 16)} ${esc(f.name)}</span></td>
         <td class="muted">—</td><td class="muted">—</td><td></td></tr>`;
     });
-    d.files.forEach(f => {
-      h += `<tr><td><input type="checkbox" data-check="${esc(f.key)}" ${selKeys.has(f.key) ? 'checked' : ''}></td>
+    sortFiles(d.files).forEach(f => {
+      h += `<tr>${state.selectMode ? `<td><input type="checkbox" data-check="${esc(f.key)}" ${selKeys.has(f.key) ? 'checked' : ''}></td>` : ''}
         <td><span class="rname" data-key="${esc(f.key)}" data-kind="${f.kind}" data-name="${esc(f.name)}">${iconFor(f.kind)} ${esc(f.name)}</span></td>
         <td>${fmtSize(f.size)}</td><td class="muted">${fmtDate(f.lastModified)}</td>
         <td><div class="row-actions">
@@ -524,7 +579,7 @@ function renderFileList(d) {
         </div></td></tr>`;
     });
     body.innerHTML = h + '</tbody></table>';
-    $$('[data-folder]', body).forEach(el => el.ondblclick = () => { state.prefix = el.dataset.folder; loadFiles(); });
+    $$('[data-folder]', body).forEach(el => el.onclick = () => { state.prefix = el.dataset.folder; loadFiles(); });
     $$('[data-key]', body).forEach(el => el.onclick = () => openPreview(el.dataset.key, el.dataset.name, el.dataset.kind));
     $$('[data-check]', body).forEach(el => el.onchange = () => {
       el.checked ? selKeys.add(el.dataset.check) : selKeys.delete(el.dataset.check);
@@ -541,8 +596,9 @@ function renderFileList(d) {
 function updateSelBar() {
   const bar = $('#selBar');
   if (!bar) return;
-  bar.hidden = selKeys.size === 0;
-  $('#selCount').textContent = `已选 ${selKeys.size} 个`;
+  bar.hidden = !state.selectMode;
+  const total = $$('.fitem[data-key]', $('#fileBody')).length;
+  $('#selCount').textContent = `已选 ${selKeys.size} / ${total} 个`;
 }
 function deleteSelected() {
   if (!selKeys.size) return;
