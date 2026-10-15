@@ -896,7 +896,7 @@ async function testAccount(id) {
 let wiz = {};
 function openWizard(editId) {
   const existing = editId ? state.accounts.find(a => a.id === editId) : null;
-  wiz = { step: 1, provider: existing ? existing.provider : 'r2', editId: editId || null, existing };
+  wiz = { step: existing ? 2 : 1, provider: existing ? existing.provider : 'r2', editId: editId || null, existing };
   renderWizard();
   $('#previewModal').hidden = true; // reuse backdrop? no — use dedicated
   $('#wizModal').hidden = false;
@@ -910,8 +910,8 @@ function renderWizard() {
     document.body.appendChild(div);
     modal = div;
   }
-  const steps = ['选择服务商', '填写密钥', '完成'];
-  let body = `<div class="wiz-steps">${steps.map((s, i) =>
+  const isEdit = !!wiz.existing;
+  let body = isEdit ? '' : `<div class="wiz-steps">${['选择服务商', '填写密钥', '完成'].map((s, i) =>
     `<div class="ws ${wiz.step === i + 1 ? 'active' : ''}">${s}</div>`).join('')}</div>`;
   if (wiz.step === 1) {
     body += `<h3 style="margin-top:0">选择服务商</h3><div class="prov-grid">` +
@@ -923,11 +923,18 @@ function renderWizard() {
   } else if (wiz.step === 2) {
     const p = PROVIDERS.find(x => x.id === wiz.provider);
     const ex = wiz.existing || {};
-    body += `<h3 style="margin-top:0">${p.icon} ${p.name}</h3><p class="muted">${p.hint}</p>`;
+    const isEdit = !!wiz.existing;
+    // R2 的 Account ID 从 endpoint 反解：https://<id>.r2.cloudflarestorage.com
+    let acctId = '';
+    if (wiz.provider === 'r2' && ex.endpoint) {
+      const m = ex.endpoint.match(/https?:\/\/([^.]+)\.r2\.cloudflarestorage\.com/);
+      if (m) acctId = m[1];
+    }
+    body += `<h3 style="margin-top:0">${isEdit ? '编辑账户' : p.icon + ' ' + p.name}</h3>${isEdit ? '' : `<p class="muted">${p.hint}</p>`}`;
     body += `<label class="fld"><span>起个名字（比如"我的 R2"）</span>
       <input class="input" id="wName" value="${esc(ex.name || '')}" placeholder="我的 R2"></label>`;
     if (wiz.provider === 'r2') body += `<label class="fld"><span>Account ID（账户ID）</span>
-      <input class="input" id="wAccountId" placeholder="Cloudflare 面板右下角的 Account ID"></label>`;
+      <input class="input" id="wAccountId" value="${esc(acctId)}" placeholder="Cloudflare 面板右下角的 Account ID"></label>`;
     if (wiz.provider === 'oss' || wiz.provider === 'cos' || wiz.provider === 'qiniu')
       body += `<label class="fld"><span>地域</span><select class="input" id="wRegion">${regionOptions(wiz.provider, ex.region)}</select></label>`;
     if (wiz.provider === 'minio' || wiz.provider === 'custom')
@@ -935,8 +942,9 @@ function renderWizard() {
       <input class="input" id="wEndpoint" value="${esc(ex.endpoint || '')}" placeholder="https://minio.example.com"></label>`;
     body += `<label class="fld"><span>Access Key（访问密钥 ID）</span>
       <input class="input" id="wAK" value="${esc(ex.accessKey || '')}" autocomplete="off"></label>
-      <label class="fld"><span>Secret Key（机密访问密钥${wiz.existing ? '，留空则不修改' : ''}）</span>
-      <input class="input" id="wSK" type="password" autocomplete="new-password"></label>
+      <label class="fld"><span>Secret Key（机密访问密钥）</span>
+      <input class="input" id="wSK" type="password" autocomplete="new-password"
+        placeholder="${wiz.existing ? '••••••••（已保存，留空不修改）' : ''}"></label>
       <label class="fld"><span>储存桶（必填，可填多个）</span>
       <input class="input" id="wBucket" value="${esc(ex.bucket || '')}" placeholder="pic, assets —— 多个用英文逗号分隔"></label>
       <label class="fld"><span>空间配额（可选）</span>
@@ -951,7 +959,7 @@ function renderWizard() {
         <div class="hint">S3 协议查不到总空间，填了后仪表盘会显示使用率（仅用于展示）</div></label>
       <div id="wizErr" style="color:#ef4444;font-size:13px;min-height:20px"></div>
       <div class="modal-actions">
-        <button class="btn" id="wizBack">上一步</button>
+        ${wiz.existing ? '' : '<button class="btn" id="wizBack">上一步</button>'}
         <button class="btn" id="wizTest">测试连接</button>
         <button class="btn btn-primary" id="wizSave">${wiz.existing ? '保存' : '添加'}</button></div>`;
   } else {
