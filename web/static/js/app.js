@@ -181,16 +181,20 @@ function renderShell() {
   $('#app').innerHTML = `
   <div class="layout">
     <aside class="sidebar">
-      <div class="side-switch" id="switcher">
-        <div class="avatar" id="swAvatar">${ic('bucket', 26)}</div>
-        <div><div class="sname" id="swName">选择账户</div><div class="ssub" id="swSub">点击切换</div></div>
+      <div class="brand">
+        <div class="logo-ic">${ic('anchor')}</div>
+        <div><div class="t">ObjDock</div><div class="s">对象存储管理</div></div>
       </div>
-      <div class="nav-item active" data-nav="dash">${ic('dash')}仪表盘</div>
-      <div class="nav-item" data-nav="files">${ic('folder')}全部文件</div>
+      <div class="nav-item active" data-nav="dash">${ic('dash')}<span>仪表盘</span></div>
+      <div class="nav-item" data-nav="files">${ic('folder')}<span>全部文件</span></div>
       <div class="nav-sec">文件夹</div>
       <div id="sideFolders"></div>
       <div class="side-foot">
-        <div class="nav-item" data-nav="settings">${ic('settings')}设置</div>
+        <div class="storage-switch" id="switcher">
+          <div class="avatar" id="swAvatar">${ic('bucket')}</div>
+          <div><div class="sname" id="swName">选择账户</div><div class="ssub" id="swSub">点击切换</div></div>
+        </div>
+        <div class="nav-item" data-nav="settings">${ic('settings')}<span>设置</span></div>
         <div class="acct-card" id="acctCard">
           <div class="avatar">${esc((u.displayName || u.username)[0].toUpperCase())}</div>
           <div><div class="sname">${esc(u.displayName || u.username)}</div><div class="ssub">${esc(u.username)}</div></div>
@@ -294,7 +298,7 @@ async function renderDash() {
   if (!state.accountId || !state.bucket) {
     main.innerHTML = `<div class="card"><h3>${ic('dash')}仪表盘</h3>
       <div class="empty"><div class="big">${ic('bucket', 56)}</div>
-      ${state.accounts.length ? '请先在左上角选择账户和存储桶' : '还没有绑定任何账户，去 <a href="javascript:nav(\'settings\')">设置</a> 添加第一个吧'}
+      ${state.accounts.length ? '请先在左下角选择账户和存储桶' : '还没有绑定任何账户，去 <a href="javascript:nav(\'settings\')">设置</a> 添加第一个吧'}
       </div></div>`;
     return;
   }
@@ -325,21 +329,24 @@ async function loadDash() {
     const x1 = cx + r * Math.cos(a1), y1 = cy + r * Math.sin(a1);
     return `<path d="M${x0},${y0} A${r},${r} 0 ${large} 1 ${x1},${y1} L${cx},${cy} Z" fill="${DONUT_COLORS[i % 8]}"/>`;
   }).join('');
-  // heatmap: last 53 weeks
+  // 活跃度：近 30 天柱状图
   const act = d.activity || {};
-  let hm = '';
   const today = new Date(); today.setHours(0, 0, 0, 0);
-  const start = new Date(today); start.setDate(start.getDate() - 7 * 53 - today.getDay());
-  for (let w = 0; w < 53; w++) {
-    for (let i = 0; i < 7; i++) {
-      const dt = new Date(start); dt.setDate(dt.getDate() + w * 7 + i);
-      if (dt > today) { hm += '<div class="hd" style="background:transparent"></div>'; continue; }
-      const k = dt.toISOString().slice(0, 10);
-      const c = act[k] || 0;
-      const lv = c >= 8 ? 'lv4' : c >= 4 ? 'lv3' : c >= 2 ? 'lv2' : c >= 1 ? 'lv1' : '';
-      hm += `<div class="hd ${lv}" title="${k}：${c} 个文件"></div>`;
-    }
+  let bars = '', maxAct = 1, totalAct = 0;
+  const days = [];
+  for (let i = 29; i >= 0; i--) {
+    const dt = new Date(today); dt.setDate(dt.getDate() - i);
+    const k = dt.toISOString().slice(0, 10);
+    const c = act[k] || 0;
+    days.push({ k, c, label: (dt.getMonth() + 1) + '/' + dt.getDate() });
+    if (c > maxAct) maxAct = c;
+    totalAct += c;
   }
+  bars = days.map(x => {
+    const h = Math.max(4, (x.c / maxAct * 100));
+    const bg = x.c === 0 ? '#eef2f7' : x.c === maxAct && maxAct > 1 ? '#2563eb' : '#93c5fd';
+    return `<div class="ab" style="height:${h.toFixed(0)}%;background:${bg}"><span class="tip">${x.k} · ${x.c} 个文件变动</span></div>`;
+  }).join('');
   // trend line
   const trend = d.trend || [];
   let trendSvg = '<div class="muted">暂无历史数据（每天统计一次后生成趋势）</div>';
@@ -375,7 +382,13 @@ async function loadDash() {
       </div>
     </div>
     <div class="card"><h3>${ic('trend')}存储增长趋势</h3><p class="desc">每天统计一次，记录总用量变化</p>${trendSvg}</div>
-    <div class="card"><h3>${ic('calendar')}文件活跃度（近一年）</h3><div class="heat">${hm}</div></div>`;
+    <div class="card"><h3>${ic('calendar')}文件活跃度（近 30 天）</h3>
+      <p class="desc">每天有文件新增或修改的天数统计，共 ${totalAct} 次变动</p>
+      <div class="activity-chart">${bars}</div>
+      <div class="activity-legend"><span>${days[0].label}</span><span>${days[29].label}</span></div></div>
+    <div class="card"><h3>${ic('drive')}存储空间说明</h3>
+      <p class="desc" style="margin-bottom:0">S3 兼容协议（R2 / OSS / COS / MinIO）不提供查询总配额的接口，因此无法显示「总空间 / 剩余空间」。
+      上方「总存储量」为本桶实际已用空间。如需查看配额，请前往对应云服务商控制台。</p></div>`;
 }
 
 /* ---------- file browser ---------- */
@@ -384,7 +397,7 @@ async function renderFiles() {
   const main = $('#main');
   if (!state.accountId || !state.bucket) {
     main.innerHTML = `<div class="card"><h3>${ic('folder')}全部文件</h3>
-      <div class="empty"><div class="big">${ic('bucket', 56)}</div>请先在左上角选择账户和存储桶</div></div>`;
+      <div class="empty"><div class="big">${ic('bucket', 56)}</div>请先在左下角选择账户和存储桶</div></div>`;
     return;
   }
   selKeys = new Set();
@@ -423,22 +436,43 @@ async function renderFiles() {
   $('#vGrid').onclick = () => setView('grid');
   $('#vList').onclick = () => setView('list');
   $('#btnUpload').onclick = () => $('#filePicker').click();
-  $('#btnMkdir').onclick = () => askPrompt('新建文件夹', '在当前目录下创建', '', async (v) => {
+  $('#btnMkdir').onclick = () => {
+    $('#promptInput').placeholder = '例如：我的照片';
+    askPrompt('新建文件夹', '在当前目录下创建一个新文件夹', '', async (v) => {
     v = v.trim().replace(/\//g, '');
     if (!v) return;
     try {
       await apiPost(`/api/accounts/${state.accountId}/mkdir`, { bucket: state.bucket, path: state.prefix + v });
       toast('已创建'); loadFiles();
     } catch (e) { toast('创建失败：' + e.message); }
-  });
+    });
+  };
   $('#btnRefresh').onclick = () => loadFiles();
   $('#btnDelSel').onclick = deleteSelected;
-  $('#btnClearSel').onclick = () => { state.selectMode = false; selKeys.clear(); loadFiles(); };
+  $('#btnClearSel').onclick = () => {
+    state.selectMode = false; selKeys.clear();
+    const g = $('.fgrid');
+    if (g) {
+      g.classList.remove('selecting');
+      $$('.fitem.sel', g).forEach(el => el.classList.remove('sel'));
+      $$('.fitem .check', g).forEach(cb => cb.checked = false);
+      $('#btnSelect').classList.remove('active');
+      $('#btnSelAll').textContent = '全选';
+      updateSelBar();
+    } else { loadFiles(); }
+  };
   $('#btnSelAll').onclick = () => {
-    const all = $$('.fitem[data-key]', $('#fileBody')).map(el => el.dataset.key);
-    const every = all.every(k => selKeys.has(k));
-    all.forEach(k => every ? selKeys.delete(k) : selKeys.add(k));
-    loadFiles();
+    const boxes = $$('#fileBody [data-check]');
+    const all = boxes.map(cb => cb.dataset.check);
+    const every = all.length > 0 && all.every(k => selKeys.has(k));
+    boxes.forEach(cb => {
+      const k = cb.dataset.check;
+      every ? selKeys.delete(k) : selKeys.add(k);
+      cb.checked = !every;
+      const card = cb.closest('.fitem'); if (card) card.classList.toggle('sel', !every);
+    });
+    $('#btnSelAll').textContent = every ? '全选' : '全不选';
+    updateSelBar();
   };
   $('#sortSel').value = state.sort;
   $('#sortSel').onchange = (e) => { state.sort = e.target.value; localStorage.setItem('objdock_sort', state.sort); loadFiles(); };
@@ -449,7 +483,22 @@ async function renderFiles() {
   });
   const bs = $('#btnSelect');
   bs.classList.toggle('active', state.selectMode);
-  bs.onclick = () => { state.selectMode = !state.selectMode; selKeys.clear(); loadFiles(); };
+  bs.onclick = () => {
+    state.selectMode = !state.selectMode;
+    selKeys.clear();
+    const g = $('.fgrid');
+    if (g) {
+      // 缩略图视图：CSS 切换，不重建 DOM，图片不重载
+      g.classList.toggle('selecting', state.selectMode);
+      $$('.fitem.sel', g).forEach(el => el.classList.remove('sel'));
+      $$('.fitem .check', g).forEach(cb => cb.checked = false);
+    } else {
+      // 列表视图：轻量重渲染（无图片，无重载成本）
+      loadFiles(); return;
+    }
+    bs.classList.toggle('active', state.selectMode);
+    updateSelBar();
+  };
   await loadFiles();
 }
 function setView(v) {
@@ -500,7 +549,7 @@ function renderFileList(d) {
   }
   if (state.view === 'grid') {
     const sz = { small: 's', medium: 'm', large: 'l' }[state.thumbSize] || 'm';
-    let h = `<div class="fgrid sz-${sz}">`;
+    let h = `<div class="fgrid sz-${sz}${state.selectMode ? ' selecting' : ''}">`;
     const folders = d.folders.slice().sort((a, b) => a.name.localeCompare(b.name, 'zh-CN'));
     folders.forEach(f => {
       h += `<div class="fitem folder-card" data-folder="${esc(f.prefix)}">
@@ -509,7 +558,7 @@ function renderFileList(d) {
     });
     sortFiles(d.files).forEach(f => {
       const sel = selKeys.has(f.key) ? ' sel' : '';
-      const check = state.selectMode ? `<input type="checkbox" class="check" ${selKeys.has(f.key) ? 'checked' : ''} data-check="${esc(f.key)}">` : '';
+      const check = `<input type="checkbox" class="check" ${selKeys.has(f.key) ? 'checked' : ''} data-check="${esc(f.key)}">`;
       h += `<div class="fitem${sel}" data-key="${esc(f.key)}" data-kind="${f.kind}" data-name="${esc(f.name)}">
         ${check}
         <div class="fic" data-thumb="${esc(f.key)}|${f.kind}">${iconFor(f.kind)}</div>
@@ -528,6 +577,16 @@ function renderFileList(d) {
           updateSelBar(); return;
         }
         openPreview(el.dataset.key, el.dataset.name, el.dataset.kind);
+      };
+      // 复选框：自己处理选中，不冒泡到卡片
+      const cb = $('[data-check]', el);
+      if (cb) cb.onclick = (e) => {
+        e.stopPropagation();
+        const k = el.dataset.key;
+        selKeys.has(k) ? selKeys.delete(k) : selKeys.add(k);
+        cb.checked = selKeys.has(k);
+        el.classList.toggle('sel', selKeys.has(k));
+        updateSelBar();
       };
     });
     // 图片缩略图：懒加载 + 批量签名，一次请求搞定可见区域
@@ -560,25 +619,41 @@ function renderFileList(d) {
       }
     }
   } else {
-    const checkCol = state.selectMode ? '<th style="width:34px"></th>' : '';
-    let h = `<table class="ftable"><thead><tr>${checkCol}<th>名称</th><th>大小</th><th>修改时间</th><th style="width:190px">操作</th></tr></thead><tbody>`;
+    const checkCol = state.selectMode ? '<th class="check-cell"></th>' : '';
+    let h = `<div class="ftable-wrap"><table class="ftable"><thead><tr>${checkCol}<th>名称</th><th style="width:110px">大小</th><th style="width:170px">修改时间</th><th style="width:170px;text-align:right">操作</th></tr></thead><tbody>`;
     d.folders.slice().sort((a, b) => a.name.localeCompare(b.name, 'zh-CN')).forEach(f => {
-      h += `<tr>${state.selectMode ? '<td></td>' : ''}<td><span class="rname" data-folder="${esc(f.prefix)}">${ic('folder', 16)} ${esc(f.name)}</span></td>
-        <td class="muted">—</td><td class="muted">—</td><td></td></tr>`;
+      h += `<tr>${state.selectMode ? '<td class="check-cell"></td>' : ''}
+        <td><div class="fname"><div class="fic-sm folder">${ic('folder')}</div>
+          <span class="nm clickable" data-folder="${esc(f.prefix)}">${esc(f.name)}</span></div></td>
+        <td class="fsize muted">—</td><td class="ftime">—</td><td></td></tr>`;
     });
     sortFiles(d.files).forEach(f => {
-      h += `<tr>${state.selectMode ? `<td><input type="checkbox" data-check="${esc(f.key)}" ${selKeys.has(f.key) ? 'checked' : ''}></td>` : ''}
-        <td><span class="rname" data-key="${esc(f.key)}" data-kind="${f.kind}" data-name="${esc(f.name)}">${iconFor(f.kind)} ${esc(f.name)}</span></td>
-        <td>${fmtSize(f.size)}</td><td class="muted">${fmtDate(f.lastModified)}</td>
+      h += `<tr>${state.selectMode ? `<td class="check-cell"><input type="checkbox" data-check="${esc(f.key)}" ${selKeys.has(f.key) ? 'checked' : ''}></td>` : ''}
+        <td><div class="fname"><div class="fic-sm" data-lthumb="${esc(f.key)}|${f.kind}">${iconFor(f.kind)}</div>
+          <span class="nm clickable" data-key="${esc(f.key)}" data-kind="${f.kind}" data-name="${esc(f.name)}">${esc(f.name)}</span></div></td>
+        <td class="fsize">${fmtSize(f.size)}</td><td class="ftime">${fmtDate(f.lastModified)}</td>
         <td><div class="row-actions">
           <button class="icon-btn" data-act="preview" title="预览">${ic('eye')}</button>
           <button class="icon-btn" data-act="download" title="下载">${ic('download')}</button>
           <button class="icon-btn" data-act="share" title="分享">${ic('link')}</button>
           <button class="icon-btn" data-act="rename" title="重命名">${ic('pencil')}</button>
-          <button class="icon-btn" data-act="delete" title="删除">${ic('trash')}</button>
+          <button class="icon-btn danger" data-act="delete" title="删除">${ic('trash')}</button>
         </div></td></tr>`;
     });
-    body.innerHTML = h + '</tbody></table>';
+    body.innerHTML = h + '</tbody></table></div>';
+    // 列表视图小缩略图：批量签名懒加载
+    const lthumbs = $$('[data-lthumb]', body).filter(el => el.dataset.lthumb.split('|')[1] === 'image');
+    if (lthumbs.length) {
+      const keys = [...new Set(lthumbs.map(el => el.dataset.lthumb.split('|')[0]))];
+      apiPost(`/api/accounts/${state.accountId}/presign-batch`, { bucket: state.bucket, keys, op: 'preview', expires: 600 })
+        .then(r => {
+          const urls = r.urls || {};
+          lthumbs.forEach(el => {
+            const u = urls[el.dataset.lthumb.split('|')[0]];
+            if (u) el.innerHTML = `<img src="${esc(u)}" loading="lazy" alt="">`;
+          });
+        }).catch(() => {});
+    }
     $$('[data-folder]', body).forEach(el => el.onclick = () => { state.prefix = el.dataset.folder; loadFiles(); });
     $$('[data-key]', body).forEach(el => el.onclick = () => openPreview(el.dataset.key, el.dataset.name, el.dataset.kind));
     $$('[data-check]', body).forEach(el => el.onchange = () => {
@@ -597,7 +672,9 @@ function updateSelBar() {
   const bar = $('#selBar');
   if (!bar) return;
   bar.hidden = !state.selectMode;
-  const total = $$('.fitem[data-key]', $('#fileBody')).length;
+  const total = state.view === 'grid'
+    ? $$('.fitem[data-key]', $('#fileBody')).length
+    : $$('#fileBody [data-check]').length;
   $('#selCount').textContent = `已选 ${selKeys.size} / ${total} 个`;
 }
 function deleteSelected() {
