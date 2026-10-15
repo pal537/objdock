@@ -314,14 +314,34 @@ async function renderDash() {
     <div id="dashBody"><div class="empty">统计中…</div></div>`;
   $('#dashRefresh').onclick = () => { delete state.statsCache[state.accountId + '/' + state.bucket]; renderDash(); };
   await refreshAccounts();
-  await loadDash();
+  // 配额卡片独立显示，不依赖统计接口成败
+  const acct = state.accounts.find(x => x.id === state.accountId) || {};
+  const quota = acct.quotaBytes || 0;
+  if (quota > 0) {
+    const qb = `<div class="card" id="quotaCard"><h3>${ic('drive')}空间使用</h3>
+      <p class="desc">配额 ${fmtSize(quota)} · 正在统计使用量…</p></div>`;
+    $('#dashBody').innerHTML = qb;
+  }
+  await loadDash(quota);
 }
-async function loadDash() {
+async function loadDash(quota) {
+  quota = quota || 0;
   const key = state.accountId + '/' + state.bucket;
   let d = state.statsCache[key];
   if (!d) {
     try { d = await apiGet(`/api/accounts/${state.accountId}/stats?bucket=${encodeURIComponent(state.bucket)}`); }
-    catch (e) { $('#dashBody').innerHTML = `<div class="empty">统计失败：${esc(e.message)}</div>`; return; }
+    catch (e) {
+      // 统计失败时仍显示配额卡片（如果已设置）
+      const acct = state.accounts.find(x => x.id === state.accountId) || {};
+      const q = acct.quotaBytes || quota;
+      if (q > 0) {
+        $('#dashBody').innerHTML = `<div class="card"><h3>${ic('drive')}空间使用</h3>
+          <p class="desc">配额 ${fmtSize(q)} · 使用量统计失败（${esc(e.message)}）</p></div>`;
+      } else {
+        $('#dashBody').innerHTML = `<div class="empty">统计失败：${esc(e.message)}</div>`;
+      }
+      return;
+    }
     state.statsCache[key] = d;
   }
   const maxF = Math.max(...d.byFolder.map(x => x.value), 1);
@@ -367,7 +387,7 @@ async function loadDash() {
       <div class="muted">${esc(trend[0].day)} → ${esc(trend[trend.length - 1].day)}，${fmtSize(trend[0].totalSize)} → ${fmtSize(trend[trend.length - 1].totalSize)}</div>`;
   }
   const acct = state.accounts.find(x => x.id === state.accountId) || {};
-  const quota = acct.quotaBytes || 0;
+  quota = acct.quotaBytes || quota || 0;
   let quotaHtml = '';
   if (quota > 0) {
     const pct = Math.min(100, (d.totalSize / quota * 100));
@@ -902,7 +922,8 @@ async function testAccount(id) {
 
 /* ---------- add-account wizard ---------- */
 let wiz = {};
-function openWizard(editId) {
+async function openWizard(editId) {
+  if (editId) await refreshAccounts();
   const existing = editId ? state.accounts.find(a => a.id === editId) : null;
   wiz = { step: existing ? 2 : 1, provider: existing ? existing.provider : 'r2', editId: editId || null, existing };
   renderWizard();
