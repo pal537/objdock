@@ -476,15 +476,35 @@ function renderFileList(d) {
         openPreview(el.dataset.key, el.dataset.name, el.dataset.kind);
       };
     });
-    // 图片缩略图
-    $$('[data-thumb]', body).forEach(async (el) => {
-      const [key, kind] = el.dataset.thumb.split('|');
-      if (kind !== 'image') return;
-      try {
-        const p = await apiGet(`/api/accounts/${state.accountId}/presign?bucket=${encodeURIComponent(state.bucket)}&key=${encodeURIComponent(key)}&op=preview&expires=600`);
-        el.innerHTML = `<img src="${esc(p.url)}" loading="lazy">`;
-      } catch (e) { /* keep icon */ }
-    });
+    // 图片缩略图：懒加载 + 批量签名，一次请求搞定可见区域
+    const thumbEls = $$('[data-thumb]', body).filter(el => el.dataset.thumb.split('|')[1] === 'image');
+    if (thumbEls.length) {
+      const urlCache = new Map(); // key -> url, 避免重复签名
+      const loadThumbs = async (els) => {
+        const need = els.filter(el => !urlCache.has(el.dataset.thumb.split('|')[0]) && !el.dataset.done);
+        if (!need.length) return;
+        need.forEach(el => el.dataset.done = '1');
+        const keys = need.map(el => el.dataset.thumb.split('|')[0]);
+        try {
+          const r = await apiPost(`/api/accounts/${state.accountId}/presign-batch`,
+            { bucket: state.bucket, keys, op: 'preview', expires: 600 });
+          for (const [k, url] of Object.entries(r.urls || {})) urlCache.set(k, url);
+        } catch (e) { /* keep icons */ }
+        need.forEach(el => {
+          const url = urlCache.get(el.dataset.thumb.split('|')[0]);
+          if (url) el.innerHTML = `<img src="${esc(url)}" loading="lazy" decoding="async">`;
+        });
+      };
+      if ('IntersectionObserver' in window) {
+        const io = new IntersectionObserver(entries => {
+          const vis = entries.filter(e => e.isIntersecting).map(e => e.target);
+          if (vis.length) { vis.forEach(el => io.unobserve(el)); loadThumbs(vis); }
+        }, { rootMargin: '300px' });
+        thumbEls.forEach(el => io.observe(el));
+      } else {
+        loadThumbs(thumbEls);
+      }
+    }
   } else {
     let h = `<table class="ftable"><thead><tr><th style="width:34px"></th><th>名称</th><th>大小</th><th>修改时间</th><th style="width:190px">操作</th></tr></thead><tbody>`;
     d.folders.forEach(f => {

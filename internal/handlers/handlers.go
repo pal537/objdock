@@ -79,6 +79,7 @@ func (s *Server) routes() {
 	// Objects
 	m.HandleFunc("GET /api/accounts/{id}/objects", s.requireLogin(s.handleListObjects))
 	m.HandleFunc("GET /api/accounts/{id}/presign", s.requireLogin(s.handlePresign))
+	m.HandleFunc("POST /api/accounts/{id}/presign-batch", s.requireLogin(s.handlePresignBatch))
 	m.HandleFunc("POST /api/accounts/{id}/mkdir", s.requireLogin(s.handleMkdir))
 	m.HandleFunc("POST /api/accounts/{id}/rename", s.requireLogin(s.handleRename))
 	m.HandleFunc("POST /api/accounts/{id}/delete", s.requireLogin(s.handleDeleteObjects))

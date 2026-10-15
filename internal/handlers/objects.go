@@ -148,6 +148,63 @@ func (s *Server) handlePresign(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"url": url, "expiresIn": expiresSec})
 }
 
+// POST /api/accounts/{id}/presign-batch — signs many keys in one round trip.
+// Body: {bucket, keys: [], op, expires}. Used for thumbnail grids.
+func (s *Server) handlePresignBatch(w http.ResponseWriter, r *http.Request) {
+	u := s.currentUser(r)
+	id, _ := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	a, err := s.DB.AccountByID(id, u.ID)
+	if err != nil {
+		writeErr(w, http.StatusNotFound, "account not found")
+		return
+	}
+	var in struct {
+		Bucket  string   `json:"bucket"`
+		Keys    []string `json:"keys"`
+		Op      string   `json:"op"`
+		Expires int      `json:"expires"`
+	}
+	if err := decodeJSON(r, &in); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad request")
+		return
+	}
+	if in.Bucket == "" || len(in.Keys) == 0 {
+		writeErr(w, http.StatusBadRequest, "bucket and keys are required")
+		return
+	}
+	if len(in.Keys) > 200 {
+		writeErr(w, http.StatusBadRequest, "too many keys (max 200)")
+		return
+	}
+	expiresSec := in.Expires
+	if expiresSec <= 0 || expiresSec > 7*24*3600 {
+		expiresSec = 600
+	}
+	client, err := s.s3Client(a)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "cannot decrypt secret")
+		return
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), 20*time.Second)
+	defer cancel()
+	urls := make(map[string]string, len(in.Keys))
+	for _, key := range in.Keys {
+		if strings.Contains(key, "..") {
+			continue
+		}
+		var url string
+		if in.Op == "upload" {
+			url, err = client.PresignUpload(ctx, in.Bucket, key, time.Duration(expiresSec)*time.Second)
+		} else {
+			url, err = client.PresignDownload(ctx, in.Bucket, key, time.Duration(expiresSec)*time.Second)
+		}
+		if err == nil {
+			urls[key] = url
+		}
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"urls": urls})
+}
+
 // POST /api/accounts/{id}/mkdir {bucket, path}
 func (s *Server) handleMkdir(w http.ResponseWriter, r *http.Request) {
 	u := s.currentUser(r)
