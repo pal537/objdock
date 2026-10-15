@@ -791,6 +791,16 @@ async function wizardSave(testOnly) {
     // 测试连接
     const t = await apiPost(`/api/accounts/${id}/test`, {});
     if (testOnly) {
+      if (!t.ok) {
+        errBox.style.color = '#ef4444';
+        errBox.textContent = '失败：' + (t.error || '连接失败');
+        if (t.needBucket) {
+          const bf = $('#wBucket');
+          if (bf) { bf.style.borderColor = '#ef4444'; bf.focus(); }
+        }
+        setTimeout(() => errBox.style.color = '', 100);
+        return;
+      }
       errBox.style.color = '#10b981';
       errBox.textContent = t.listable ? `✓ 连接成功，找到 ${t.buckets.length} 个存储桶` : '✓ 连接成功（已用指定桶验证）';
       errBox.style.color = '';

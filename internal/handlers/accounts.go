@@ -211,13 +211,24 @@ func (s *Server) handleTestAccount(w http.ResponseWriter, r *http.Request) {
 		if a.Bucket != "" {
 			if herr := client.HeadBucket(ctx, a.Bucket); herr == nil {
 				writeJSON(w, http.StatusOK, map[string]any{
-					"ok":           true,
-					"listable":     false,
-					"buckets":      []string{a.Bucket},
-					"note":         "key cannot list all buckets, but the specified bucket is reachable",
+					"ok":       true,
+					"listable": false,
+					"buckets":  []string{a.Bucket},
+					"note":     "key cannot list all buckets, but the specified bucket is reachable",
 				})
 				return
 			}
+			writeErr(w, http.StatusBadGateway, "connection failed: "+friendlyS3Err(err))
+			return
+		}
+		// No bucket given and the key may not list buckets: guide the user.
+		if strings.Contains(err.Error(), "AccessDenied") {
+			writeJSON(w, http.StatusOK, map[string]any{
+				"ok":         false,
+				"needBucket": true,
+				"error":      "密钥有效，但它无权列出存储桶。请在上方填写存储桶名称，或换用管理员权限的密钥",
+			})
+			return
 		}
 		writeErr(w, http.StatusBadGateway, "connection failed: "+friendlyS3Err(err))
 		return
