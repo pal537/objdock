@@ -1,6 +1,9 @@
 services:
   objdock:
-    build: .
+    build:
+      context: .
+      args:
+        APP_VERSION: ${APP_VERSION:-dev}
     image: objdock:latest
     container_name: objdock
     restart: unless-stopped

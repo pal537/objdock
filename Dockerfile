@@ -8,7 +8,8 @@ ENV GOTOOLCHAIN=auto
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-RUN go build -trimpath -ldflags="-s -w" -o /objdock .
+ARG APP_VERSION=dev
+RUN go build -trimpath -ldflags="-s -w -X main.appVersion=$APP_VERSION" -o /objdock .
 
 # ---- runtime ----
 # Note: runs as root so it can write to the /data volume on any host.

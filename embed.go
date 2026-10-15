@@ -4,6 +4,7 @@ import (
 	"embed"
 	"io/fs"
 	"net/http"
+	"strings"
 )
 
 //go:embed all:web/static
@@ -18,6 +19,9 @@ func staticFS() http.FileSystem {
 	return http.FS(sub)
 }
 
+// appVersion is set at build time via -ldflags "-X main.appVersion=...".
+var appVersion = "dev"
+
 // serveIndex writes the embedded SPA shell.
 func serveIndex(w http.ResponseWriter, r *http.Request) {
 	data, err := embeddedStatic.ReadFile("web/static/index.html")
@@ -25,6 +29,9 @@ func serveIndex(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
+	html := strings.ReplaceAll(string(data), "__APP_VERSION__", appVersion)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	_, _ = w.Write(data)
+	// Shell is tiny and changes per deploy: never cache it.
+	w.Header().Set("Cache-Control", "no-cache")
+	_, _ = w.Write([]byte(html))
 }
