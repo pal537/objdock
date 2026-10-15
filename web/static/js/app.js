@@ -814,7 +814,7 @@ function renderSettings() {
   const main = $('#main');
   main.innerHTML = `
     <div class="topbar"><h2>${ic('settings')}设置</h2></div>
-    <div class="card"><h3>${ic('bucket')}存储账户</h3><p class="desc">绑定多个对象存储账户，左上角一键切换</p>
+    <div class="card"><h3>${ic('bucket')}存储账户</h3><p class="desc">绑定多个对象存储账户，左下角一键切换</p>
       <div id="acctList"></div>
       <button class="btn btn-primary" id="btnAddAcct" style="margin-top:12px">＋ 添加账户</button>
     </div>
@@ -927,7 +927,7 @@ function renderWizard() {
   } else {
     const names = (wiz.createdNames && wiz.createdNames.length ? wiz.createdNames : []).map(esc).join('、');
     body += `<div class="empty"><div class="big">${ic('checkCircle', 56)}</div><h3>添加成功！</h3>
-      <p class="muted">${names ? `已添加：${names}<br>` : ''}去左上角切换到新账户，开始管理你的对象存储吧</p></div>
+      <p class="muted">${names ? `已添加：${names}<br>` : ''}去左下角切换到新账户，开始管理你的对象存储吧</p></div>
       <div class="modal-actions"><button class="btn btn-primary" id="wizDone">开始使用</button></div>`;
   }
   $('#wizBody').innerHTML = body;
