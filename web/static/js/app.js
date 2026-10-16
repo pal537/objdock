@@ -253,10 +253,13 @@ function renderShell() {
   const tb = $('#themeBtn');
   const moonSvg = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
   const sunSvg = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>';
+  window.updateThemeBtn = () => {
+    const btn = $('#themeBtn');
+    if (btn) { btn.innerHTML = document.documentElement.dataset.theme === 'dark' ? sunSvg : moonSvg; btn.style.color = 'inherit'; }
+  };
   if (tb) {
-    const updateIcon = () => { tb.innerHTML = document.documentElement.dataset.theme === 'dark' ? sunSvg : moonSvg; tb.style.color = 'inherit'; };
-    updateIcon();
-    tb.onclick = (e) => { e.stopPropagation(); toggleTheme(); updateIcon(); };
+    window.updateThemeBtn();
+    tb.onclick = (e) => { e.stopPropagation(); toggleTheme(); window.updateThemeBtn(); };
   }
   $('#acctCard').onclick = (e) => { e.stopPropagation(); toggleAcctMenu(); };
   document.addEventListener('click', () => { $('#dropdown').hidden = true; });
@@ -954,7 +957,7 @@ async function editText(key, name) {
 function copyObject(srcKey, name, isMove) {
   // 先拿桶列表
   apiGet(`/api/accounts/${state.accountId}/buckets`).then(d => {
-    const buckets = d.buckets || [state.bucket];
+    const buckets = (d.buckets || [state.bucket]).map(b => typeof b === 'string' ? b : (b.name || b.bucket || ''));
     const bOpts = buckets.map(b => `<option value="${esc(b)}" ${b === state.bucket ? 'selected' : ''}>${esc(b)}</option>`).join('');
     const modal = $('#uploadModal'), list = $('#uploadList');
     list.innerHTML = '';
@@ -1295,6 +1298,8 @@ function renderSettingsTab(tab) {
     $('#themeToggle').onchange = (e) => {
       document.documentElement.dataset.theme = e.target.checked ? 'dark' : 'light';
       localStorage.setItem('objdock-theme', e.target.checked ? 'dark' : 'light');
+      // 同步左下角按钮图标
+      if (typeof updateThemeBtn === 'function') updateThemeBtn();
     };
   }
 }
@@ -1338,7 +1343,7 @@ async function loadUserList() {
     const arr = d.users || [];
     if (!arr.length) { box.innerHTML = '<div class="muted">暂无用户</div>'; return; }
     box.innerHTML = arr.map(x => {
-      const dt = new Date(x.createdAt * 1000).toLocaleDateString('zh-CN');
+      const dt = new Date(x.createdAt).toLocaleDateString('zh-CN');
       const tag = x.admin ? '<span style="background:#dbeafe;color:#1d4ed8;font-size:11px;padding:2px 8px;border-radius:10px">管理员</span>' : '';
       const isSelf = x.username === state.user.username;
       return `<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #f1f5f9">
@@ -1530,7 +1535,7 @@ async function loadUploadLinkList() {
     });
     box.querySelectorAll('[data-del-ul]').forEach(b => b.onclick = () => {
       askConfirm('撤销上传链接', '确定撤销这个上传链接吗？', '撤销', async () => {
-        try { await apiDelete(`/api/upload-links/${b.dataset.delUl}`); toast('已撤销'); loadUploadLinkList(); }
+        try { await apiDelete(`/api/upload-links/${b.dataset.delUl}`); toast('已撤销'); loadUploadLinkList(); if (typeof loadSideUlLinks === 'function') loadSideUlLinks(); }
         catch (e) { toast('撤销失败：' + e.message); }
       });
     });
