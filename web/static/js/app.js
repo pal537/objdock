@@ -15,6 +15,8 @@ const state = {
   sort: localStorage.getItem('objdock_sort') || 'time-desc',
   selectMode: false,
   users: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+  copy: '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
+  move: '<path d="M5 9l-3 3 3 3"/><path d="M9 5l3-3 3 3"/><path d="M15 19l-3 3-3-3"/><path d="M19 9l3 3-3 3"/><path d="M2 12h20"/><path d="M12 2v20"/>',
   settings: {},
   statsCache: {},
 };
@@ -226,7 +228,18 @@ function renderShell() {
   document.addEventListener('click', () => { $('#dropdown').hidden = true; });
   updateSwitcherLabel();
 }
+// 深色模式
+function initTheme() {
+  const t = localStorage.getItem('objdock-theme') || 'light';
+  document.documentElement.dataset.theme = t;
+}
+function toggleTheme() {
+  const cur = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+  document.documentElement.dataset.theme = cur;
+  localStorage.setItem('objdock-theme', cur);
+}
 function nav(which) {
+  setTimeout(initDragUpload, 100);
   $$('.nav-item[data-nav]').forEach(el => el.classList.toggle('active', el.dataset.nav === which));
   $('#dropdown').hidden = true;
   if (which === 'dash') renderDash();
@@ -461,6 +474,7 @@ async function renderFiles() {
   selKeys = new Set();
   main.innerHTML = `
     <div class="topbar"><h2>${ic('folder')}全部文件</h2><div class="spacer"></div>
+      <input class="input input-sm" id="searchInput" placeholder="🔍 全桶搜索…" style="width:180px">
       <select class="input input-sm" id="sortSel" title="排序">
         <option value="time-desc">时间 ↓ 新到旧</option>
         <option value="time-asc">时间 ↑ 旧到新</option>
@@ -480,6 +494,7 @@ async function renderFiles() {
       </div>
       <button class="btn btn-sm" id="btnSelect">${ic('check', 15)}选择</button>
       <button class="btn btn-sm" id="btnUpload">${ic('upload', 15)}上传</button>
+      <button class="btn btn-sm" id="btnUpLink" title="生成公开上传链接，别人无需登录可上传文件到此目录">🔗上传链接</button>
       <button class="btn btn-sm" id="btnMkdir">${ic('folderPlus', 15)}新建文件夹</button>
       <button class="btn btn-sm" id="btnRefresh">↻</button>
     </div>
@@ -507,6 +522,17 @@ async function renderFiles() {
     });
   };
   $('#btnRefresh').onclick = () => loadFiles();
+  $('#btnUpLink').onclick = () => openUploadLinkModal();
+  let searchTimer = null;
+  $('#searchInput').addEventListener('input', (e) => {
+    clearTimeout(searchTimer);
+    const q = e.target.value.trim();
+    if (!q) { loadFiles(); return; }
+    searchTimer = setTimeout(() => doSearch(q), 500);
+  });
+  $('#searchInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') { e.target.value = ''; loadFiles(); }
+  });
   $('#btnDlSel').onclick = async () => {
     const keys = [...selKeys].filter(k => !k.endsWith('/'));
     if (!keys.length) { toast('所选没有可下载的文件'); return; }
@@ -809,6 +835,96 @@ function enterFolder(key) {
   state.prefix = key.endsWith('/') ? key : key + '/';
   loadFiles();
 }
+async function downloadFolder(prefix, name) {
+  try {
+    toast(`正在列出「${name}」下的文件…`);
+    const d = await apiGet(`/api/accounts/${state.accountId}/list-all?bucket=${encodeURIComponent(state.bucket)}&prefix=${encodeURIComponent(prefix)}`);
+    const keys = d.keys || [];
+    if (!keys.length) { toast('文件夹是空的'); return; }
+    if (keys.length > 5000) { toast(`文件太多（${keys.length} 个），最多打包 5000 个`); return; }
+    // 复用打包逻辑
+    const modal = $('#uploadModal'), list = $('#uploadList');
+    list.innerHTML = '';
+    modal.querySelector('h3').textContent = '打包下载';
+    $('#uploadModal').hidden = false;
+    const row = document.createElement('div');
+    row.style.cssText = 'padding:12px 0';
+    row.innerHTML = `<div style="margin-bottom:8px">正在打包 ${keys.length} 个文件…</div>
+      <div style="height:8px;background:#e2e8f0;border-radius:4px;overflow:hidden">
+        <div class="ufill" style="height:100%;width:0;background:#3b82f6;transition:width .2s"></div></div>
+      <div class="ust" style="font-size:12px;color:#64748b;margin-top:6px"></div>`;
+    list.appendChild(row);
+    const fill = row.querySelector('.ufill'), st = row.querySelector('.ust');
+    const p = await apiPost(`/api/accounts/${state.accountId}/presign-batch`,
+      { bucket: state.bucket, keys, op: 'download', expires: 600 });
+    const urls = p.urls || {};
+    const zip = new JSZip();
+    let n = 0;
+    for (const key of keys) {
+      const url = urls[key];
+      if (!url) continue;
+      const rel = key.slice(prefix.length) || key.split('/').pop();
+      st.textContent = `下载中：${rel} (${n + 1}/${keys.length})`;
+      const resp = await fetch(url);
+      if (!resp.ok) throw new Error(`下载 ${rel} 失败`);
+      zip.file(rel, await resp.blob());
+      n++;
+      fill.style.width = Math.round(n / keys.length * 100) + '%';
+    }
+    st.textContent = '正在生成 zip…';
+    const blob = await zip.generateAsync({ type: 'blob' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `${name.replace(/\/$/, '')}-${new Date().toISOString().slice(0, 10)}.zip`;
+    document.body.appendChild(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 5000);
+    $('#uploadModal').hidden = true;
+    modal.querySelector('h3').textContent = '上传文件';
+    toast(`已打包下载 ${n} 个文件`);
+  } catch (e) { toast('打包失败：' + e.message); }
+}
+async function editText(key, name) {
+  try {
+    toast('正在加载…');
+    const d = await apiGet(`/api/accounts/${state.accountId}/text?bucket=${encodeURIComponent(state.bucket)}&key=${encodeURIComponent(key)}`);
+    const modal = $('#uploadModal'), list = $('#uploadList');
+    list.innerHTML = '';
+    modal.querySelector('h3').textContent = '编辑 ' + name;
+    const ta = document.createElement('textarea');
+    ta.value = d.content;
+    ta.style.cssText = 'width:100%;height:400px;font-family:monospace;font-size:13px;padding:12px;border:1px solid #e2e8f0;border-radius:8px;box-sizing:border-box;resize:vertical';
+    list.appendChild(ta);
+    const btnRow = document.createElement('div');
+    btnRow.style.cssText = 'margin-top:12px;display:flex;gap:8px;justify-content:flex-end';
+    btnRow.innerHTML = '<button class="btn" id="edCancel">取消</button><button class="btn btn-primary" id="edSave">保存</button>';
+    list.appendChild(btnRow);
+    $('#uploadModal').hidden = false;
+    $('#edCancel').onclick = () => { $('#uploadModal').hidden = true; modal.querySelector('h3').textContent = '上传文件'; };
+    $('#edSave').onclick = async () => {
+      try {
+        await apiPut(`/api/accounts/${state.accountId}/text`, { bucket: state.bucket, key, content: ta.value });
+        toast('已保存');
+        $('#uploadModal').hidden = true;
+        modal.querySelector('h3').textContent = '上传文件';
+        loadFiles();
+      } catch (e) { toast('保存失败：' + e.message); }
+    };
+  } catch (e) { toast('加载失败：' + e.message); }
+}
+function copyObject(srcKey, name, isMove) {
+  askPrompt(isMove ? '移动到' : '复制到', '目标路径（相对于桶根目录，含文件名）', state.prefix + name, async (v) => {
+    v = v.trim().replace(/^\/+/, '');
+    if (!v) return;
+    try {
+      toast(`正在${isMove ? '移动' : '复制'}…`);
+      await apiPost(`/api/accounts/${state.accountId}/copy`, {
+        srcBucket: state.bucket, srcKey, dstBucket: state.bucket, dstKey: v, move: isMove,
+      });
+      toast(isMove ? '移动成功' : '复制成功');
+      loadFiles();
+    } catch (e) { toast('失败：' + e.message); }
+  });
+}
 function deleteSingle(key, name, isFolder) {
   askConfirm('删除', `确定删除「${name}」吗？${isFolder ? '文件夹内的文件也会被删除，' : ''}此操作不可恢复。`, '删除', async () => {
     try {
@@ -996,9 +1112,15 @@ document.addEventListener('contextmenu', (e) => {
   if (!isFolder) {
     items.push({ label: '下载', icon: ic('download', 15), fn: () => downloadFile(key, name) });
     items.push({ label: '分享链接', icon: ic('share', 15), fn: () => openShare(key, name) });
+    if (/\.(txt|md|json|js|css|html|xml|yml|yaml|ini|conf|cfg|log|sh|py|go|rs|ts|jsx|tsx)$/i.test(name)) {
+      items.push({ label: '编辑文本', icon: ic('edit', 15), fn: () => editText(key, name) });
+    }
+    items.push({ label: '复制到…', icon: ic('copy', 15), fn: () => copyObject(key, name, false) });
+    items.push({ label: '移动到…', icon: ic('move', 15), fn: () => copyObject(key, name, true) });
     items.push({ label: '重命名', icon: ic('edit', 15), fn: () => renameObject(key, name) });
   } else {
     items.push({ label: '进入', icon: ic('folder', 15), fn: () => enterFolder(key) });
+    items.push({ label: '打包下载 (zip)', icon: ic('download', 15), fn: () => downloadFolder(key, name) });
   }
   items.push({ label: '删除', icon: ic('trash', 15), danger: true, fn: () => deleteSingle(key, name, isFolder) });
   showCtxMenu(e.clientX, e.clientY, items);
@@ -1048,6 +1170,11 @@ function renderSettings() {
     <div class="card" id="userCard" hidden><h3>${ic('users')}用户管理</h3><p class="desc">共 <b id="userTotal">0</b> 个用户（仅管理员可见，不显示密码）</p>
       <div id="userList"><div class="muted">加载中…</div></div>
     </div>
+    <div class="card"><h3>${ic('settings')}外观</h3>
+      <label style="display:flex;gap:8px;align-items:center;cursor:pointer">
+        <input type="checkbox" id="themeToggle" style="width:18px;height:18px"> 深色模式
+      </label>
+    </div>
     <div class="card" id="siteCard" hidden><h3>${ic('settings')}站点设置</h3><p class="desc">分享链接用的公开地址（仅管理员可见）</p>
       <label class="fld"><span>站点地址</span>
         <div style="display:flex;gap:8px">
@@ -1059,6 +1186,11 @@ function renderSettings() {
   $('#btnAddAcct').onclick = () => openWizard();
   loadAcctList();
   loadShareList();
+  $('#themeToggle').checked = document.documentElement.dataset.theme === 'dark';
+  $('#themeToggle').onchange = (e) => {
+    document.documentElement.dataset.theme = e.target.checked ? 'dark' : 'light';
+    localStorage.setItem('objdock-theme', e.target.checked ? 'dark' : 'light');
+  };
   if (state.user.admin) {
     $('#regCard').hidden = false;
     $('#siteCard').hidden = false;
@@ -1140,6 +1272,77 @@ async function loadUserList() {
       });
     });
   } catch (e) { box.innerHTML = '<div class="muted">加载失败</div>'; }
+}
+// 拖拽上传
+function initDragUpload() {
+  const zone = $('#main');
+  if (!zone || zone.dataset.dragInit) return;
+  zone.dataset.dragInit = '1';
+  let overlay = null;
+  const showOverlay = () => {
+    if (overlay) return;
+    overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(59,130,246,.12);border:3px dashed #3b82f6;z-index:9999;display:flex;align-items:center;justify-content:center;pointer-events:none;margin:12px;border-radius:16px';
+    overlay.innerHTML = '<div style="background:#fff;padding:20px 36px;border-radius:14px;font-size:18px;color:#3b82f6;box-shadow:0 8px 30px rgba(0,0,0,.15)">松开以上传文件</div>';
+    document.body.appendChild(overlay);
+  };
+  const hideOverlay = () => { if (overlay) { overlay.remove(); overlay = null; } };
+  let counter = 0;
+  zone.addEventListener('dragenter', (e) => {
+    if (!e.dataTransfer.types.includes('Files')) return;
+    if (!state.accountId || state.view !== 'files') return;
+    e.preventDefault(); counter++; showOverlay();
+  });
+  zone.addEventListener('dragover', (e) => { e.preventDefault(); });
+  zone.addEventListener('dragleave', (e) => { counter--; if (counter <= 0) { counter = 0; hideOverlay(); } });
+  zone.addEventListener('drop', (e) => {
+    counter = 0; hideOverlay();
+    if (!e.dataTransfer.types.includes('Files')) return;
+    if (!state.accountId || state.view !== 'files') return;
+    e.preventDefault();
+    const files = [...e.dataTransfer.files];
+    if (files.length) uploadFiles(files);
+  });
+}
+async function doSearch(q) {
+  const body = $('#fileBody');
+  body.innerHTML = '<div class="empty">搜索中…</div>';
+  try {
+    const d = await apiGet(`/api/accounts/${state.accountId}/search?bucket=${encodeURIComponent(state.bucket)}&q=${encodeURIComponent(q)}`);
+    const results = d.results || [];
+    if (!results.length) {
+      body.innerHTML = `<div class="empty">没有找到包含 “${esc(q)}” 的文件（扫描了 ${d.scanned} 个）</div>`;
+      return;
+    }
+    // 用列表模式显示搜索结果
+    body.innerHTML = `<div class="muted" style="padding:8px 4px">找到 ${results.length} 个结果${d.truncated ? '（只显示前 100 个）' : ''}，扫描了 ${d.scanned} 个文件</div>` +
+      results.map(r => `
+      <div class="frow" data-key="${esc(r.key)}" data-name="${esc(r.name)}" data-kind="file">
+        <span class="fname">${ic('file', 16)} ${esc(r.name)}</span>
+        <span class="fmeta">${fmtSize(r.size)}</span>
+        <span class="fpath muted" style="font-size:12px">${esc(r.key)}</span>
+      </div>`).join('');
+    // 搜索结果行点击预览
+    body.querySelectorAll('.frow').forEach(el => {
+      el.style.cursor = 'pointer';
+      el.onclick = () => openPreview(el.dataset.key, el.dataset.name, 'file');
+    });
+  } catch (e) {
+    body.innerHTML = `<div class="empty">搜索失败：${esc(e.message)}</div>`;
+  }
+}
+function openUploadLinkModal() {
+  askPrompt('创建上传链接', `文件将上传到当前目录：${state.prefix || '根目录'}\n有效期`, '7', async (v) => {
+    const days = parseInt(v, 10) || 7;
+    try {
+      const p = await apiPost(`/api/accounts/${state.accountId}/upload-link`, {
+        bucket: state.bucket, prefix: state.prefix, expires: days * 86400,
+      });
+      await navigator.clipboard.writeText(p.url);
+      toast('上传链接已复制：' + p.url);
+      prompt('上传链接（已复制）', p.url);
+    } catch (e) { toast('创建失败：' + e.message); }
+  });
 }
 async function refreshAccounts() {
   try {
@@ -1423,6 +1626,7 @@ function renderProfile() {
 
 /* ---------- boot ---------- */
 async function boot() {
+  initTheme();
   try {
     const me = await apiGet('/api/me');
     state.user = me;

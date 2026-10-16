@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/base64"
+	"io"
 	"net/http"
 
 	"github.com/pal537/objdock/internal/auth"
@@ -268,6 +269,451 @@ func (s *Server) handleDeleteShare(w http.ResponseWriter, r *http.Request) {
 	if err := s.DB.DeleteShare(r.PathValue("token"), u.ID); err != nil {
 		writeErr(w, http.StatusInternalServerError, "delete failed")
 		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+}
+
+// GET /api/accounts/{id}/list-all?bucket=&prefix= — list all keys under prefix recursively.
+func (s *Server) handleListAll(w http.ResponseWriter, r *http.Request) {
+	u := s.currentUser(r)
+	id, _ := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	a, err := s.DB.AccountByID(id, u.ID)
+	if err != nil {
+		writeErr(w, http.StatusNotFound, "account not found")
+		return
+	}
+	bucket := r.URL.Query().Get("bucket")
+	prefix := r.URL.Query().Get("prefix")
+	if bucket == "" {
+		writeErr(w, http.StatusBadRequest, "bucket is required")
+		return
+	}
+	client, err := s.s3Client(a)
+	if err != nil {
+		writeErr(w, http.StatusBadGateway, err.Error())
+		return
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), 60*time.Second)
+	defer cancel()
+	var keys []string
+	token := ""
+	for {
+		page, err := client.ListPrefixPage(ctx, bucket, prefix, token)
+		if err != nil {
+			writeErr(w, http.StatusBadGateway, err.Error())
+			return
+		}
+		for _, o := range page.Objects {
+			if !strings.HasSuffix(o.Key, "/") {
+				keys = append(keys, o.Key)
+			}
+		}
+		if page.NextToken == "" || len(keys) >= 5000 {
+			break
+		}
+		token = page.NextToken
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"keys": keys, "total": len(keys)})
+}
+
+// GET /api/accounts/{id}/search?bucket=&q= — search keys containing q (max 5000 scanned).
+func (s *Server) handleSearch(w http.ResponseWriter, r *http.Request) {
+	u := s.currentUser(r)
+	id, _ := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	a, err := s.DB.AccountByID(id, u.ID)
+	if err != nil {
+		writeErr(w, http.StatusNotFound, "account not found")
+		return
+	}
+	bucket := r.URL.Query().Get("bucket")
+	q := strings.ToLower(r.URL.Query().Get("q"))
+	if bucket == "" || q == "" {
+		writeErr(w, http.StatusBadRequest, "bucket and q are required")
+		return
+	}
+	client, err := s.s3Client(a)
+	if err != nil {
+		writeErr(w, http.StatusBadGateway, err.Error())
+		return
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), 60*time.Second)
+	defer cancel()
+	var matches []map[string]any
+	token := ""
+	scanned := 0
+	for {
+		page, err := client.ListPrefixPage(ctx, bucket, "", token)
+		if err != nil {
+			writeErr(w, http.StatusBadGateway, err.Error())
+			return
+		}
+		for _, o := range page.Objects {
+			scanned++
+			if strings.HasSuffix(o.Key, "/") {
+				continue
+			}
+			if strings.Contains(strings.ToLower(o.Key), q) {
+				matches = append(matches, map[string]any{
+					"key": o.Key, "name": o.Key[strings.LastIndex(o.Key, "/")+1:],
+					"size": o.Size, "lastModified": o.LastModified.Unix(),
+				})
+				if len(matches) >= 100 {
+					break
+				}
+			}
+		}
+		if page.NextToken == "" || scanned >= 5000 || len(matches) >= 100 {
+			break
+		}
+		token = page.NextToken
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"results": matches, "scanned": scanned, "truncated": len(matches) >= 100})
+}
+
+// POST /api/accounts/{id}/upload-link {bucket, prefix, password, maxUses, expires} — create reverse share.
+func (s *Server) handleCreateUploadLink(w http.ResponseWriter, r *http.Request) {
+	u := s.currentUser(r)
+	id, _ := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	a, err := s.DB.AccountByID(id, u.ID)
+	if err != nil {
+		writeErr(w, http.StatusNotFound, "account not found")
+		return
+	}
+	var in struct {
+		Bucket   string `json:"bucket"`
+		Prefix   string `json:"prefix"`
+		Password string `json:"password"`
+		MaxUses  int64  `json:"maxUses"`
+		Expires  int    `json:"expires"`
+	}
+	if err := decodeJSON(r, &in); err != nil || in.Bucket == "" {
+		writeErr(w, http.StatusBadRequest, "bucket is required")
+		return
+	}
+	exp := in.Expires
+	if exp <= 0 || exp > 30*24*3600 {
+		exp = 7 * 24 * 3600
+	}
+	tok := make([]byte, 9)
+	if _, err := rand.Read(tok); err != nil {
+		writeErr(w, http.StatusInternalServerError, "cannot generate token")
+		return
+	}
+	token := base64.RawURLEncoding.EncodeToString(tok)[:12]
+	pwHash := ""
+	if in.Password != "" {
+		h, err := auth.HashPassword(in.Password)
+		if err != nil {
+			writeErr(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		pwHash = h
+	}
+	prefix := strings.Trim(in.Prefix, "/")
+	if prefix != "" {
+		prefix += "/"
+	}
+	now := time.Now().Unix()
+	ul := &db.UploadLink{
+		Token: token, UserID: u.ID, AccountID: a.ID, Bucket: in.Bucket, Prefix: prefix,
+		PasswordHash: pwHash, MaxUses: in.MaxUses, ExpiresAt: now + int64(exp), CreatedAt: now,
+	}
+	if err := s.DB.CreateUploadLink(ul); err != nil {
+		writeErr(w, http.StatusInternalServerError, "cannot create link")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"url": s.siteBaseURL(r) + "/u/" + token})
+}
+
+// GET /u/{token} — public upload page.
+func (s *Server) handleUploadPage(w http.ResponseWriter, r *http.Request) {
+	token := r.PathValue("token")
+	ul, err := s.DB.UploadLinkByToken(token)
+	if err != nil || time.Now().Unix() > ul.ExpiresAt {
+		http.NotFound(w, r)
+		return
+	}
+	if ul.MaxUses > 0 && ul.UseCount >= ul.MaxUses {
+		http.Error(w, "link expired", http.StatusGone)
+		return
+	}
+	needPw := ul.PasswordHash != ""
+	authed := false
+	if needPw {
+		if c, _ := r.Cookie("ul_auth_"+token); c != nil && c.Value == "1" {
+			authed = true
+		}
+	} else {
+		authed = true
+	}
+	if r.Method == "POST" && needPw && !authed {
+		r.ParseForm()
+		if auth.VerifyPassword(r.Form.Get("password"), ul.PasswordHash) {
+			http.SetCookie(w, &http.Cookie{Name: "ul_auth_" + token, Value: "1", Path: "/u/" + token, MaxAge: 3600, HttpOnly: true, SameSite: http.SameSiteLaxMode})
+			authed = true
+		} else {
+			s.renderUploadPage(w, token, true)
+			return
+		}
+	}
+	if !authed {
+		s.renderUploadPage(w, token, false)
+		return
+	}
+	s.renderUploadPage(w, token, false)
+}
+
+func (s *Server) renderUploadPage(w http.ResponseWriter, token string, pwFailed bool) {
+	ul, _ := s.DB.UploadLinkByToken(token)
+	needPw := ul != nil && ul.PasswordHash != ""
+	authed := false
+	if needPw {
+		// checked by caller via cookie; here just render form state
+	} else {
+		authed = true
+	}
+	_ = authed
+	msg := ""
+	if pwFailed {
+		msg = "<p style='color:#dc2626'>密码错误</p>"
+	}
+	pwForm := ""
+	if needPw {
+		// Simple: always show password form if needed; JS checks auth via presign call
+		pwForm = `<div id="pwWrap"><p style="color:#64748b">此上传链接受密码保护</p>` + msg + `
+		<input type="password" id="upPw" placeholder="输入密码" style="width:100%;padding:12px;border:1px solid #e2e8f0;border-radius:10px;box-sizing:border-box">
+		<button onclick="unlockUpload()" style="width:100%;margin-top:10px;padding:12px;background:#3b82f6;color:#fff;border:none;border-radius:10px;cursor:pointer">解锁</button></div>
+		<div id="upWrap" hidden>`
+	} else {
+		pwForm = `<div id="upWrap">`
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Write([]byte(`<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>上传文件 - ObjDock</title></head>
+<body style="font-family:system-ui;background:#f1f5f9;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0">
+<div style="background:#fff;padding:32px;border-radius:16px;box-shadow:0 4px 20px rgba(0,0,0,.1);max-width:480px;width:92%;box-sizing:border-box">
+<h2 style="margin:0 0 8px">📤 上传文件</h2>
+<p class="muted" style="color:#64748b;font-size:14px">选择文件上传，无需登录</p>` + pwForm + `
+<input type="file" id="upFiles" multiple style="margin:12px 0">
+<div id="upList" style="margin:12px 0"></div>
+<button onclick="doUpload()" style="width:100%;padding:12px;background:#3b82f6;color:#fff;border:none;border-radius:10px;font-size:15px;cursor:pointer">开始上传</button>
+</div>
+<script>
+const token = "` + token + `";
+async function unlockUpload() {
+  const pw = document.getElementById('upPw').value;
+  const r = await fetch('/u/' + token, {method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'}, body: 'password=' + encodeURIComponent(pw)});
+  if (r.ok) { document.getElementById('pwWrap').hidden = true; document.getElementById('upWrap').hidden = false; }
+  else location.reload();
+}
+async function doUpload() {
+  const files = document.getElementById('upFiles').files;
+  if (!files.length) return alert('请选择文件');
+  const list = document.getElementById('upList');
+  list.innerHTML = '';
+  for (const f of files) {
+    const div = document.createElement('div');
+    div.textContent = f.name + ' 上传中…';
+    list.appendChild(div);
+    try {
+      const r = await fetch('/api/upload-token/' + token + '/presign?key=' + encodeURIComponent(f.name));
+      if (!r.ok) throw new Error('获取上传地址失败');
+      const {url} = await r.json();
+      const up = await fetch(url, {method: 'PUT', body: f});
+      if (!up.ok) throw new Error('HTTP ' + up.status);
+      div.textContent = '✅ ' + f.name;
+    } catch (e) { div.textContent = '❌ ' + f.name + ': ' + e.message; }
+  }
+}
+</script></body></html>`))
+}
+
+// GET /api/upload-token/{token}/presign?key= — public presigned upload URL.
+func (s *Server) handleUploadTokenPresign(w http.ResponseWriter, r *http.Request) {
+	token := r.PathValue("token")
+	ul, err := s.DB.UploadLinkByToken(token)
+	if err != nil || time.Now().Unix() > ul.ExpiresAt {
+		writeErr(w, http.StatusNotFound, "link not found")
+		return
+	}
+	if ul.MaxUses > 0 && ul.UseCount >= ul.MaxUses {
+		writeErr(w, http.StatusGone, "link expired")
+		return
+	}
+	if ul.PasswordHash != "" {
+		if c, _ := r.Cookie("ul_auth_"+token); c == nil || c.Value != "1" {
+			writeErr(w, http.StatusUnauthorized, "password required")
+			return
+		}
+	}
+	key := r.URL.Query().Get("key")
+	if key == "" || strings.Contains(key, "..") {
+		writeErr(w, http.StatusBadRequest, "invalid key")
+		return
+	}
+	fullKey := ul.Prefix + key[strings.LastIndex(key, "/")+1:]
+	a, err := s.DB.AccountByID(ul.AccountID, ul.UserID)
+	if err != nil {
+		writeErr(w, http.StatusBadGateway, "account unavailable")
+		return
+	}
+	client, err := s.s3Client(a)
+	if err != nil {
+		writeErr(w, http.StatusBadGateway, err.Error())
+		return
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
+	defer cancel()
+	url, err := client.PresignUpload(ctx, ul.Bucket, fullKey, 15*time.Minute)
+	if err != nil {
+		writeErr(w, http.StatusBadGateway, err.Error())
+		return
+	}
+	s.DB.IncrementUploadUse(token)
+	writeJSON(w, http.StatusOK, map[string]any{"url": url})
+}
+
+// GET /api/accounts/{id}/text?bucket=&key= — get text file content (max 1MB).
+func (s *Server) handleGetText(w http.ResponseWriter, r *http.Request) {
+	u := s.currentUser(r)
+	id, _ := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	a, err := s.DB.AccountByID(id, u.ID)
+	if err != nil {
+		writeErr(w, http.StatusNotFound, "account not found")
+		return
+	}
+	bucket := r.URL.Query().Get("bucket")
+	key := r.URL.Query().Get("key")
+	if bucket == "" || key == "" {
+		writeErr(w, http.StatusBadRequest, "bucket and key required")
+		return
+	}
+	client, err := s.s3Client(a)
+	if err != nil {
+		writeErr(w, http.StatusBadGateway, err.Error())
+		return
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
+	defer cancel()
+	// Get object head first to check size
+	url, err := client.PresignDownload(ctx, bucket, key, 60*time.Second, false)
+	if err != nil {
+		writeErr(w, http.StatusBadGateway, err.Error())
+		return
+	}
+	// Fetch via presigned URL (server-side, max 1MB)
+	req, _ := http.NewRequestWithContext(ctx, "GET", url, nil)
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		writeErr(w, http.StatusBadGateway, err.Error())
+		return
+	}
+	defer resp.Body.Close()
+	if resp.ContentLength > 1024*1024 {
+		writeErr(w, http.StatusBadRequest, "file too large (max 1MB)")
+		return
+	}
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 1024*1024+1))
+	if err != nil || int64(len(body)) > 1024*1024 {
+		writeErr(w, http.StatusBadRequest, "file too large (max 1MB)")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"content": string(body)})
+}
+
+// PUT /api/accounts/{id}/text {bucket, key, content} — save text file.
+func (s *Server) handlePutText(w http.ResponseWriter, r *http.Request) {
+	u := s.currentUser(r)
+	id, _ := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	a, err := s.DB.AccountByID(id, u.ID)
+	if err != nil {
+		writeErr(w, http.StatusNotFound, "account not found")
+		return
+	}
+	var in struct {
+		Bucket  string `json:"bucket"`
+		Key     string `json:"key"`
+		Content string `json:"content"`
+	}
+	if err := decodeJSON(r, &in); err != nil || in.Bucket == "" || in.Key == "" {
+		writeErr(w, http.StatusBadRequest, "bucket, key, content required")
+		return
+	}
+	if len(in.Content) > 1024*1024 {
+		writeErr(w, http.StatusBadRequest, "content too large (max 1MB)")
+		return
+	}
+	client, err := s.s3Client(a)
+	if err != nil {
+		writeErr(w, http.StatusBadGateway, err.Error())
+		return
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
+	defer cancel()
+	url, err := client.PresignUpload(ctx, in.Bucket, in.Key, 5*time.Minute)
+	if err != nil {
+		writeErr(w, http.StatusBadGateway, err.Error())
+		return
+	}
+	req, _ := http.NewRequestWithContext(ctx, "PUT", url, strings.NewReader(in.Content))
+	req.Header.Set("Content-Type", "text/plain; charset=utf-8")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		writeErr(w, http.StatusBadGateway, err.Error())
+		return
+	}
+	resp.Body.Close()
+	if resp.StatusCode >= 300 {
+		writeErr(w, http.StatusBadGateway, "upload failed")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+}
+
+// POST /api/accounts/{id}/copy {srcBucket, srcKey, dstBucket, dstKey, move} — cross-bucket copy/move.
+func (s *Server) handleCopy(w http.ResponseWriter, r *http.Request) {
+	u := s.currentUser(r)
+	id, _ := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	a, err := s.DB.AccountByID(id, u.ID)
+	if err != nil {
+		writeErr(w, http.StatusNotFound, "account not found")
+		return
+	}
+	var in struct {
+		SrcBucket string `json:"srcBucket"`
+		SrcKey    string `json:"srcKey"`
+		DstBucket string `json:"dstBucket"`
+		DstKey    string `json:"dstKey"`
+		Move      bool   `json:"move"`
+	}
+	if err := decodeJSON(r, &in); err != nil || in.SrcBucket == "" || in.SrcKey == "" || in.DstBucket == "" || in.DstKey == "" {
+		writeErr(w, http.StatusBadRequest, "all fields required")
+		return
+	}
+	if strings.Contains(in.DstKey, "..") {
+		writeErr(w, http.StatusBadRequest, "invalid dst key")
+		return
+	}
+	client, err := s.s3Client(a)
+	if err != nil {
+		writeErr(w, http.StatusBadGateway, err.Error())
+		return
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), 60*time.Second)
+	defer cancel()
+	if err := client.CopyObjectCrossBucket(ctx, in.SrcBucket, in.SrcKey, in.DstBucket, in.DstKey); err != nil {
+		writeErr(w, http.StatusBadGateway, err.Error())
+		return
+	}
+	if in.Move {
+		// Delete source after successful copy
+		delCtx, delCancel := context.WithTimeout(r.Context(), 30*time.Second)
+		defer delCancel()
+		if err := client.DeleteObjects(delCtx, in.SrcBucket, []string{in.SrcKey}); err != nil {
+			// Copy succeeded but delete failed — report partial
+			writeJSON(w, http.StatusOK, map[string]any{"ok": true, "warning": "copied but failed to delete source"})
+			return
+		}
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
 }

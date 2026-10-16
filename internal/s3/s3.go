@@ -129,9 +129,17 @@ type ObjectPage struct {
 // ListAllPage lists objects recursively (no delimiter), one page at a time.
 // Used by the dashboard to scan the whole bucket.
 func (c *Client) ListAllPage(ctx context.Context, bucket, contToken string) (ObjectPage, error) {
+	return c.ListPrefixPage(ctx, bucket, "", contToken)
+}
+
+// ListPrefixPage lists objects under prefix recursively, one page at a time.
+func (c *Client) ListPrefixPage(ctx context.Context, bucket, prefix, contToken string) (ObjectPage, error) {
 	in := &s3sdk.ListObjectsV2Input{
 		Bucket:  aws.String(bucket),
 		MaxKeys: aws.Int32(1000),
+	}
+	if prefix != "" {
+		in.Prefix = aws.String(prefix)
 	}
 	if contToken != "" {
 		in.ContinuationToken = aws.String(contToken)
@@ -219,6 +227,19 @@ func (c *Client) CopyObject(ctx context.Context, bucket, srcKey, dstKey string) 
 	})
 	if err != nil {
 		return fmt.Errorf("copy object: %w", err)
+	}
+	return nil
+}
+
+// CopyObjectCrossBucket copies key from srcBucket to dstBucket (same endpoint/account).
+func (c *Client) CopyObjectCrossBucket(ctx context.Context, srcBucket, srcKey, dstBucket, dstKey string) error {
+	_, err := c.api.CopyObject(ctx, &s3sdk.CopyObjectInput{
+		Bucket:     aws.String(dstBucket),
+		Key:        aws.String(dstKey),
+		CopySource: aws.String(srcBucket + "/" + srcKey),
+	})
+	if err != nil {
+		return fmt.Errorf("copy object cross-bucket: %w", err)
 	}
 	return nil
 }

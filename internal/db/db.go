@@ -79,6 +79,18 @@ func (d *DB) migrate() error {
 			key TEXT NOT NULL,
 			expires_at INTEGER NOT NULL
 		)`,
+		`CREATE TABLE IF NOT EXISTS upload_links (
+			token TEXT PRIMARY KEY,
+			user_id INTEGER NOT NULL,
+			account_id INTEGER NOT NULL,
+			bucket TEXT NOT NULL,
+			prefix TEXT NOT NULL DEFAULT '',
+			password_hash TEXT NOT NULL DEFAULT '',
+			max_uses INTEGER NOT NULL DEFAULT 0,
+			use_count INTEGER NOT NULL DEFAULT 0,
+			expires_at INTEGER NOT NULL,
+			created_at INTEGER NOT NULL
+		)`,
 		`CREATE TABLE IF NOT EXISTS stats (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
@@ -431,6 +443,67 @@ func (d *DB) IncrementShareView(token string) error {
 
 func (d *DB) DeleteShare(token string, userID int64) error {
 	_, err := d.Exec(`DELETE FROM shares WHERE token=? AND user_id=?`, token, userID)
+	return err
+}
+
+// UploadLink is a public link that lets anyone upload files to a prefix.
+type UploadLink struct {
+	Token        string
+	UserID       int64
+	AccountID    int64
+	Bucket       string
+	Prefix       string
+	PasswordHash string
+	MaxUses      int64
+	UseCount     int64
+	ExpiresAt    int64
+	CreatedAt    int64
+}
+
+func (d *DB) CreateUploadLink(ul *UploadLink) error {
+	_, err := d.Exec(`INSERT INTO upload_links(token, user_id, account_id, bucket, prefix, password_hash, max_uses, use_count, expires_at, created_at)
+		VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		ul.Token, ul.UserID, ul.AccountID, ul.Bucket, ul.Prefix, ul.PasswordHash, ul.MaxUses, ul.UseCount, ul.ExpiresAt, ul.CreatedAt)
+	return err
+}
+
+func (d *DB) UploadLinkByToken(token string) (*UploadLink, error) {
+	ul := &UploadLink{}
+	err := d.QueryRow(`SELECT token, user_id, account_id, bucket, prefix, password_hash, max_uses, use_count, expires_at, created_at
+		FROM upload_links WHERE token=?`, token).Scan(
+		&ul.Token, &ul.UserID, &ul.AccountID, &ul.Bucket, &ul.Prefix, &ul.PasswordHash, &ul.MaxUses, &ul.UseCount, &ul.ExpiresAt, &ul.CreatedAt)
+	if err != nil {
+		return nil, err
+	}
+	return ul, nil
+}
+
+func (d *DB) UploadLinksByUser(userID int64) ([]*UploadLink, error) {
+	rows, err := d.Query(`SELECT token, user_id, account_id, bucket, prefix, password_hash, max_uses, use_count, expires_at, created_at
+		FROM upload_links WHERE user_id=? ORDER BY created_at DESC`, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []*UploadLink
+	for rows.Next() {
+		ul := &UploadLink{}
+		if err := rows.Scan(&ul.Token, &ul.UserID, &ul.AccountID, &ul.Bucket, &ul.Prefix,
+			&ul.PasswordHash, &ul.MaxUses, &ul.UseCount, &ul.ExpiresAt, &ul.CreatedAt); err != nil {
+			return nil, err
+		}
+		out = append(out, ul)
+	}
+	return out, rows.Err()
+}
+
+func (d *DB) DeleteUploadLink(token string, userID int64) error {
+	_, err := d.Exec(`DELETE FROM upload_links WHERE token=? AND user_id=?`, token, userID)
+	return err
+}
+
+func (d *DB) IncrementUploadUse(token string) error {
+	_, err := d.Exec(`UPDATE upload_links SET use_count = use_count + 1 WHERE token=?`, token)
 	return err
 }
 
