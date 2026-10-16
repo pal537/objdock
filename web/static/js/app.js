@@ -701,7 +701,7 @@ async function loadFiles() {
   try {
     const d = await apiGet(`/api/accounts/${state.accountId}/objects?bucket=${encodeURIComponent(state.bucket)}&prefix=${encodeURIComponent(state.prefix)}`);
     renderFileList(d);
-    loadSideFolders(d);
+    loadSideFolders(); // 侧边栏固定显示根目录，不跟随当前路径
   } catch (e) { body.innerHTML = `<div class="empty">加载失败：${esc(e.message)}</div>`; }
 }
 function sortFiles(files) {
@@ -1629,7 +1629,7 @@ async function ulFileDownload(idx) {
   const { ul, keys } = window._ulView;
   const k = keys[idx];
   try {
-    const d = await apiGet(`/api/accounts/${ul.accountId}/download?bucket=${encodeURIComponent(ul.bucket)}&key=${encodeURIComponent(k)}`);
+    const d = await apiGet(`/api/accounts/${ul.accountId}/presign?bucket=${encodeURIComponent(ul.bucket)}&key=${encodeURIComponent(k)}&op=download&expires=600`);
     window.open(d.url, '_blank');
   } catch (e) { toast('下载失败：' + e.message); }
 }
@@ -1638,7 +1638,7 @@ async function ulFileDelete(idx) {
   const k = keys[idx];
   if (!confirm(`删除 ${k.split('/').pop()}？`)) return;
   try {
-    await apiDelete(`/api/accounts/${ul.accountId}/objects?bucket=${encodeURIComponent(ul.bucket)}&key=${encodeURIComponent(k)}`);
+    await apiPost(`/api/accounts/${ul.accountId}/delete`, { bucket: ul.bucket, keys: [k] });
     toast('已删除');
     // 从记录中删除
     keys.splice(idx, 1);
