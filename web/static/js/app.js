@@ -836,7 +836,7 @@ $('#filePicker').addEventListener('change', async (e) => {
           }
         };
         xhr.onload = () => (xhr.status >= 200 && xhr.status < 300) ? resolve() : reject(new Error('HTTP ' + xhr.status));
-        xhr.onerror = () => reject(new Error('网络错误（检查存储桶 CORS 配置）'));
+        xhr.onerror = () => reject(new Error('CORS_FAIL'));
         xhr.send(r.f);
       });
       r.fill.style.width = '100%';
@@ -848,13 +848,17 @@ $('#filePicker').addEventListener('change', async (e) => {
       r.fill.style.background = '#ef4444';
       r.st.textContent = '失败';
       r.st.style.color = '#dc2626';
-      r.st.title = err.message;
+      if (err.message === 'CORS_FAIL') {
+        r.st.title = '浏览器直传被拦截：去存储桶设置里配置 CORS，允许来源为本网站域名，允许方法 GET/PUT/HEAD，允许标头 *';
+      } else {
+        r.st.title = err.message;
+      }
       failed++;
     }
   }
   const sum = document.createElement('div');
   sum.style.cssText = 'padding:12px 0 0;font-weight:600';
-  sum.textContent = failed ? `完成：${done} 成功，${failed} 失败（悬停"失败"看原因）` : `全部上传成功（${done} 个文件）`;
+  sum.textContent = failed ? `完成：${done} 成功，${failed} 失败（悬停"失败"看原因；如为 CORS 问题请去桶设置配 CORS）` : `全部上传成功（${done} 个文件）`;
   list.appendChild(sum);
   delete state.statsCache[state.accountId + '/' + state.bucket];
   if ($('.nav-item.active')?.dataset.nav === 'files') loadFiles();
