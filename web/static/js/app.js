@@ -233,12 +233,12 @@ function renderShell() {
         <div class="logo-ic">${ic('anchor')}</div>
         <div><div class="t">ObjDock</div><div class="s">对象存储管理</div></div>
       </div>
-      <div class="nav-item active" data-nav="dash">${ic('dash')}<span>仪表盘</span></div>
-      <div class="nav-item" data-nav="files">${ic('folder')}<span>全部文件</span></div>
-      <div class="nav-sec">文件夹</div>
+      <div class="nav-item active" data-nav="dash">${ic('dash')}<span>${t('nav.dashboard')}</span></div>
+      <div class="nav-item" data-nav="files">${ic('folder')}<span>${t('nav.files')}</span></div>
+      <div class="nav-sec">${t('nav.folders')}</div>
       <div id="sideFolders"></div>
       <div class="nav-sec" style="display:flex;align-items:center;justify-content:space-between">
-        <span>上传链接</span><span id="ulCount" style="font-size:11px;opacity:.6"></span>
+        <span>${t('nav.uploadLinks')}</span><span id="ulCount" style="font-size:11px;opacity:.6"></span>
       </div>
       <div id="sideUlLinks"></div>
       <div class="side-foot">
@@ -335,7 +335,7 @@ function toggleSwitcher() {
 async function toggleSwitcherRefreshBuckets() {
   const box = $('#ddBuckets');
   if (!box) return;
-  box.innerHTML = '<div class="di muted">加载中…</div>';
+  box.innerHTML = '<div class="di muted">' + t('common.loading') + '</div>';
   try {
     const d = await apiGet(`/api/accounts/${state.accountId}/buckets`);
     const cur = state.accounts.find(x => x.id === state.accountId);
@@ -572,25 +572,25 @@ async function renderFiles() {
         <button data-sz="large" class="${state.thumbSize === 'large' ? 'active' : ''}">大</button>
       </div>
       <div class="view-toggle">
-        <button id="vGrid" class="${state.view === 'grid' ? 'active' : ''}">${ic('grid', 15)}缩略图</button>
-        <button id="vList" class="${state.view === 'list' ? 'active' : ''}">${ic('list', 15)}列表</button>
+        <button id="vGrid" class="${state.view === 'grid' ? 'active' : ''}">${ic('grid', 15)}${t('view.grid')}</button>
+        <button id="vList" class="${state.view === 'list' ? 'active' : ''}">${ic('list', 15)}${t('view.list')}</button>
       </div>
-      <button class="btn btn-sm" id="btnSelect">${ic('check', 15)}选择</button>
-      <button class="btn btn-sm" id="btnUpload">${ic('upload', 15)}上传</button>
-      <button class="btn btn-sm" id="btnUpLink" title="生成公开上传链接，别人无需登录可上传文件到此目录">🔗上传链接</button>
+      <button class="btn btn-sm" id="btnSelect">${ic('check', 15)}${t('common.select')}</button>
+      <button class="btn btn-sm" id="btnUpload">${ic('upload', 15)}${t('common.upload')}</button>
+      <button class="btn btn-sm" id="btnUpLink" title="生成公开上传链接，别人无需登录可上传文件到此目录">${t('nav.uploadLinks')}</button>
       <button class="btn btn-sm" id="btnMkdir">${ic('folderPlus', 15)}新建文件夹</button>
       <button class="btn btn-sm" id="btnRefresh">↻</button>
     </div>
     <div class="crumbs" id="crumbs"></div>
     <div class="toolbar" id="selBar" hidden>
       <span id="selCount"></span>
-      <button class="btn btn-sm" id="btnSelAll">全选</button>
-      <button class="btn btn-sm" id="btnDlSel">${ic('download', 15)}下载所选</button>
-      <button class="btn btn-sm" id="btnShareSel">${ic('share', 15)}分享所选</button>
-      <button class="btn btn-sm" id="btnDelSel">${ic('trash', 15)}删除所选</button>
-      <button class="btn btn-sm" id="btnClearSel">退出选择</button>
+      <button class="btn btn-sm" id="btnSelAll">${t('file.selectAll')}</button>
+      <button class="btn btn-sm" id="btnDlSel">${ic('download', 15)}${t('file.downloadSelected')}</button>
+      <button class="btn btn-sm" id="btnShareSel">${ic('share', 15)}${t('file.shareSelected')}</button>
+      <button class="btn btn-sm" id="btnDelSel">${ic('trash', 15)}${t('file.deleteSelected')}</button>
+      <button class="btn btn-sm" id="btnClearSel">${t('file.exitSelect')}</button>
     </div>
-    <div id="fileBody"><div class="empty">加载中…</div></div>`;
+    <div id="fileBody"><div class="empty">${t('common.loading')}</div></div>`;
   $('#vGrid').onclick = () => setView('grid');
   $('#vList').onclick = () => setView('list');
   $('#btnUpload').onclick = () => $('#filePicker').click();
@@ -929,7 +929,7 @@ async function downloadFolder(prefix, name) {
     toast(`正在列出「${name}」下的文件…`);
     const d = await apiGet(`/api/accounts/${state.accountId}/list-all?bucket=${encodeURIComponent(state.bucket)}&prefix=${encodeURIComponent(prefix)}`);
     const keys = d.keys || [];
-    if (!keys.length) { toast('文件夹是空的'); return; }
+    if (!keys.length) { toast(t('file.folderEmpty')); return; }
     if (keys.length > 5000) { toast(`文件太多（${keys.length} 个），最多打包 5000 个`); return; }
     // 复用打包逻辑
     const modal = $('#uploadModal'), list = $('#uploadList');
@@ -1075,7 +1075,7 @@ let previewKey = '', previewName = '';
 async function openPreview(key, name, kind) {
   previewKey = key; previewName = name;
   $('#previewTitle').textContent = name;
-  $('#previewBody').innerHTML = '<div class="muted">加载中…</div>';
+  $('#previewBody').innerHTML = '<div class="muted">' + t('common.loading') + '</div>';
   $('#previewModal').hidden = false;
   try {
     const p = await apiGet(`/api/accounts/${state.accountId}/presign?bucket=${encodeURIComponent(state.bucket)}&key=${encodeURIComponent(key)}&op=preview&expires=3600`);
@@ -1321,10 +1321,10 @@ function renderSettingsTab(tab) {
     $('#btnAddAcct').onclick = () => openWizard();
     loadAcctList();
   } else if (tab === 'share') {
-    c.innerHTML = `<div class="card"><h3>${ic('share')}分享管理</h3><p class="desc">经本站转发的私密分享链接，可撤销</p><div id="shareList"><div class="muted">加载中…</div></div></div>`;
+    c.innerHTML = `<div class="card"><h3>${ic('share')}分享管理</h3><p class="desc">经本站转发的私密分享链接，可撤销</p><div id="shareList"><div class="muted">${t('common.loading')}</div></div></div>`;
     loadShareList();
   } else if (tab === 'upload') {
-    c.innerHTML = `<div class="card"><h3>上传链接管理</h3><p class="desc">别人可通过链接上传文件到你的桶，可撤销</p><div id="uploadLinkList"><div class="muted">加载中…</div></div></div>`;
+    c.innerHTML = `<div class="card"><h3>上传链接管理</h3><p class="desc">别人可通过链接上传文件到你的桶，可撤销</p><div id="uploadLinkList"><div class="muted">${t('common.loading')}</div></div></div>`;
     loadUploadLinkList();
   } else if (tab === 'site' && state.user.admin) {
     c.innerHTML = `<div class="card"><h3>${ic('settings')}站点设置</h3><p class="desc">分享链接用的公开地址（仅管理员可见）</p>
@@ -1350,7 +1350,7 @@ function renderSettingsTab(tab) {
       catch (err) { toast('保存失败：' + err.message); e.target.checked = !e.target.checked; }
     };
   } else if (tab === 'user' && state.user.admin) {
-    c.innerHTML = `<div class="card"><h3>${ic('users')}用户管理</h3><p class="desc">共 <b id="userTotal">0</b> 个用户（仅管理员可见，不显示密码）</p><div id="userList"><div class="muted">加载中…</div></div></div>`;
+    c.innerHTML = `<div class="card"><h3>${ic('users')}用户管理</h3><p class="desc">共 <b id="userTotal">0</b> 个用户（仅管理员可见，不显示密码）</p><div id="userList"><div class="muted">${t('common.loading')}</div></div></div>`;
     loadUserList();
   } else if (tab === 'appearance') {
     const langOpts = Object.keys(LANGS).map(k =>
@@ -1653,7 +1653,7 @@ async function openUlLinkView(i) {
   const main = $('#main');
   main.innerHTML = `<div class="topbar"><h2>${ic('link')} ${esc(ul.name || t('msg.unnamed'))}</h2></div>
     <div style="margin-bottom:12px;font-size:13px;color:var(--muted)">上传链接 · 共 <span id="ulFileCount">0</span> 个文件 · <button class="btn btn-sm" onclick="nav('files')">返回文件</button></div>
-    <div id="ulFileGrid" class="fgrid sz-m"><div class="card" style="grid-column:1/-1;text-align:center;color:var(--muted);padding:30px">加载中…</div></div>`;
+    <div id="ulFileGrid" class="fgrid sz-m"><div class="card" style="grid-column:1/-1;text-align:center;color:var(--muted);padding:30px">${t('common.loading')}</div></div>`;
   try {
     const d = await apiGet(`/api/upload-links/${ul.token}/files`);
     const keys = d.keys || [];
