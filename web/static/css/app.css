@@ -49,6 +49,10 @@
 [data-theme="dark"] .di:hover { background: #334155; }
 [data-theme="dark"] .modal { background: #1e293b; color: #f1f5f9; }
 [data-theme="dark"] .fld span { color: #cbd5e1; }
+[data-theme="dark"] .folder-name { color: #e2e8f0; }
+[data-theme="dark"] .bucket-name { color: #f1f5f9; }
+[data-theme="dark"] .ctx-it { color: #f1f5f9 !important; }
+[data-theme="dark"] .ctx-it:hover { background: #334155 !important; color: #fff !important; }
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
 body {

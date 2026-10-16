@@ -3,7 +3,9 @@ package handlers
 import (
 	"context"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"net/http"
@@ -193,8 +195,13 @@ func (s *Server) handleCreateShare(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	exp := in.Expires
-	if exp <= 0 || exp > 30*24*3600 {
+	// exp=0 表示永久（100年）；负数或超大值则默认7天
+	if exp < 0 || exp > 100*365*24*3600 {
 		exp = 7 * 24 * 3600
+	}
+	expiresAt := now + int64(exp)
+	if exp == 0 {
+		expiresAt = now + 100*365*24*3600
 	}
 	tok := make([]byte, 9)
 	if _, err := rand.Read(tok); err != nil {
@@ -205,12 +212,9 @@ func (s *Server) handleCreateShare(w http.ResponseWriter, r *http.Request) {
 	now := time.Now().Unix()
 	pwHash := ""
 	if in.Password != "" {
-		h, err := auth.HashPassword(in.Password)
-		if err != nil {
-			writeErr(w, http.StatusBadRequest, err.Error())
-			return
-		}
-		pwHash = h
+		// 上传链接密码：简单 SHA256，不做长度/复杂度限制
+		sum := sha256.Sum256([]byte("objdock-ul:" + in.Password))
+		pwHash = hex.EncodeToString(sum[:])
 	}
 	firstKey := keys[0]
 	shareName := firstKey[strings.LastIndex(firstKey, "/")+1:]
@@ -225,7 +229,7 @@ func (s *Server) handleCreateShare(w http.ResponseWriter, r *http.Request) {
 		Key:          firstKey,
 		Name:         shareName,
 		CreatedAt:    now,
-		ExpiresAt:    now + int64(exp),
+		ExpiresAt:    expiresAt,
 		PasswordHash: pwHash,
 		MaxViews:     in.MaxViews,
 	}
@@ -412,8 +416,13 @@ func (s *Server) handleCreateUploadLink(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	exp := in.Expires
-	if exp <= 0 || exp > 30*24*3600 {
+	// exp=0 表示永久（100年）；负数或超大值则默认7天
+	if exp < 0 || exp > 100*365*24*3600 {
 		exp = 7 * 24 * 3600
+	}
+	expiresAt := now + int64(exp)
+	if exp == 0 {
+		expiresAt = now + 100*365*24*3600
 	}
 	tok := make([]byte, 9)
 	if _, err := rand.Read(tok); err != nil {
@@ -437,7 +446,7 @@ func (s *Server) handleCreateUploadLink(w http.ResponseWriter, r *http.Request) 
 	now := time.Now().Unix()
 	ul := &db.UploadLink{
 		Token: token, UserID: u.ID, AccountID: a.ID, Bucket: in.Bucket, Prefix: prefix,
-		PasswordHash: pwHash, MaxUses: in.MaxUses, ExpiresAt: now + int64(exp), CreatedAt: now,
+		PasswordHash: pwHash, MaxUses: in.MaxUses, ExpiresAt: expiresAt, CreatedAt: now,
 	}
 	if err := s.DB.CreateUploadLink(ul); err != nil {
 		writeErr(w, http.StatusInternalServerError, "cannot create link")
@@ -502,8 +511,9 @@ func (s *Server) handleUploadPage(w http.ResponseWriter, r *http.Request) {
 	}
 	if r.Method == "POST" && needPw && !authed {
 		r.ParseForm()
-		if auth.VerifyPassword(r.Form.Get("password"), ul.PasswordHash) {
-			http.SetCookie(w, &http.Cookie{Name: "ul_auth_" + token, Value: "1", Path: "/u/" + token, MaxAge: 3600, HttpOnly: true, SameSite: http.SameSiteLaxMode})
+		sum := sha256.Sum256([]byte("objdock-ul:" + r.Form.Get("password")))
+		if hex.EncodeToString(sum[:]) == ul.PasswordHash {
+			http.SetCookie(w, &http.Cookie{Name: "ul_auth_" + token, Value: "1", Path: "/", MaxAge: 3600, HttpOnly: true, SameSite: http.SameSiteLaxMode})
 			authed = true
 		} else {
 			s.renderUploadPage(w, token, true)
@@ -520,6 +530,19 @@ func (s *Server) handleUploadPage(w http.ResponseWriter, r *http.Request) {
 func (s *Server) renderUploadPage(w http.ResponseWriter, token string, pwFailed bool) {
 	ul, _ := s.DB.UploadLinkByToken(token)
 	needPw := ul != nil && ul.PasswordHash != ""
+	ownerName := ""
+	if ul != nil {
+		if u, err := s.DB.UserByID(ul.UserID); err == nil {
+			ownerName = u.Username
+		}
+	}
+	brandHtml := `<div style="text-align:center;margin-bottom:20px">
+		<div style="font-size:28px;font-weight:800;color:#1e293b">📦 ObjDock</div>
+	</div>`
+	inviteHtml := ""
+	if ownerName != "" {
+		inviteHtml = fmt.Sprintf(`<p class="sub">%s 邀请你上传文件</p>`, ownerName)
+	}
 	msg := ""
 	if pwFailed {
 		msg = "<p style='color:#dc2626;font-size:14px'>密码错误，请重试</p>"
@@ -545,8 +568,8 @@ func (s *Server) renderUploadPage(w http.ResponseWriter, token string, pwFailed 
 <title>上传文件 - ObjDock</title>
 <style>
 * { box-sizing: border-box; }
-body { font-family: -apple-system, system-ui, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 20px; }
-.card { background: #fff; padding: 40px; border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,.3); max-width: 520px; width: 100%; }
+body { font-family: -apple-system, system-ui, sans-serif; background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%); display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 20px; }
+.card { background: #fff; padding: 40px; border-radius: 20px; box-shadow: 0 8px 32px rgba(0,0,0,.08); max-width: 520px; width: 100%; }
 .logo { font-size: 56px; text-align: center; margin-bottom: 8px; }
 h2 { text-align: center; margin: 0 0 8px; font-size: 22px; }
 .sub { text-align: center; color: #64748b; font-size: 14px; margin-bottom: 24px; }
@@ -567,9 +590,9 @@ h2 { text-align: center; margin: 0 0 8px; font-size: 22px; }
 .progress > div { height: 100%; background: #3b82f6; width: 0; transition: width .2s; }
 .done-msg { text-align: center; padding: 20px; color: #16a34a; font-size: 16px; font-weight: 600; }
 </style></head><body>
-<div class="card">` + pwSection + `
+<div class="card">` + brandHtml + pwSection + `
 	<div class="logo">📤</div>
-	<h2>上传文件</h2>
+	<h2>上传文件</h2>` + inviteHtml + `
 	<p class="sub">无需登录，直接上传到对方的存储空间</p>
 	<div class="drop" id="dropZone" onclick="document.getElementById('fileInput').click()">
 		<div style="font-size:40px;margin-bottom:8px">📁</div>
@@ -941,18 +964,29 @@ func (s *Server) renderSharePage(w http.ResponseWriter, sh *db.Share, files []ma
 	if title == "" {
 		title = "分享文件"
 	}
+	ownerName := ""
+	if u, err := s.DB.UserByID(sh.UserID); err == nil {
+		ownerName = u.Username
+	}
+	brandHtml := `<div style="text-align:center;margin-bottom:24px">
+		<div style="font-size:32px;font-weight:800;color:#1e293b;letter-spacing:-0.5px">📦 ObjDock</div>
+		<div style="font-size:13px;color:#94a3b8;margin-top:4px">对象存储分享</div>
+	</div>`
+	ownerHtml := ""
+	if ownerName != "" {
+		ownerHtml = fmt.Sprintf(`<p class="sub">来源于 %s 的分享</p>`, ownerName)
+	}
 	w.Write([]byte(`<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>` + title + ` - ObjDock 分享</title>
 <style>
 * { box-sizing: border-box; }
-body { font-family: -apple-system, system-ui, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); margin: 0; padding: 20px; min-height: 100vh; }
-.card { background: #fff; border-radius: 20px; padding: 32px; max-width: 640px; margin: 0 auto; box-shadow: 0 20px 60px rgba(0,0,0,.3); }
+body { font-family: -apple-system, system-ui, sans-serif; background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%); margin: 0; padding: 20px; min-height: 100vh; }
+.card { background: #fff; border-radius: 20px; padding: 32px; max-width: 640px; margin: 0 auto; box-shadow: 0 8px 32px rgba(0,0,0,.08); }
 h1 { margin: 0 0 8px; font-size: 22px; }
 .sub { color: #64748b; font-size: 14px; margin-bottom: 24px; }
 </style></head><body>
-<div class="card">
-<h1>📁 ` + title + `</h1>
-<p class="sub">通过 ObjDock 分享</p>` + fileHtml + `
+<div class="card">` + brandHtml + `
+<h1>📁 ` + title + `</h1>` + ownerHtml + fileHtml + `
 </div></body></html>`))
 }
 

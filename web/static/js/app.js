@@ -216,7 +216,7 @@ function renderShell() {
         <div class="acct-card" id="acctCard">
           <div class="avatar">${esc(u.username[0].toUpperCase())}</div>
           <div style="flex:1"><div class="sname">${esc(u.username)}</div></div>
-          <button id="themeBtn" title="切换深色/浅色" style="background:none;border:none;cursor:pointer;font-size:18px;padding:4px">🌙</button>
+          <button id="themeBtn" title="切换深色/浅色" style="background:none;border:none;cursor:pointer;padding:6px;display:flex;align-items:center"></button>
         </div>
       </div>
     </aside>
@@ -226,13 +226,12 @@ function renderShell() {
   $$('.nav-item[data-nav]').forEach(el => el.onclick = () => nav(el.dataset.nav));
   $('#switcher').onclick = (e) => { e.stopPropagation(); toggleSwitcher(); };
   const tb = $('#themeBtn');
+  const moonSvg = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
+  const sunSvg = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>';
   if (tb) {
-    tb.textContent = document.documentElement.dataset.theme === 'dark' ? '☀️' : '🌙';
-    tb.onclick = (e) => {
-      e.stopPropagation();
-      toggleTheme();
-      tb.textContent = document.documentElement.dataset.theme === 'dark' ? '☀️' : '🌙';
-    };
+    const updateIcon = () => { tb.innerHTML = document.documentElement.dataset.theme === 'dark' ? sunSvg : moonSvg; tb.style.color = 'inherit'; };
+    updateIcon();
+    tb.onclick = (e) => { e.stopPropagation(); toggleTheme(); updateIcon(); };
   }
   $('#acctCard').onclick = (e) => { e.stopPropagation(); toggleAcctMenu(); };
   document.addEventListener('click', () => { $('#dropdown').hidden = true; });
@@ -1404,13 +1403,20 @@ function openUploadLinkModal() {
   modal.querySelector('h3').textContent = '创建上传链接';
   list.innerHTML = `
     <label class="fld"><span>上传到路径</span>
-      <input class="input" id="ulPrefix" value="${esc(state.prefix || '')}" placeholder="留空为根目录">
+      <input class="input" id="ulPrefix" value="${esc(state.prefix || '')}" placeholder="默认为当前目录：${esc(state.prefix || '根目录')}">
       <div class="hint">别人上传的文件会存到这个目录下</div></label>
     <label class="fld"><span>有效期</span>
       <select class="input" id="ulExpiry">
+        <option value="3600">1 小时</option>
+        <option value="18000">5 小时</option>
+        <option value="43200">12 小时</option>
         <option value="86400">1 天</option>
+        <option value="259200">3 天</option>
         <option value="604800" selected>7 天</option>
+        <option value="1296000">15 天</option>
         <option value="2592000">30 天</option>
+        <option value="7776000">90 天</option>
+        <option value="0">永久</option>
       </select></label>
     <div style="display:flex;gap:10px">
       <label class="fld" style="flex:1"><span>访问密码（可选）</span>
@@ -1437,7 +1443,6 @@ function openUploadLinkModal() {
   $('#ulUrl').onclick = (e) => { e.target.select(); document.execCommand('copy'); toast('已复制'); };
   $('#ulCreate').onclick = async () => {
     const pwd = $('#ulPwd').value;
-    if (pwd && pwd.length < 4) { toast('密码至少 4 位'); return; }
     try {
       const p = await apiPost(`/api/accounts/${state.accountId}/upload-link`, {
         bucket: state.bucket,
