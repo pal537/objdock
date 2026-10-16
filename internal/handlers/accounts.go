@@ -117,6 +117,9 @@ func (s *Server) buildAccount(u *db.User, in accountInput, existing *db.Account)
 		a.Endpoint = providerEndpoint(a.Provider, strings.TrimSpace(in.AccountID), a.Region)
 	}
 	a.Endpoint = strings.TrimSuffix(a.Endpoint, "/")
+	if a.Endpoint != "" && !strings.HasPrefix(a.Endpoint, "http://") && !strings.HasPrefix(a.Endpoint, "https://") {
+		a.Endpoint = "https://" + a.Endpoint
+	}
 	a.AccessKey = strings.TrimSpace(in.AccessKey)
 	a.Bucket = strings.TrimSpace(in.Bucket)
 	if in.QuotaBytes >= 0 {
