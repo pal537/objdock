@@ -430,7 +430,7 @@ async function renderDash() {
   const acct = state.accounts.find(x => x.id === state.accountId) || {};
   const quota = acct.quotaBytes || 0;
   if (quota > 0) {
-    const qb = `<div class="card" id="quotaCard"><h3>${ic('drive')}空间使用</h3>
+    const qb = `<div class="card" id="quotaCard"><h3>${ic('drive')}${t('dash.quota')}</h3>
       <p class="desc">配额 ${fmtSize(quota)} · 正在统计使用量…</p></div>`;
     $('#dashBody').innerHTML = qb;
   }
@@ -447,7 +447,7 @@ async function loadDash(quota) {
       const acct = state.accounts.find(x => x.id === state.accountId) || {};
       const q = acct.quotaBytes || quota;
       if (q > 0) {
-        $('#dashBody').innerHTML = `<div class="card"><h3>${ic('drive')}空间使用</h3>
+        $('#dashBody').innerHTML = `<div class="card"><h3>${ic('drive')}${t('dash.quota')}</h3>
           <p class="desc">配额 ${fmtSize(q)} · 使用量统计失败（${esc(e.message)}）</p></div>`;
       } else {
         $('#dashBody').innerHTML = `<div class="empty">统计失败：${esc(e.message)}</div>`;
@@ -506,7 +506,7 @@ async function loadDash(quota) {
     const pct = Math.min(100, (d.totalSize / quota * 100));
     const left = Math.max(0, quota - d.totalSize);
     const barColor = pct >= 90 ? '#ef4444' : pct >= 70 ? '#f59e0b' : '#3b82f6';
-    quotaHtml = `<div class="card"><h3>${ic('drive')}空间使用</h3>
+    quotaHtml = `<div class="card"><h3>${ic('drive')}${t('dash.quota')}</h3>
       <p class="desc">已用 ${fmtSize(d.totalSize)} / 总计 ${fmtSize(quota)}（${pct.toFixed(1)}%），剩余 ${fmtSize(left)}</p>
       <div style="height:12px;background:#f1f5f9;border-radius:6px;overflow:hidden">
         <div style="height:100%;width:${pct.toFixed(1)}%;background:${barColor};border-radius:6px;transition:width .5s ease"></div>
@@ -535,8 +535,8 @@ async function loadDash(quota) {
         </div></div>
       </div>
     </div>
-    <div class="card"><h3>${ic('trend')}存储增长趋势</h3><p class="desc">每天统计一次，记录总用量变化</p>${trendSvg}</div>
-    <div class="card"><h3>${ic('calendar')}文件活跃度（近 30 天）</h3>
+    <div class="card"><h3>${ic('trend')}${t('dash.trend')}</h3><p class="desc">${t('dash.trendDesc')}</p>${trendSvg}</div>
+    <div class="card"><h3>${ic('calendar')}${t('dash.activity')}</h3>
       <p class="desc">每天有文件新增或修改的天数统计，共 ${totalAct} 次变动</p>
       <div class="activity-chart">${bars}</div>
       <div class="activity-legend"><span>${days[0].label}</span><span>${days[29].label}</span></div></div>
@@ -556,20 +556,20 @@ async function renderFiles() {
   }
   selKeys = new Set();
   main.innerHTML = `
-    <div class="topbar"><h2>${ic('folder')}全部文件</h2><div class="spacer"></div>
-      <input class="input input-sm" id="searchInput" placeholder="🔍 全桶搜索…" style="width:180px">
+    <div class="topbar"><h2>${ic('folder')}${t('nav.files')}</h2><div class="spacer"></div>
+      <input class="input input-sm" id="searchInput" placeholder="${t('file.search')}" style="width:180px">
       <select class="input input-sm" id="sortSel" title="排序">
-        <option value="time-desc">时间 ↓ 新到旧</option>
-        <option value="time-asc">时间 ↑ 旧到新</option>
-        <option value="size-desc">大小 ↓ 大到小</option>
-        <option value="size-asc">大小 ↑ 小到大</option>
-        <option value="name-asc">名称 A-Z</option>
-        <option value="name-desc">名称 Z-A</option>
+        <option value="time-desc">${t('sort.timeDesc')}</option>
+        <option value="time-asc">${t('sort.timeAsc')}</option>
+        <option value="size-desc">${t('sort.sizeDesc')}</option>
+        <option value="size-asc">${t('sort.sizeAsc')}</option>
+        <option value="name-asc">${t('sort.nameAsc')}</option>
+        <option value="name-desc">${t('sort.nameDesc')}</option>
       </select>
       <div class="view-toggle" id="sizeSeg">
-        <button data-sz="small" class="${state.thumbSize === 'small' ? 'active' : ''}">小</button>
-        <button data-sz="medium" class="${state.thumbSize === 'medium' ? 'active' : ''}">中</button>
-        <button data-sz="large" class="${state.thumbSize === 'large' ? 'active' : ''}">大</button>
+        <button data-sz="small" class="${state.thumbSize === 'small' ? 'active' : ''}">${t('size.small')}</button>
+        <button data-sz="medium" class="${state.thumbSize === 'medium' ? 'active' : ''}">${t('size.medium')}</button>
+        <button data-sz="large" class="${state.thumbSize === 'large' ? 'active' : ''}">${t('size.large')}</button>
       </div>
       <div class="view-toggle">
         <button id="vGrid" class="${state.view === 'grid' ? 'active' : ''}">${ic('grid', 15)}${t('view.grid')}</button>
@@ -1317,7 +1317,7 @@ function renderSettingsTab(tab) {
   if (tab === 'account') {
     c.innerHTML = `<div class="card"><h3>${ic('bucket')}${t('settings.accounts')}</h3><p class="desc">绑定多个对象存储账户，左下角一键切换</p>
       <div id="acctList"></div>
-      <button class="btn btn-primary" id="btnAddAcct" style="margin-top:12px">＋ 添加账户</button></div>`;
+      <button class="btn btn-primary" id="btnAddAcct" style="margin-top:12px">${t('account.add')}</button></div>`;
     $('#btnAddAcct').onclick = () => openWizard();
     loadAcctList();
   } else if (tab === 'share') {
@@ -1357,7 +1357,7 @@ function renderSettingsTab(tab) {
       `<option value="${k}" ${getLang() === k ? 'selected' : ''}>${LANGS[k]}</option>`).join('');
     c.innerHTML = `<div class="card"><h3>${ic('settings')}${t('settings.appearance')}</h3>
       <label style="display:flex;gap:8px;align-items:center;cursor:pointer;margin-bottom:12px">
-        <input type="checkbox" id="themeToggle" style="width:18px;height:18px"> 深色模式
+        <input type="checkbox" id="themeToggle" style="width:18px;height:18px">${t('settings.darkMode')}
       </label>
       <label class="fld"><span>语言 / Language</span>
         <select class="input" id="langSelect" style="max-width:240px">${langOpts}</select>
@@ -1755,8 +1755,8 @@ async function loadAcctList() {
         <span class="prov-ic">${(PROVIDERS.find(p => p.id === a.provider) || {}).icon || ic('bucket')}</span>
         <div style="flex:1"><div style="font-weight:600">${esc(a.name)}</div>
           <div class="muted">${esc(a.provider)} · ${esc(a.endpoint)}${a.bucket ? ' · ' + ic('box', 13) + ' ' + esc(a.bucket) : ''}</div></div>
-        <button class="btn btn-sm" data-edit="${a.id}">编辑</button>
-        <button class="btn btn-sm" data-test="${a.id}">测试</button>
+        <button class="btn btn-sm" data-edit="${a.id}">${t('common.edit')}</button>
+        <button class="btn btn-sm" data-test="${a.id}">${t('common.test')}</button>
         <button class="btn btn-sm" data-del="${a.id}" style="color:#ef4444">删除</button>
       </div>`).join('');
     $$('[data-edit]', box).forEach(b => b.onclick = () => openWizard(parseInt(b.dataset.edit, 10)));
