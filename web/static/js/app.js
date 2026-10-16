@@ -376,9 +376,36 @@ async function renderDash() {
       </div></div>`;
     return;
   }
+  // 桶快速切换条：所有账户的所有桶
+  let bucketBar = '';
+  if (state.accounts.length) {
+    const chips = [];
+    state.accounts.forEach(a => {
+      const buckets = (a.bucket || '').split(',').map(b => b.trim()).filter(Boolean);
+      if (!buckets.length) buckets.push('');
+      buckets.forEach(b => {
+        const active = (a.id === state.accountId && b === state.bucket) ? ' active' : '';
+        chips.push(`<button class="bucket-chip${active}" data-acct="${a.id}" data-bucket="${esc(b)}">
+          <span class="bc-acct">${esc(a.name)}</span><span class="bc-bucket">${esc(b || '默认桶')}</span>
+        </button>`);
+      });
+    });
+    if (chips.length > 1) bucketBar = `<div class="bucket-bar">${chips.join('')}</div>`;
+  }
   main.innerHTML = `<div class="topbar"><h2>${ic('dash')}仪表盘</h2><div class="spacer"></div>
     <button class="btn btn-sm" id="dashRefresh">↻ 重新统计</button></div>
+    ${bucketBar}
     <div id="dashBody"><div class="empty">统计中…</div></div>`;
+  // 绑定切换
+  $$('.bucket-chip', main).forEach(btn => btn.onclick = async () => {
+    const aid = parseInt(btn.dataset.acct, 10);
+    const bkt = btn.dataset.bucket;
+    if (aid === state.accountId && bkt === state.bucket) return;
+    await selectAccount(aid);
+    if (bkt) state.bucket = bkt;
+    updateSwitcherLabel();
+    renderDash();
+  });
   $('#dashRefresh').onclick = () => { delete state.statsCache[state.accountId + '/' + state.bucket]; renderDash(); };
   await refreshAccounts();
   // 配额卡片独立显示，不依赖统计接口成败

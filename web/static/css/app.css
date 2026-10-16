@@ -514,3 +514,17 @@ table.ftable { width: 100%; border-collapse: collapse; font-size: 13.5px; }
 
 [data-theme="dark"] .nav-item:hover { background: #334155 !important; color: #f1f5f9 !important; }
 [data-theme="dark"] .nav-item:hover span { color: #f1f5f9 !important; }
+
+/* ---------- 仪表盘桶快速切换 ---------- */
+.bucket-bar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+.bucket-chip {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+  padding: 10px 16px; border-radius: 12px; cursor: pointer;
+  border: 1.5px solid var(--line); background: var(--card);
+  transition: all .15s ease; min-width: 120px;
+}
+.bucket-chip:hover { border-color: var(--primary); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(59,130,246,.12); }
+.bucket-chip.active { border-color: var(--primary); background: rgba(59,130,246,.08); box-shadow: 0 0 0 2px rgba(59,130,246,.2); }
+.bucket-chip .bc-acct { font-size: 11px; color: var(--muted); }
+.bucket-chip .bc-bucket { font-size: 15px; font-weight: 600; color: var(--text); }
+[data-theme="dark"] .bucket-chip .bc-bucket { color: #f1f5f9; }
