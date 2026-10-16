@@ -136,7 +136,7 @@ func (s *Server) handlePresign(w http.ResponseWriter, r *http.Request) {
 	case "upload":
 		url, err = client.PresignUpload(ctx, bucket, key, time.Duration(expiresSec)*time.Second)
 	case "download", "share", "preview", "":
-		url, err = client.PresignDownload(ctx, bucket, key, time.Duration(expiresSec)*time.Second)
+		url, err = client.PresignDownload(ctx, bucket, key, time.Duration(expiresSec)*time.Second, op == "download")
 	default:
 		writeErr(w, http.StatusBadRequest, "unknown op")
 		return
@@ -196,7 +196,7 @@ func (s *Server) handlePresignBatch(w http.ResponseWriter, r *http.Request) {
 		if in.Op == "upload" {
 			url, err = client.PresignUpload(ctx, in.Bucket, key, time.Duration(expiresSec)*time.Second)
 		} else {
-			url, err = client.PresignDownload(ctx, in.Bucket, key, time.Duration(expiresSec)*time.Second)
+			url, err = client.PresignDownload(ctx, in.Bucket, key, time.Duration(expiresSec)*time.Second, in.Op == "download")
 		}
 		if err == nil {
 			urls[key] = url

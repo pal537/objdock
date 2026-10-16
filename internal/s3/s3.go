@@ -163,11 +163,16 @@ func (c *Client) HeadBucket(ctx context.Context, bucket string) error {
 
 // PresignDownload returns a time-limited GET URL. The browser downloads
 // directly from storage; the secret key never leaves the server.
-func (c *Client) PresignDownload(ctx context.Context, bucket, key string, expires time.Duration) (string, error) {
-	req, err := c.pre.PresignGetObject(ctx, &s3sdk.GetObjectInput{
+func (c *Client) PresignDownload(ctx context.Context, bucket, key string, expires time.Duration, asAttachment bool) (string, error) {
+	input := &s3sdk.GetObjectInput{
 		Bucket: aws.String(bucket),
 		Key:    aws.String(key),
-	}, s3sdk.WithPresignExpires(expires))
+	}
+	if asAttachment {
+		// Force browser to download instead of previewing inline.
+		input.ResponseContentDisposition = aws.String("attachment")
+	}
+	req, err := c.pre.PresignGetObject(ctx, input, s3sdk.WithPresignExpires(expires))
 	if err != nil {
 		return "", fmt.Errorf("presign download: %w", err)
 	}

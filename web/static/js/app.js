@@ -470,6 +470,7 @@ async function renderFiles() {
     <div class="toolbar" id="selBar" hidden>
       <span id="selCount"></span>
       <button class="btn btn-sm" id="btnSelAll">全选</button>
+      <button class="btn btn-sm" id="btnDlSel">${ic('download', 15)}下载所选</button>
       <button class="btn btn-sm" id="btnDelSel">${ic('trash', 15)}删除所选</button>
       <button class="btn btn-sm" id="btnClearSel">退出选择</button>
     </div>
@@ -489,6 +490,15 @@ async function renderFiles() {
     });
   };
   $('#btnRefresh').onclick = () => loadFiles();
+  $('#btnDlSel').onclick = async () => {
+    const keys = [...selKeys].filter(k => !k.endsWith('/'));
+    if (!keys.length) { toast('所选没有可下载的文件'); return; }
+    toast(`准备下载 ${keys.length} 个文件…`);
+    for (const key of keys) {
+      await downloadFile(key, key.split('/').pop());
+      await new Promise(r => setTimeout(r, 400));
+    }
+  };
   $('#btnDelSel').onclick = deleteSelected;
   $('#btnClearSel').onclick = () => {
     state.selectMode = false; selKeys.clear();
@@ -727,6 +737,29 @@ function deleteSelected() {
     } catch (e) { toast('删除失败：' + e.message); }
   });
 }
+function renameObject(key, name) {
+  askPrompt('重命名', '新文件名', name, async (v) => {
+    v = v.trim();
+    if (!v || v === name) return;
+    const dst = state.prefix + v;
+    try {
+      await apiPost(`/api/accounts/${state.accountId}/rename`, { bucket: state.bucket, src: key, dst });
+      toast('重命名成功'); loadFiles();
+    } catch (e) { toast('重命名失败：' + e.message); }
+  });
+}
+function enterFolder(key) {
+  state.prefix = key.endsWith('/') ? key : key + '/';
+  loadFiles();
+}
+function deleteSingle(key, name, isFolder) {
+  askConfirm('删除', `确定删除「${name}」吗？${isFolder ? '文件夹内的文件也会被删除，' : ''}此操作不可恢复。`, '删除', async () => {
+    try {
+      await apiPost(`/api/accounts/${state.accountId}/delete`, { bucket: state.bucket, keys: [key] });
+      toast('已删除'); loadFiles();
+    } catch (e) { toast('删除失败：' + e.message); }
+  });
+}
 function fileAction(act, key, name, kind) {
   if (act === 'preview') openPreview(key, name, kind);
   else if (act === 'download') downloadFile(key, name);
@@ -862,6 +895,42 @@ $('#filePicker').addEventListener('change', async (e) => {
   list.appendChild(sum);
   delete state.statsCache[state.accountId + '/' + state.bucket];
   if ($('.nav-item.active')?.dataset.nav === 'files') loadFiles();
+});
+
+/* ---------- context menu (right-click) ---------- */
+function showCtxMenu(x, y, items) {
+  const m = $('#ctxMenu');
+  m.innerHTML = items.map((it, i) =>
+    `<div class="ctx-it" data-i="${i}" style="padding:9px 14px;border-radius:7px;cursor:pointer;font-size:14px;display:flex;align-items:center;gap:9px;${it.danger ? 'color:#dc2626' : ''}">${it.icon || ''}${esc(it.label)}</div>`
+  ).join('');
+  m.hidden = false;
+  const r = m.getBoundingClientRect();
+  m.style.left = Math.min(x, innerWidth - r.width - 10) + 'px';
+  m.style.top = Math.min(y, innerHeight - r.height - 10) + 'px';
+  m.querySelectorAll('.ctx-it').forEach(el => {
+    el.onmouseenter = () => el.style.background = '#f1f5f9';
+    el.onmouseleave = () => el.style.background = '';
+    el.onclick = () => { hideCtxMenu(); items[+el.dataset.i].fn(); };
+  });
+}
+function hideCtxMenu() { $('#ctxMenu').hidden = true; }
+document.addEventListener('click', hideCtxMenu);
+document.addEventListener('contextmenu', (e) => {
+  const item = e.target.closest('.fitem, .frow');
+  if (!item || !state.accountId) return;
+  e.preventDefault();
+  const key = item.dataset.key, name = item.dataset.name || key.split('/').pop();
+  const isFolder = (item.dataset.kind === 'folder') || key.endsWith('/');
+  const items = [];
+  if (!isFolder) {
+    items.push({ label: '下载', icon: ic('download', 15), fn: () => downloadFile(key, name) });
+    items.push({ label: '分享链接', icon: ic('share', 15), fn: () => openShare(key, name) });
+    items.push({ label: '重命名', icon: ic('edit', 15), fn: () => renameObject(key, name) });
+  } else {
+    items.push({ label: '进入', icon: ic('folder', 15), fn: () => enterFolder(key) });
+  }
+  items.push({ label: '删除', icon: ic('trash', 15), danger: true, fn: () => deleteSingle(key, name, isFolder) });
+  showCtxMenu(e.clientX, e.clientY, items);
 });
 
 /* ---------- sidebar folders ---------- */
