@@ -1393,17 +1393,15 @@ function renderProfile() {
     <div class="topbar"><h2>${ic('user')}修改登录信息</h2></div>
     <div class="card" style="max-width:480px">
       <label class="fld"><span>用户名（不可修改）</span><input class="input" value="${esc(u.username)}" disabled></label>
-      <label class="fld"><span>昵称</span><input class="input" id="pName" value="${esc(u.displayName || '')}"></label>
       <h4 style="margin:18px 0 8px">修改密码（不改请留空）</h4>
       <label class="fld"><span>当前密码</span><input class="input" id="pCur" type="password"></label>
-      <label class="fld"><span>新密码（至少 6 位）</span><input class="input" id="pNew" type="password"></label>
+      <label class="fld"><span>新密码（至少 8 位，字母+数字）</span><input class="input" id="pNew" type="password"></label>
       <div id="pErr" style="color:#ef4444;font-size:13px;min-height:20px"></div>
       <button class="btn btn-primary" id="pSave">保存</button>
     </div>`;
   $('#pSave').onclick = async () => {
     try {
       const d = await apiPut('/api/me', {
-        displayName: $('#pName').value.trim(),
         currentPassword: $('#pCur').value,
         newPassword: $('#pNew').value,
       });
