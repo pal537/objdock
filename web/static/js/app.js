@@ -231,7 +231,7 @@ function renderShell() {
     <aside class="sidebar">
       <div class="brand">
         <div class="logo-ic">${ic('anchor')}</div>
-        <div><div class="t">ObjDock</div><div class="s">对象存储管理</div></div>
+        <div><div class="t">ObjDock</div><div class="s">${t('brand.subtitle')}</div></div>
       </div>
       <div class="nav-item active" data-nav="dash">${ic('dash')}<span>${t('nav.dashboard')}</span></div>
       <div class="nav-item" data-nav="files">${ic('folder')}<span>${t('nav.files')}</span></div>
@@ -246,7 +246,7 @@ function renderShell() {
           <div class="avatar" id="swAvatar">${ic('bucket')}</div>
           <div><div class="sname" id="swName">选择账户</div><div class="ssub" id="swSub">点击切换</div></div>
         </div>
-        <div class="nav-item" data-nav="settings">${ic('settings')}<span>设置</span></div>
+        <div class="nav-item" data-nav="settings">${ic('settings')}<span>${t('nav.settings')}</span></div>
         <div class="acct-card" id="acctCard">
           <div class="avatar">${esc(u.username[0].toUpperCase())}</div>
           <div style="flex:1"><div class="sname">${esc(u.username)}</div></div>
@@ -578,7 +578,7 @@ async function renderFiles() {
       <button class="btn btn-sm" id="btnSelect">${ic('check', 15)}${t('common.select')}</button>
       <button class="btn btn-sm" id="btnUpload">${ic('upload', 15)}${t('common.upload')}</button>
       <button class="btn btn-sm" id="btnUpLink" title="生成公开上传链接，别人无需登录可上传文件到此目录">${t('nav.uploadLinks')}</button>
-      <button class="btn btn-sm" id="btnMkdir">${ic('folderPlus', 15)}新建文件夹</button>
+      <button class="btn btn-sm" id="btnMkdir">${ic('folderPlus', 15)}${t('file.newFolderBtn')}</button>
       <button class="btn btn-sm" id="btnRefresh">↻</button>
     </div>
     <div class="crumbs" id="crumbs"></div>
@@ -777,7 +777,7 @@ function renderFileList(d) {
     folders.forEach(f => {
       h += `<div class="fitem folder-card" data-folder="${esc(f.prefix)}">
         <div class="fic folder-ic">${ic('folder')}</div>
-        <div class="fsub"><div class="fn">${esc(f.name)}</div><div class="fs">文件夹</div></div></div>`;
+        <div class="fsub"><div class="fn">${esc(f.name)}</div><div class="fs">${t('file.folderLabel')}</div></div></div>`;
     });
     sortFiles(d.files).forEach(f => {
       const sel = selKeys.has(f.key) ? ' sel' : '';
@@ -1293,7 +1293,7 @@ function renderSettings(tab) {
   const tabs = [
     { id: 'account', label: t('settings.accounts') },
     { id: 'share', label: t('settings.share') },
-    { id: 'upload', label: '上传链接' },
+    { id: 'upload', label: t('settings.uploadTab') },
     { id: 'site', label: t('settings.site') },
     { id: 'user', label: t('settings.users') },
     { id: 'appearance', label: t('settings.appearance') },
@@ -1315,7 +1315,7 @@ function renderSettings(tab) {
 function renderSettingsTab(tab) {
   const c = $('#setTabContent');
   if (tab === 'account') {
-    c.innerHTML = `<div class="card"><h3>${ic('bucket')}${t('settings.accounts')}</h3><p class="desc">绑定多个对象存储账户，左下角一键切换</p>
+    c.innerHTML = `<div class="card"><h3>${ic('bucket')}${t('settings.accounts')}</h3><p class="desc">${t('settings.accountDesc')}</p>
       <div id="acctList"></div>
       <button class="btn btn-primary" id="btnAddAcct" style="margin-top:12px">${t('account.add')}</button></div>`;
     $('#btnAddAcct').onclick = () => openWizard();
@@ -1623,7 +1623,7 @@ async function loadSideUlLinks() {
     ulLinks = (d.links || []).filter(ul => !state.bucket || ul.bucket === state.bucket);
     $('#ulCount').textContent = ulLinks.length ? ulLinks.length + '个' : '';
     if (!ulLinks.length) {
-      box.innerHTML = '<div style="font-size:12px;color:var(--muted);padding:4px 12px">暂无</div>';
+      box.innerHTML = '<div style="font-size:12px;color:var(--muted);padding:4px 12px">' + t('common.none') + '</div>';
       return;
     }
     box.innerHTML = ulLinks.map((ul, i) => {
