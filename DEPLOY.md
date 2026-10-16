@@ -1,6 +1,6 @@
-# ObjDock — 部署说明（Oracle VPS）
+# ObjDock — 部署说明（VPS 部署）
 
-> 面向自动化部署 agent。域名 oss.example.com（Cloudflare 代理中），VPS YOUR_SERVER_IP。
+> 面向自动化部署 agent。域名 oss.example.com（Cloudflare 代理中），VPS 为你的服务器 IP。
 
 ## 架构
 
