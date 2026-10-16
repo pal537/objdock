@@ -254,6 +254,9 @@ func (s *Server) handleTestDraft(w http.ResponseWriter, r *http.Request) {
 		if strings.HasPrefix(ep, "s3.") && strings.HasSuffix(ep, ".backblazeb2.com") {
 			region = strings.TrimSuffix(strings.TrimPrefix(ep, "s3."), ".backblazeb2.com")
 		}
+		if region == "" {
+			region = "us-west-004" // 兜底
+		}
 	}
 	a := &db.Account{
 		Provider:  in.Provider,
