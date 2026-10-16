@@ -30,6 +30,7 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 		Username    string `json:"username"`
 		Password    string `json:"password"`
 		DisplayName string `json:"displayName"`
+		Language    string `json:"language"`
 	}
 	if err := decodeJSON(r, &in); err != nil {
 		writeErr(w, http.StatusBadRequest, "invalid request")
@@ -54,7 +55,12 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 	if name == "" {
 		name = in.Username
 	}
-	id, err := s.DB.CreateUser(in.Username, hash, name, first)
+	lang := in.Language
+	validLangs := map[string]bool{"zh-CN": true, "en": true, "ja": true, "ko": true, "es": true}
+	if !validLangs[lang] {
+		lang = "en"
+	}
+	id, err := s.DB.CreateUser(in.Username, hash, name, first, lang)
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, "username already taken")
 		return
@@ -128,7 +134,30 @@ func (s *Server) handleMe(w http.ResponseWriter, r *http.Request) {
 		"username":    u.Username,
 		"displayName": u.DisplayName,
 		"admin":       u.IsAdmin,
+		"language":    u.Language,
 	})
+}
+
+// POST /api/user/language {language}
+func (s *Server) handleSetLanguage(w http.ResponseWriter, r *http.Request) {
+	u := s.currentUser(r)
+	var in struct {
+		Language string `json:"language"`
+	}
+	if err := decodeJSON(r, &in); err != nil {
+		writeErr(w, http.StatusBadRequest, "invalid request")
+		return
+	}
+	validLangs := map[string]bool{"zh-CN": true, "en": true, "ja": true, "ko": true, "es": true}
+	if !validLangs[in.Language] {
+		writeErr(w, http.StatusBadRequest, "invalid language")
+		return
+	}
+	if err := s.DB.SetUserLanguage(u.ID, in.Language); err != nil {
+		writeErr(w, http.StatusInternalServerError, "failed to save language")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
 }
 
 // PUT /api/me {displayName?, password?, currentPassword?}

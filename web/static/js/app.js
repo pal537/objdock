@@ -182,6 +182,13 @@ function renderAuthForm(mode) {
     <label class="fld"><span>用户名</span><input class="input" id="aUser" autocomplete="username"></label>
     <label class="fld"><span>密码${isLogin ? '' : '（至少 8 位，字母+数字）'}</span><input class="input" id="aPass" type="password" autocomplete="${isLogin ? 'current-password' : 'new-password'}"></label>
     ${isLogin ? '' : '<label class="fld"><span>确认密码</span><input class="input" id="aPass2" type="password" autocomplete="new-password"></label>'}
+    ${isLogin ? '' : `<label class="fld"><span>语言 / Language</span><select class="input" id="aLang">
+      <option value="en" selected>English</option>
+      <option value="zh-CN">简体中文</option>
+      <option value="ja">日本語</option>
+      <option value="ko">한국어</option>
+      <option value="es">Español</option>
+    </select></label>`}
     ${isLogin ? '<label style="display:flex;gap:8px;align-items:center;cursor:pointer;margin:4px 0 12px;font-size:14px"><input type="checkbox" id="aRemember" checked style="width:16px;height:16px"> 记住我（30 天免登录）</label>' : ''}
     <button class="btn btn-primary" id="aGo" style="width:100%;padding:11px">${isLogin ? '登录' : '注册'}</button>
     <div id="aErr" class="muted" style="color:#ef4444;margin-top:10px;text-align:center"></div>`;
@@ -201,7 +208,9 @@ function renderAuthForm(mode) {
         const p2 = $('#aPass2').value;
         if (p !== p2) { $('#aErr').textContent = '两次输入的密码不一致'; return; }
         if (p.length < 8) { $('#aErr').textContent = '密码至少 8 位'; return; }
-        await apiPost('/api/register', { username: u, password: p });
+        const lang = ($('#aLang') && $('#aLang').value) || 'en';
+        await apiPost('/api/register', { username: u, password: p, language: lang });
+        setLang(lang);
       }
       await boot();
     } catch (e) { $('#aErr').textContent = e.message; }
@@ -1344,9 +1353,14 @@ function renderSettingsTab(tab) {
     c.innerHTML = `<div class="card"><h3>${ic('users')}用户管理</h3><p class="desc">共 <b id="userTotal">0</b> 个用户（仅管理员可见，不显示密码）</p><div id="userList"><div class="muted">加载中…</div></div></div>`;
     loadUserList();
   } else if (tab === 'appearance') {
+    const langOpts = Object.keys(LANGS).map(k =>
+      `<option value="${k}" ${getLang() === k ? 'selected' : ''}>${LANGS[k]}</option>`).join('');
     c.innerHTML = `<div class="card"><h3>${ic('settings')}外观</h3>
-      <label style="display:flex;gap:8px;align-items:center;cursor:pointer">
+      <label style="display:flex;gap:8px;align-items:center;cursor:pointer;margin-bottom:12px">
         <input type="checkbox" id="themeToggle" style="width:18px;height:18px"> 深色模式
+      </label>
+      <label class="fld"><span>语言 / Language</span>
+        <select class="input" id="langSelect" style="max-width:240px">${langOpts}</select>
       </label></div>`;
     $('#themeToggle').checked = document.documentElement.dataset.theme === 'dark';
     $('#themeToggle').onchange = (e) => {
@@ -1354,6 +1368,10 @@ function renderSettingsTab(tab) {
       localStorage.setItem('objdock-theme', e.target.checked ? 'dark' : 'light');
       // 同步左下角按钮图标
       if (typeof updateThemeBtn === 'function') updateThemeBtn();
+    };
+    $('#langSelect').onchange = (e) => {
+      setLang(e.target.value);
+      location.reload();
     };
   }
 }
@@ -2031,6 +2049,14 @@ async function boot() {
   try {
     const me = await apiGet('/api/me');
     state.user = me;
+    // 应用用户保存的语言偏好（如果本地没有手动设置过）
+    try {
+      const localLang = localStorage.getItem('objdock-lang');
+      if (!localLang && me.language && LANGS[me.language]) {
+        currentLang = me.language;
+        document.documentElement.lang = me.language;
+      }
+    } catch (e) {}
     renderShell();
     await afterLogin();
   } catch (e) {

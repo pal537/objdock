@@ -77,6 +77,7 @@ func (s *Server) routes() {
 	// Everything below requires login.
 	m.HandleFunc("GET /api/me", s.requireLogin(s.handleMe))
 	m.HandleFunc("PUT /api/me", s.requireLogin(s.handleUpdateMe))
+	m.HandleFunc("POST /api/user/language", s.requireLogin(s.handleSetLanguage))
 	m.HandleFunc("GET /api/settings", s.requireLogin(s.handleGetSettings))
 	m.HandleFunc("PUT /api/settings", s.requireLogin(s.handlePutSettings))
 	m.HandleFunc("GET /api/admin/users", s.requireLogin(s.handleAdminListUsers))

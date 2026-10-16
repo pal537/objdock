@@ -43,6 +43,7 @@ func (d *DB) migrate() error {
 			password_hash TEXT NOT NULL,
 			display_name TEXT NOT NULL DEFAULT '',
 			is_admin INTEGER NOT NULL DEFAULT 0,
+			language TEXT NOT NULL DEFAULT 'zh-CN',
 			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 		)`,
 		`CREATE TABLE IF NOT EXISTS sessions (
@@ -141,6 +142,11 @@ func (d *DB) migrate() error {
 			return fmt.Errorf("db migrate shares.max_views: %w", err)
 		}
 	}
+	if !d.hasColumn("users", "language") {
+		if _, err := d.Exec(`ALTER TABLE users ADD COLUMN language TEXT NOT NULL DEFAULT 'zh-CN'`); err != nil {
+			return fmt.Errorf("db migrate users.language: %w", err)
+		}
+	}
 	if !d.hasColumn("shares", "view_count") {
 		if _, err := d.Exec(`ALTER TABLE shares ADD COLUMN view_count INTEGER NOT NULL DEFAULT 0`); err != nil {
 			return fmt.Errorf("db migrate shares.view_count: %w", err)
@@ -217,16 +223,20 @@ type User struct {
 	PasswordHash string
 	DisplayName string
 	IsAdmin     bool
+	Language    string
 	CreatedAt   time.Time
 }
 
-func (d *DB) CreateUser(username, hash, displayName string, admin bool) (int64, error) {
+func (d *DB) CreateUser(username, hash, displayName string, admin bool, lang string) (int64, error) {
 	adminInt := 0
 	if admin {
 		adminInt = 1
 	}
-	res, err := d.Exec(`INSERT INTO users(username, password_hash, display_name, is_admin)
-		VALUES(?, ?, ?, ?)`, username, hash, displayName, adminInt)
+	if lang == "" {
+		lang = "zh-CN"
+	}
+	res, err := d.Exec(`INSERT INTO users(username, password_hash, display_name, is_admin, language)
+		VALUES(?, ?, ?, ?, ?)`, username, hash, displayName, adminInt, lang)
 	if err != nil {
 		return 0, err
 	}
@@ -236,9 +246,9 @@ func (d *DB) CreateUser(username, hash, displayName string, admin bool) (int64, 
 func (d *DB) UserByUsername(username string) (*User, error) {
 	u := &User{}
 	var adminInt int
-	err := d.QueryRow(`SELECT id, username, password_hash, display_name, is_admin, created_at
+	err := d.QueryRow(`SELECT id, username, password_hash, display_name, is_admin, language, created_at
 		FROM users WHERE username=?`, username).
-		Scan(&u.ID, &u.Username, &u.PasswordHash, &u.DisplayName, &adminInt, &u.CreatedAt)
+		Scan(&u.ID, &u.Username, &u.PasswordHash, &u.DisplayName, &adminInt, &u.Language, &u.CreatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -249,14 +259,19 @@ func (d *DB) UserByUsername(username string) (*User, error) {
 func (d *DB) UserByID(id int64) (*User, error) {
 	u := &User{}
 	var adminInt int
-	err := d.QueryRow(`SELECT id, username, password_hash, display_name, is_admin, created_at
+	err := d.QueryRow(`SELECT id, username, password_hash, display_name, is_admin, language, created_at
 		FROM users WHERE id=?`, id).
-		Scan(&u.ID, &u.Username, &u.PasswordHash, &u.DisplayName, &adminInt, &u.CreatedAt)
+		Scan(&u.ID, &u.Username, &u.PasswordHash, &u.DisplayName, &adminInt, &u.Language, &u.CreatedAt)
 	if err != nil {
 		return nil, err
 	}
 	u.IsAdmin = adminInt == 1
 	return u, nil
+}
+
+func (d *DB) SetUserLanguage(id int64, lang string) error {
+	_, err := d.Exec(`UPDATE users SET language=? WHERE id=?`, lang, id)
+	return err
 }
 
 func (d *DB) UserCount() int {
