@@ -70,6 +70,14 @@ func (d *DB) migrate() error {
 			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 		)`,
 		`CREATE INDEX IF NOT EXISTS idx_accounts_user ON accounts(user_id)`,
+		`CREATE TABLE IF NOT EXISTS shares (
+			token TEXT PRIMARY KEY,
+			user_id INTEGER NOT NULL,
+			account_id INTEGER NOT NULL,
+			bucket TEXT NOT NULL,
+			key TEXT NOT NULL,
+			expires_at INTEGER NOT NULL
+		)`,
 		`CREATE TABLE IF NOT EXISTS stats (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
@@ -293,6 +301,37 @@ func (d *DB) AccountByID(id, userID int64) (*Account, error) {
 		return nil, err
 	}
 	return a, nil
+}
+
+// Share is a short public link to one object.
+type Share struct {
+	Token     string
+	UserID    int64
+	AccountID int64
+	Bucket    string
+	Key       string
+	ExpiresAt int64
+}
+
+func (d *DB) CreateShare(sh *Share) error {
+	_, err := d.Exec(`INSERT INTO shares(token, user_id, account_id, bucket, key, expires_at)
+		VALUES(?, ?, ?, ?, ?, ?)`, sh.Token, sh.UserID, sh.AccountID, sh.Bucket, sh.Key, sh.ExpiresAt)
+	return err
+}
+
+func (d *DB) ShareByToken(token string) (*Share, error) {
+	sh := &Share{}
+	err := d.QueryRow(`SELECT token, user_id, account_id, bucket, key, expires_at
+		FROM shares WHERE token=?`, token).Scan(
+		&sh.Token, &sh.UserID, &sh.AccountID, &sh.Bucket, &sh.Key, &sh.ExpiresAt)
+	if err != nil {
+		return nil, err
+	}
+	return sh, nil
+}
+
+func (d *DB) PruneExpiredShares() {
+	d.Exec(`DELETE FROM shares WHERE expires_at < strftime('%s','now')`)
 }
 
 func (d *DB) UpdateAccount(a *Account) error {

@@ -34,10 +34,11 @@ func New(database *db.DB, encKey []byte, secure bool, static http.FileSystem, se
 		mux:      http.NewServeMux(),
 	}
 	s.routes()
-	// Prune expired sessions hourly.
+	// Prune expired sessions and shares hourly.
 	go func() {
 		for range time.Tick(time.Hour) {
 			database.PruneExpiredSessions()
+			database.PruneExpiredShares()
 		}
 	}()
 	return s
@@ -84,6 +85,9 @@ func (s *Server) routes() {
 	m.HandleFunc("GET /api/accounts/{id}/objects", s.requireLogin(s.handleListObjects))
 	m.HandleFunc("GET /api/accounts/{id}/presign", s.requireLogin(s.handlePresign))
 	m.HandleFunc("POST /api/accounts/{id}/presign-batch", s.requireLogin(s.handlePresignBatch))
+	m.HandleFunc("POST /api/accounts/{id}/share", s.requireLogin(s.handleCreateShare))
+	// Public short links (no login required).
+	m.HandleFunc("GET /s/{token}", s.handleShareRedirect)
 	m.HandleFunc("POST /api/accounts/{id}/mkdir", s.requireLogin(s.handleMkdir))
 	m.HandleFunc("POST /api/accounts/{id}/rename", s.requireLogin(s.handleRename))
 	m.HandleFunc("POST /api/accounts/{id}/delete", s.requireLogin(s.handleDeleteObjects))

@@ -822,9 +822,10 @@ function openShare(key, name) {
 }
 $('#shareCancel').onclick = () => $('#shareModal').hidden = true;
 $('#shareGen').onclick = async () => {
-  const exp = $('#shareExpiry').value;
+  const exp = parseInt($('#shareExpiry').value, 10);
   try {
-    const p = await apiGet(`/api/accounts/${state.accountId}/presign?bucket=${encodeURIComponent(state.bucket)}&key=${encodeURIComponent(shareKey)}&op=share&expires=${exp}`);
+    const p = await apiPost(`/api/accounts/${state.accountId}/share`,
+      { bucket: state.bucket, key: shareKey, expires: exp });
     $('#shareUrl').value = p.url;
     $('#shareResult').hidden = false;
   } catch (e) { toast('生成失败：' + e.message); }

@@ -2,11 +2,15 @@ package handlers
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/base64"
 	"net/http"
 	"path"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/pal537/objdock/internal/db"
 )
 
 // GET /api/accounts/{id}/objects?bucket=&prefix=&token=
@@ -146,6 +150,91 @@ func (s *Server) handlePresign(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"url": url, "expiresIn": expiresSec})
+}
+
+// POST /api/accounts/{id}/share {bucket, key, expires} — creates a short public link.
+// Returns {"url": "https://host/s/<token>"}.
+func (s *Server) handleCreateShare(w http.ResponseWriter, r *http.Request) {
+	u := s.currentUser(r)
+	id, _ := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	a, err := s.DB.AccountByID(id, u.ID)
+	if err != nil {
+		writeErr(w, http.StatusNotFound, "account not found")
+		return
+	}
+	var in struct {
+		Bucket  string `json:"bucket"`
+		Key     string `json:"key"`
+		Expires int    `json:"expires"`
+	}
+	if err := decodeJSON(r, &in); err != nil || in.Bucket == "" || in.Key == "" {
+		writeErr(w, http.StatusBadRequest, "bucket and key are required")
+		return
+	}
+	if strings.Contains(in.Key, "..") {
+		writeErr(w, http.StatusBadRequest, "invalid key")
+		return
+	}
+	exp := in.Expires
+	if exp <= 0 || exp > 30*24*3600 {
+		exp = 7 * 24 * 3600
+	}
+	tok := make([]byte, 9)
+	if _, err := rand.Read(tok); err != nil {
+		writeErr(w, http.StatusInternalServerError, "cannot generate token")
+		return
+	}
+	token := base64.RawURLEncoding.EncodeToString(tok)[:12]
+	sh := &db.Share{
+		Token:     token,
+		UserID:    u.ID,
+		AccountID: a.ID,
+		Bucket:    in.Bucket,
+		Key:       in.Key,
+		ExpiresAt: time.Now().Unix() + int64(exp),
+	}
+	if err := s.DB.CreateShare(sh); err != nil {
+		writeErr(w, http.StatusInternalServerError, "cannot create share")
+		return
+	}
+	scheme := "http"
+	if r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https" {
+		scheme = "https"
+	}
+	url := scheme + "://" + r.Host + "/s/" + token
+	writeJSON(w, http.StatusOK, map[string]any{"url": url, "expiresIn": exp})
+}
+
+// GET /s/{token} — public redirect to a presigned URL.
+func (s *Server) handleShareRedirect(w http.ResponseWriter, r *http.Request) {
+	token := r.PathValue("token")
+	sh, err := s.DB.ShareByToken(token)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	if time.Now().Unix() > sh.ExpiresAt {
+		http.NotFound(w, r)
+		return
+	}
+	a, err := s.DB.AccountByID(sh.AccountID, sh.UserID)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	client, err := s.s3Client(a)
+	if err != nil {
+		http.Error(w, "unavailable", http.StatusBadGateway)
+		return
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
+	defer cancel()
+	url, err := client.PresignDownload(ctx, sh.Bucket, sh.Key, 300*time.Second, false)
+	if err != nil {
+		http.Error(w, "unavailable", http.StatusBadGateway)
+		return
+	}
+	http.Redirect(w, r, url, http.StatusFound)
 }
 
 // POST /api/accounts/{id}/presign-batch — signs many keys in one round trip.
