@@ -1756,9 +1756,9 @@ function renderWizard() {
     if (wiz.provider === 'oss' || wiz.provider === 'cos' || wiz.provider === 'qiniu')
       body += `<label class="fld"><span>地域</span><select class="input" id="wRegion">${regionOptions(wiz.provider, ex.region)}</select></label>`;
     if (wiz.provider === 'b2')
-      body += `<label class="fld"><span>S3 Endpoint（B2 控制台桶详情里复制）</span>
-      <input class="input" id="wEndpoint" value="${esc(ex.endpoint || '')}" placeholder="s3.us-west-004.backblazeb2.com"></label>
-      <div class="hint">在 B2 控制台点进桶，复制 Endpoint 那一串填进来</div>`;
+      body += `<label class="fld"><span>S3 Endpoint</span>
+      <input class="input" id="wEndpoint" value="${esc(ex.endpoint || '')}" placeholder="s3.us-west-004.backblazeb2.com">
+      <div class="hint">在 B2 控制台点进桶，复制 Endpoint 那一串填进来</div></label>`;
     if (wiz.provider === 'minio' || wiz.provider === 'custom')
       body += `<label class="fld"><span>网关地址</span>
       <input class="input" id="wEndpoint" value="${esc(ex.endpoint || '')}" placeholder="https://minio.example.com"></label>`;
