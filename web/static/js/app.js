@@ -189,7 +189,7 @@ function renderAuthForm(mode) {
       <option value="ko">한국어</option>
       <option value="es">Español</option>
     </select></label>`}
-    ${isLogin ? '<label style="display:flex;gap:8px;align-items:center;cursor:pointer;margin:4px 0 12px;font-size:14px"><input type="checkbox" id="aRemember" checked style="width:16px;height:16px"> 记住我（30 天免登录）</label>' : ''}
+    ${isLogin ? '<label style="display:flex;gap:8px;align-items:center;cursor:pointer;margin:4px 0 12px;font-size:14px"><input type="checkbox" id="aRemember" checked style="width:16px;height:16px"> ' + t('auth.remember') + '</label>' : ''}
     <button class="btn btn-primary" id="aGo" style="width:100%;padding:11px">${isLogin ? t('auth.login') : t('auth.register')}</button>
     <div id="aErr" class="muted" style="color:#ef4444;margin-top:10px;text-align:center"></div>`;
   if (!isLogin) {
@@ -207,7 +207,7 @@ function renderAuthForm(mode) {
       } else {
         const p2 = $('#aPass2').value;
         if (p !== p2) { $('#aErr').textContent = t('auth.passMismatch'); return; }
-        if (p.length < 8) { $('#aErr').textContent = '密码至少 8 位'; return; }
+        if (p.length < 8) { $('#aErr').textContent = t('auth.pwdMin'); return; }
         const lang = ($('#aLang') && $('#aLang').value) || 'en';
         await apiPost('/api/register', { username: u, password: p, language: lang });
         setLang(lang);
@@ -250,7 +250,7 @@ function renderShell() {
         <div class="acct-card" id="acctCard">
           <div class="avatar">${esc(u.username[0].toUpperCase())}</div>
           <div style="flex:1"><div class="sname">${esc(u.username)}</div></div>
-          <button id="themeBtn" title="切换深色/浅色" style="background:none;border:none;cursor:pointer;padding:6px;display:flex;align-items:center"></button>
+          <button id="themeBtn" title="${t('theme.toggle')}" style="background:none;border:none;cursor:pointer;padding:6px;display:flex;align-items:center"></button>
         </div>
       </div>
     </aside>
@@ -1434,7 +1434,7 @@ async function loadUserList() {
     });
     box.querySelectorAll('[data-reset-user]').forEach(b => b.onclick = () => {
       askPrompt('重置密码', `为「${b.dataset.uname}」设置新密码（至少 8 位，字母+数字）`, '', async (v) => {
-        if (!v || v.length < 8) { toast('密码至少 8 位'); return; }
+        if (!v || v.length < 8) { toast(t('auth.pwdMin')); return; }
         try { await apiPost(`/api/admin/users/${b.dataset.resetUser}/reset-password`, { password: v }); toast('密码已重置'); }
         catch (e) { toast('重置失败：' + e.message); }
       });
