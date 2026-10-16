@@ -1034,8 +1034,8 @@ async function openPreview(key, name, kind) {
   try {
     const p = await apiGet(`/api/accounts/${state.accountId}/presign?bucket=${encodeURIComponent(state.bucket)}&key=${encodeURIComponent(key)}&op=preview&expires=3600`);
     const url = p.url, body = $('#previewBody');
-    if (kind === 'image') body.innerHTML = `<img src="${esc(url)}">`;
-    else if (kind === 'video') body.innerHTML = `<video src="${esc(url)}" controls></video>`;
+    if (kind === 'image') body.innerHTML = `<img src="${esc(url)}" style="max-width:100%;max-height:70vh;object-fit:contain;cursor:zoom-in" onclick="window.open('${esc(url)}','_blank')" title="点击查看大图">`;
+    else if (kind === 'video') body.innerHTML = `<video src="${esc(url)}" controls style="max-width:100%;max-height:70vh"></video>`;
     else if (kind === 'audio') body.innerHTML = `<audio src="${esc(url)}" controls style="width:90%"></audio>`;
     else if (kind === 'pdf') body.innerHTML = `<iframe src="${esc(url)}" style="width:100%;height:60vh;border:none"></iframe>`;
     else if (kind === 'text') {
