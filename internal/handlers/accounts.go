@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"regexp"
 	"log"
 	"context"
 	"net/http"
@@ -119,6 +120,12 @@ func (s *Server) buildAccount(u *db.User, in accountInput, existing *db.Account)
 	a.Endpoint = strings.TrimSuffix(a.Endpoint, "/")
 	if a.Endpoint != "" && !strings.HasPrefix(a.Endpoint, "http://") && !strings.HasPrefix(a.Endpoint, "https://") {
 		a.Endpoint = "https://" + a.Endpoint
+	}
+	// B2 手动填 endpoint 时，从 endpoint 解析 region（S3 签名需要）
+	if a.Provider == "b2" && a.Region == "" && a.Endpoint != "" {
+		if m := regexp.MustCompile(`s3\.([a-z0-9-]+)\.backblazeb2\.com`).FindStringSubmatch(a.Endpoint); len(m) == 2 {
+			a.Region = m[1]
+		}
 	}
 	a.AccessKey = strings.TrimSpace(in.AccessKey)
 	a.Bucket = strings.TrimSpace(in.Bucket)
@@ -240,10 +247,17 @@ func (s *Server) handleTestDraft(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "endpoint is required")
 		return
 	}
+	region := in.Region
+	// B2 手动填 endpoint 时，从 endpoint 解析 region
+	if in.Provider == "b2" && region == "" {
+		if m := regexp.MustCompile(`s3\.([a-z0-9-]+)\.backblazeb2\.com`).FindStringSubmatch(endpoint); len(m) == 2 {
+			region = m[1]
+		}
+	}
 	a := &db.Account{
 		Provider:  in.Provider,
 		Endpoint:  endpoint,
-		Region:    in.Region,
+		Region:    region,
 		AccessKey: in.AccessKey,
 	}
 	s.testS3Multi(w, r, a, in.SecretKey, buckets)
