@@ -843,7 +843,7 @@ function renderFileList(d) {
     }
   } else {
     const checkCol = state.selectMode ? '<th class="check-cell"></th>' : '';
-    let h = `<div class="ftable-wrap"><table class="ftable"><thead><tr>${checkCol}<th>名称</th><th style="width:110px">大小</th><th style="width:170px">${t('file.modTime')}</th><th style="width:170px;text-align:right">操作</th></tr></thead><tbody>`;
+    let h = `<div class="ftable-wrap"><table class="ftable"><thead><tr>${checkCol}<th>${t('file.colName')}</th><th style="width:110px">大小</th><th style="width:170px">${t('file.modTime')}</th><th style="width:170px;text-align:right">操作</th></tr></thead><tbody>`;
     d.folders.slice().sort((a, b) => a.name.localeCompare(b.name, 'zh-CN')).forEach(f => {
       h += `<tr>${state.selectMode ? '<td class="check-cell"></td>' : ''}
         <td><div class="fname clickable" data-folder="${esc(f.prefix)}"><div class="fic-sm folder">${ic('folder')}</div>
@@ -1009,7 +1009,7 @@ function copyObject(srcKey, name, isMove) {
     list.innerHTML = '';
     modal.querySelector('h3').textContent = isMove ? '移动到' : '复制到';
     list.innerHTML = `
-      <label class="fld"><span>目标桶</span><select class="input" id="cpBucket">${bOpts}</select></label>
+      <label class="fld"><span>${t('file.targetBucket')}</span><select class="input" id="cpBucket">${bOpts}</select></label>
       <label class="fld"><span>目标路径（含文件名）</span><input class="input" id="cpPath" value="${esc(state.prefix + name)}"></label>
       <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
         <button class="btn" id="cpCancel">${t('common.cancel')}</button>
@@ -1151,7 +1151,7 @@ $('#filePicker').addEventListener('change', async (e) => {
     const row = document.createElement('div');
     row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f1f5f9';
     row.innerHTML = `<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(f.name)}</span>
-      <span class="ust" style="font-size:12px;color:#64748b;white-space:nowrap">等待…</span>
+      <span class="ust" style="font-size:12px;color:#64748b;white-space:nowrap">${t('common.waiting')}</span>
       <div class="ubar" style="width:120px;height:6px;background:#e2e8f0;border-radius:3px;overflow:hidden">
         <div class="ufill" style="height:100%;width:0;background:#3b82f6;border-radius:3px;transition:width .2s"></div>
       </div>`;
@@ -1384,7 +1384,7 @@ async function loadShareList() {
     if (!arr.length) { box.innerHTML = '<div class="muted">' + t('empty.noShare') + '</div>'; return; }
     box.innerHTML = arr.map(sh => {
       const exp = new Date(sh.expiresAt * 1000).toLocaleString('zh-CN', { hour12: false });
-      let st = sh.expired ? '<span style="color:#dc2626">已过期</span>' : `<span style="color:#16a34a">有效期至 ${esc(exp)}</span>`;
+      let st = sh.expired ? '<span style="color:#dc2626">' + t('common.expired') + '</span>' : `<span style="color:#16a34a">${t('share.validUntil')} ${esc(exp)}</span>`;
       const tags = [];
       if (sh.hasPassword) tags.push('🔒密码');
       if (sh.maxViews > 0) tags.push(`${sh.viewCount}/${sh.maxViews}次`);
@@ -1392,8 +1392,8 @@ async function loadShareList() {
       return `<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #f1f5f9">
         <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(sh.key)}">${esc(sh.name)}</span>
         <span style="font-size:12px;color:#64748b">${st}${tagHtml}</span>
-        <button class="btn btn-sm" data-copy-share="${esc(sh.url)}">复制</button>
-        <button class="btn btn-sm" data-del-share="${esc(sh.token)}" style="color:#dc2626">撤销</button>
+        <button class="btn btn-sm" data-copy-share="${esc(sh.url)}">${t('common.copy')}</button>
+        <button class="btn btn-sm" data-del-share="${esc(sh.token)}" style="color:#dc2626">${t('common.revoke')}</button>
       </div>`;
     }).join('');
     box.querySelectorAll('[data-copy-share]').forEach(b => b.onclick = () => {
@@ -1423,7 +1423,7 @@ async function loadUserList() {
         <span style="font-size:12px;color:#64748b">${dt} 注册</span>
         ${isSelf ? '<span style="font-size:12px;color:#94a3b8">自己</span>' : `
           <button class="btn btn-sm" data-reset-user="${x.id}" data-uname="${esc(x.username)}">${t('user.resetPwd')}</button>
-          <button class="btn btn-sm" data-del-user="${x.id}" data-uname="${esc(x.username)}" style="color:#dc2626">删除</button>`}
+          <button class="btn btn-sm" data-del-user="${x.id}" data-uname="${esc(x.username)}" style="color:#dc2626">${t('common.delete')}</button>`}
       </div>`;
     }).join('');
     box.querySelectorAll('[data-del-user]').forEach(b => b.onclick = () => {
@@ -1433,7 +1433,7 @@ async function loadUserList() {
       });
     });
     box.querySelectorAll('[data-reset-user]').forEach(b => b.onclick = () => {
-      askPrompt('重置密码', `为「${b.dataset.uname}」设置新密码（至少 8 位，字母+数字）`, '', async (v) => {
+      askPrompt('重置密码', `为「${b.dataset.uname}」设置${t('user.newPwd')}`, '', async (v) => {
         if (!v || v.length < 8) { toast(t('auth.pwdMin')); return; }
         try { await apiPost(`/api/admin/users/${b.dataset.resetUser}/reset-password`, { password: v }); toast('密码已重置'); }
         catch (e) { toast('重置失败：' + e.message); }
@@ -1540,7 +1540,7 @@ function openUploadLinkModal() {
     </div>
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
       <button class="btn" id="ulCancel">${t('common.cancel')}</button>
-      <button class="btn btn-primary" id="ulCreate">创建链接</button>
+      <button class="btn btn-primary" id="ulCreate">${t('common.createLink')}</button>
     </div>`;
   $('#uploadModal').hidden = false;
   const close = () => { $('#uploadModal').hidden = true; modal.querySelector('h3').textContent = '上传文件'; };
@@ -1570,7 +1570,7 @@ function openUploadLinkModal() {
             <input class="input" id="ulUrl2" readonly value="${esc(p.url)}" onclick="this.select();document.execCommand('copy');toast(t('msg.copied'))" style="cursor:pointer;text-align:center">
           </label>
           <div style="display:flex;gap:8px;justify-content:center;margin-top:16px">
-            <button class="btn" onclick="$('#uploadModal').hidden=true">关闭</button>
+            <button class="btn" onclick="$('#uploadModal').hidden=true">${t('common.close')}</button>
             <button class="btn btn-primary" onclick="openUploadLinkModal()">${t('upload.createAgain')}</button>
           </div>
         </div>`;
@@ -1589,7 +1589,7 @@ async function loadUploadLinkList() {
     if (!arr.length) { box.innerHTML = '<div class="muted">' + t('empty.noUploadLink') + '</div>'; return; }
     box.innerHTML = arr.map(ul => {
       const exp = new Date(ul.expiresAt * 1000).toLocaleString('zh-CN', { hour12: false });
-      const st = ul.expired ? '<span style="color:#dc2626">已过期</span>' : `<span style="color:#16a34a">有效期至 ${esc(exp)}</span>`;
+      const st = ul.expired ? '<span style="color:#dc2626">' + t('common.expired') + '</span>' : `<span style="color:#16a34a">${t('share.validUntil')} ${esc(exp)}</span>`;
       const tags = [];
       if (ul.hasPassword) tags.push('🔒密码');
       if (ul.maxUses > 0) tags.push(`${ul.useCount}/${ul.maxUses}次`);
@@ -1598,8 +1598,8 @@ async function loadUploadLinkList() {
       return `<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #f1f5f9">
         <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(nm)}">${esc(nm)} <span style="color:#94a3b8;font-size:12px">${esc(ul.bucket)}${ul.prefix ? ' / ' + esc(ul.prefix) : ''}</span></span>
         <span style="font-size:12px;color:#64748b">${st}${tagHtml}</span>
-        <button class="btn btn-sm" data-copy-ul="${esc(ul.url)}">复制</button>
-        <button class="btn btn-sm" data-del-ul="${esc(ul.token)}" style="color:#dc2626">撤销</button>
+        <button class="btn btn-sm" data-copy-ul="${esc(ul.url)}">${t('common.copy')}</button>
+        <button class="btn btn-sm" data-del-ul="${esc(ul.token)}" style="color:#dc2626">${t('common.revoke')}</button>
       </div>`;
     }).join('');
     box.querySelectorAll('[data-copy-ul]').forEach(b => b.onclick = () => {
@@ -1652,7 +1652,7 @@ async function openUlLinkView(i) {
   if (!ul) return;
   const main = $('#main');
   main.innerHTML = `<div class="topbar"><h2>${ic('link')} ${esc(ul.name || t('msg.unnamed'))}</h2></div>
-    <div style="margin-bottom:12px;font-size:13px;color:var(--muted)">上传链接 · 共 <span id="ulFileCount">0</span> 个文件 · <button class="btn btn-sm" onclick="nav('files')">返回文件</button></div>
+    <div style="margin-bottom:12px;font-size:13px;color:var(--muted)">上传链接 · 共 <span id="ulFileCount">0</span> 个文件 · <button class="btn btn-sm" onclick="nav('files')">${t('common.backToFiles')}</button></div>
     <div id="ulFileGrid" class="fgrid sz-m"><div class="card" style="grid-column:1/-1;text-align:center;color:var(--muted);padding:30px">${t('common.loading')}</div></div>`;
   try {
     const d = await apiGet(`/api/upload-links/${ul.token}/files`);
@@ -1660,7 +1660,7 @@ async function openUlLinkView(i) {
     $('#ulFileCount').textContent = keys.length;
     const grid = $('#ulFileGrid');
     if (!keys.length) {
-      grid.innerHTML = '<div class="card" style="grid-column:1/-1;text-align:center;color:var(--muted);padding:40px">暂无上传文件</div>';
+      grid.innerHTML = '<div class="card" style="grid-column:1/-1;text-align:center;color:var(--muted);padding:40px">' + t('empty.noUploadFile') + '</div>';
       return;
     }
     // 保存到全局供下载用
@@ -1675,8 +1675,8 @@ async function openUlLinkView(i) {
           <div class="fn" title="${esc(name)}" style="font-weight:600;font-size:14px;margin-bottom:4px">${esc(name)}</div>
           <div class="fs" style="font-size:12px;color:var(--muted);margin-bottom:8px">${esc(k)}</div>
           <div style="display:flex;gap:6px">
-            <button class="btn btn-sm" onclick="ulFileDownload(${idx})">下载</button>
-            <button class="btn btn-sm" style="color:#dc2626" onclick="ulFileDelete(${idx})">删除</button>
+            <button class="btn btn-sm" onclick="ulFileDownload(${idx})">${t('common.download')}</button>
+            <button class="btn btn-sm" style="color:#dc2626" onclick="ulFileDelete(${idx})">${t('common.delete')}</button>
           </div>
         </div>
       </div>`;
@@ -1757,7 +1757,7 @@ async function loadAcctList() {
           <div class="muted">${esc(a.provider)} · ${esc(a.endpoint)}${a.bucket ? ' · ' + ic('box', 13) + ' ' + esc(a.bucket) : ''}</div></div>
         <button class="btn btn-sm" data-edit="${a.id}">${t('common.edit')}</button>
         <button class="btn btn-sm" data-test="${a.id}">${t('common.test')}</button>
-        <button class="btn btn-sm" data-del="${a.id}" style="color:#ef4444">删除</button>
+        <button class="btn btn-sm" data-del="${a.id}" style="color:#ef4444">${t('common.delete')}</button>
       </div>`).join('');
     $$('[data-edit]', box).forEach(b => b.onclick = () => openWizard(parseInt(b.dataset.edit, 10)));
     $$('[data-test]', box).forEach(b => b.onclick = () => testAccount(parseInt(b.dataset.test, 10)));
@@ -2023,10 +2023,10 @@ function renderProfile() {
   main.innerHTML = `
     <div class="topbar"><h2>${ic('user')}修改登录信息</h2></div>
     <div class="card" style="max-width:480px">
-      <label class="fld"><span>用户名（不可修改）</span><input class="input" value="${esc(u.username)}" disabled></label>
-      <h4 style="margin:18px 0 8px">修改密码（不改请留空）</h4>
-      <label class="fld"><span>当前密码</span><input class="input" id="pCur" type="password"></label>
-      <label class="fld"><span>新密码（至少 8 位，字母+数字）</span><input class="input" id="pNew" type="password"></label>
+      <label class="fld"><span>${t('user.usernameFixed')}</span><input class="input" value="${esc(u.username)}" disabled></label>
+      <h4 style="margin:18px 0 8px">${t('user.changePwd')}</h4>
+      <label class="fld"><span>${t('user.currentPwd')}</span><input class="input" id="pCur" type="password"></label>
+      <label class="fld"><span>${t('user.newPwd')}</span><input class="input" id="pNew" type="password"></label>
       <div id="pErr" style="color:#ef4444;font-size:13px;min-height:20px"></div>
       <button class="btn btn-primary" id="pSave">${t('common.save')}</button>
     </div>`;
