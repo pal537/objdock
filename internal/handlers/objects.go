@@ -200,11 +200,7 @@ func (s *Server) handleCreateShare(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusInternalServerError, "cannot create share")
 		return
 	}
-	scheme := "http"
-	if r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https" {
-		scheme = "https"
-	}
-	url := scheme + "://" + r.Host + "/s/" + token
+	url := s.siteBaseURL(r) + "/s/" + token
 	writeJSON(w, http.StatusOK, map[string]any{"url": url, "expiresIn": exp})
 }
 
@@ -216,15 +212,12 @@ func (s *Server) handleListShares(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusInternalServerError, "query failed")
 		return
 	}
-	scheme := "http"
-	if r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https" {
-		scheme = "https"
-	}
+	base := s.siteBaseURL(r)
 	out := make([]map[string]any, 0, len(shares))
 	for _, sh := range shares {
 		out = append(out, map[string]any{
 			"token": sh.Token, "name": sh.Name, "bucket": sh.Bucket, "key": sh.Key,
-			"url":       scheme + "://" + r.Host + "/s/" + sh.Token,
+			"url":       base + "/s/" + sh.Token,
 			"createdAt": sh.CreatedAt, "expiresAt": sh.ExpiresAt,
 			"expired":   time.Now().Unix() > sh.ExpiresAt,
 		})

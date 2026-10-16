@@ -984,12 +984,26 @@ function renderSettings() {
       <label style="display:flex;gap:8px;align-items:center;cursor:pointer">
         <input type="checkbox" id="regToggle" style="width:18px;height:18px"> 允许新用户注册
       </label>
+    </div>
+    <div class="card" id="siteCard" hidden><h3>${ic('settings')}站点设置</h3><p class="desc">分享链接用的公开地址（仅管理员可见）</p>
+      <label class="fld"><span>站点地址</span>
+        <div style="display:flex;gap:8px">
+          <input class="input" id="siteUrl" placeholder="如 https://oss.example.com" style="flex:1">
+          <button class="btn btn-primary" id="siteSave" style="flex:none">保存</button>
+        </div>
+        <div class="hint">留空则自动识别，用于生成私密分享短链</div></label>
     </div>`;
   $('#btnAddAcct').onclick = () => openWizard();
   loadAcctList();
   loadShareList();
   if (state.user.admin) {
     $('#regCard').hidden = false;
+    $('#siteCard').hidden = false;
+    apiGet('/api/settings').then(d => { $('#siteUrl').value = d.siteUrl || ''; }).catch(() => {});
+    $('#siteSave').onclick = async () => {
+      try { await apiPut('/api/settings', { siteUrl: $('#siteUrl').value.trim() }); toast('已保存'); }
+      catch (e) { toast('保存失败：' + e.message); }
+    };
     apiGet('/api/settings').then(d => { $('#regToggle').checked = !!d.registrationEnabled; }).catch(() => {});
     $('#regToggle').onchange = async (e) => {
       try { await apiPut('/api/settings', { registrationEnabled: e.target.checked }); toast('已保存'); }

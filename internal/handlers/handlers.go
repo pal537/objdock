@@ -4,6 +4,7 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/pal537/objdock/internal/auth"
@@ -145,6 +146,19 @@ func (s *Server) requireAdmin(next http.HandlerFunc) http.HandlerFunc {
 		}
 		next(w, r)
 	})
+}
+
+// siteBaseURL returns the configured public site URL, falling back to the
+// request host when not set.
+func (s *Server) siteBaseURL(r *http.Request) string {
+	if v := s.DB.GetSetting("site_url"); v != "" {
+		return strings.TrimSuffix(v, "/")
+	}
+	scheme := "http"
+	if r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https" {
+		scheme = "https"
+	}
+	return scheme + "://" + r.Host
 }
 
 // s3Client builds an S3 client for the account, decrypting the secret.

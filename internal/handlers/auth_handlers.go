@@ -158,6 +158,7 @@ func (s *Server) handleGetSettings(w http.ResponseWriter, r *http.Request) {
 	out := map[string]any{}
 	if u.IsAdmin {
 		out["registrationEnabled"] = s.DB.GetSetting("registration_enabled") == "1"
+		out["siteUrl"] = s.DB.GetSetting("site_url")
 	}
 	writeJSON(w, http.StatusOK, out)
 }
@@ -170,11 +171,20 @@ func (s *Server) handlePutSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var in struct {
-		RegistrationEnabled *bool `json:"registrationEnabled"`
+		RegistrationEnabled *bool  `json:"registrationEnabled"`
+		SiteURL             *string `json:"siteUrl"`
 	}
 	if err := decodeJSON(r, &in); err != nil {
 		writeErr(w, http.StatusBadRequest, "invalid request")
 		return
+	}
+	if in.SiteURL != nil {
+		v := strings.TrimSpace(*in.SiteURL)
+		v = strings.TrimSuffix(v, "/")
+		if err := s.DB.PutSetting("site_url", v); err != nil {
+			writeErr(w, http.StatusInternalServerError, "save failed")
+			return
+		}
 	}
 	if in.RegistrationEnabled != nil {
 		v := "0"
