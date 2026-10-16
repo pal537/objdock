@@ -289,6 +289,8 @@ function updateSwitcherLabel() {
   const a = state.accounts.find(x => x.id === state.accountId);
   $('#swName').textContent = a ? a.name : '选择账户';
   $('#swSub').textContent = a ? (state.bucket || '选择存储桶') : '点击切换';
+  const av = $('#swAvatar');
+  if (av) av.innerHTML = a ? providerLogo(a.provider, 20) : ic('bucket');
 }
 function toggleSwitcher() {
   const dd = $('#dropdown');
@@ -300,7 +302,7 @@ function toggleSwitcher() {
   let html = '<div class="dsec">账户</div>';
   if (!state.accounts.length) html += '<div class="di" onclick="nav(\'settings\')">＋ 去设置里添加账户</div>';
   state.accounts.forEach(a => {
-    html += `<div class="di ${a.id === state.accountId ? 'sel' : ''}" data-acct="${a.id}">${ic('bucket', 16)} ${esc(a.name)}</div>`;
+    html += `<div class="di ${a.id === state.accountId ? 'sel' : ''}" data-acct="${a.id}">${providerLogo(a.provider, 16)} ${esc(a.name)}</div>`;
   });
   html += '<div class="dsec">存储桶</div><div id="ddBuckets"><div class="di muted">先选择账户…</div></div>';
   dd.innerHTML = html;
@@ -314,6 +316,10 @@ function toggleSwitcher() {
     e.stopPropagation();
     await selectAccount(parseInt(el.dataset.acct, 10));
     toggleSwitcherRefreshBuckets();
+    await loadSideFolders();
+    await loadSideUlLinks();
+    if (state.view === 'dash') renderDash();
+    else if (state.view === 'files') loadFiles();
   });
   if (state.accountId) toggleSwitcherRefreshBuckets();
 }
@@ -385,8 +391,9 @@ async function renderDash() {
       if (!buckets.length) buckets.push('');
       buckets.forEach(b => {
         const active = (a.id === state.accountId && b === state.bucket) ? ' active' : '';
+        const logo = providerLogo(a.provider, 16);
         chips.push(`<button class="bucket-chip${active}" data-acct="${a.id}" data-bucket="${esc(b)}">
-          <span class="bc-acct">${esc(a.name)}</span><span class="bc-bucket">${esc(b || '默认桶')}</span>
+          <span class="bc-acct">${logo}<span style="margin-left:5px">${esc(a.name)}</span></span><span class="bc-bucket">${esc(b || '默认桶')}</span>
         </button>`);
       });
     });
@@ -404,6 +411,8 @@ async function renderDash() {
     await selectAccount(aid);
     if (bkt) state.bucket = bkt;
     updateSwitcherLabel();
+    await loadSideFolders();
+    await loadSideUlLinks();
     renderDash();
   });
   $('#dashRefresh').onclick = () => { delete state.statsCache[state.accountId + '/' + state.bucket]; renderDash(); };
@@ -1244,14 +1253,30 @@ async function loadSideFolders(topData) {
 }
 
 /* ---------- settings ---------- */
+/* ---------- 厂商 LOGO ---------- */
+function providerLogo(id, size) {
+  size = size || 20;
+  var s = size;
+  var logos = {
+    r2: '<svg width="'+s+'" height="'+s+'" viewBox="0 0 24 24"><path fill="#F38020" d="M7 18a4.5 4.5 0 0 1-.4-9A6 6 0 0 1 18.3 10H18a4 4 0 0 1 0 8H7z"/></svg>',
+    s3: '<svg width="'+s+'" height="'+s+'" viewBox="0 0 24 24"><path fill="#FF9900" d="M12 4a8 8 0 0 1 7.5 5.2l-2 1A6 6 0 0 0 12 6a6 6 0 0 0-5.5 3.6l-2-1A8 8 0 0 1 12 4z"/><path fill="#FF9900" d="M12 13c-2.5 0-4.8 1-6.3 2.8l1.5 1.3A7.5 7.5 0 0 1 12 15a7.5 7.5 0 0 1 4.8 1.7l1.5-1.3C16.8 14 14.5 13 12 13z"/></svg>',
+    oss: '<svg width="'+s+'" height="'+s+'" viewBox="0 0 24 24"><path fill="#FF6A00" d="M12 3C8.5 3 5.5 5.8 5.5 9.3c0 1.3.4 2.6 1.2 3.6C5.6 13.6 5 14.9 5 16.3h14c0-1.4-.6-2.7-1.7-3.4.8-1 1.2-2.3 1.2-3.6C18.5 5.8 15.5 3 12 3z"/><circle fill="#fff" cx="12" cy="10" r="2.5"/></svg>',
+    cos: '<svg width="'+s+'" height="'+s+'" viewBox="0 0 24 24"><path fill="#0052D9" d="M12 2l9 5v10l-9 5-9-5V7l9-5z"/><path fill="#fff" d="M12 7l4.5 2.5v5L12 17l-4.5-2.5v-5L12 7z"/></svg>',
+    qiniu: '<svg width="'+s+'" height="'+s+'" viewBox="0 0 24 24"><rect fill="#00AAE7" x="3" y="3" width="18" height="18" rx="4"/><path fill="#fff" d="M8 8h8v1.8H8zM8 11h8v1.8H8zM8 14h5v1.8H8z"/></svg>',
+    b2: '<svg width="'+s+'" height="'+s+'" viewBox="0 0 24 24"><path fill="#E6272D" d="M12.6 2.2c.9 3.9-4.8 5.9-4.8 11a4.8 4.8 0 0 0 9.6 0c0-2.4-1.3-4-2.6-5.1-.2 1.7-1.2 2.5-2.2 3 .6-3-.3-6.3-1.4-8.9h1.4z"/></svg>',
+    minio: '<svg width="'+s+'" height="'+s+'" viewBox="0 0 24 24"><path fill="#C72E49" d="M4 4h16v16H4z"/><path fill="#fff" d="M7 14l3-3 2.5 2.5L16 10v6H7v-2z"/></svg>'
+  };
+  return logos[id] || '<svg width="'+s+'" height="'+s+'" viewBox="0 0 24 24"><rect fill="#94a3b8" x="4" y="4" width="16" height="16" rx="4"/></svg>';
+}
+
 const PROVIDERS = [
-  { id: 'r2', name: 'Cloudflare R2', icon: ic('cloud'), hint: '填写 Account ID，地址自动生成' },
-  { id: 's3', name: 'Amazon S3', icon: ic('server'), hint: '全球/区域 endpoint 自动处理' },
-  { id: 'oss', name: '阿里云 OSS', icon: ic('bucket'), hint: '选择地域，地址自动生成' },
-  { id: 'cos', name: '腾讯云 COS', icon: ic('layers'), hint: '选择地域，地址自动生成' },
-  { id: 'qiniu', name: '七牛云', icon: ic('zap'), hint: 'S3 兼容接口' },
-  { id: 'b2', name: 'Backblaze B2', icon: ic('cloud'), hint: 'S3 兼容接口，选择地域' },
-  { id: 'minio', name: 'MinIO / 自建', icon: ic('monitor'), hint: '填写你的网关地址' },
+  { id: 'r2', name: 'Cloudflare R2', icon: providerLogo('r2', 22), hint: '填写 Account ID，地址自动生成' },
+  { id: 's3', name: 'Amazon S3', icon: providerLogo('s3', 22), hint: '全球/区域 endpoint 自动处理' },
+  { id: 'oss', name: '阿里云 OSS', icon: providerLogo('oss', 22), hint: '选择地域，地址自动生成' },
+  { id: 'cos', name: '腾讯云 COS', icon: providerLogo('cos', 22), hint: '选择地域，地址自动生成' },
+  { id: 'qiniu', name: '七牛云', icon: providerLogo('qiniu', 22), hint: 'S3 兼容接口' },
+  { id: 'b2', name: 'Backblaze B2', icon: providerLogo('b2', 22), hint: 'S3 兼容接口' },
+  { id: 'minio', name: 'MinIO / 自建', icon: providerLogo('minio', 22), hint: '填写你的网关地址' },
 ];
 function renderSettings(tab) {
   tab = tab || 'account';
@@ -1576,7 +1601,8 @@ async function loadSideUlLinks() {
   if (!box) return;
   try {
     const d = await apiGet('/api/upload-links');
-    ulLinks = d.links || [];
+    // 只显示当前桶的上传链接
+    ulLinks = (d.links || []).filter(ul => !state.bucket || ul.bucket === state.bucket);
     $('#ulCount').textContent = ulLinks.length ? ulLinks.length + '个' : '';
     if (!ulLinks.length) {
       box.innerHTML = '<div style="font-size:12px;color:var(--muted);padding:4px 12px">暂无</div>';
