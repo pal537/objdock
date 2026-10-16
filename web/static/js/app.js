@@ -728,7 +728,7 @@ function renderFileList(d) {
     folders.forEach(f => {
       h += `<div class="fitem folder-card" data-folder="${esc(f.prefix)}">
         <div class="fic folder-ic">${ic('folder')}</div>
-        <div class="fmeta"><div class="fn">${esc(f.name)}</div><div class="fs">文件夹</div></div></div>`;
+        <div class="fsub"><div class="fn">${esc(f.name)}</div><div class="fs">文件夹</div></div></div>`;
     });
     sortFiles(d.files).forEach(f => {
       const sel = selKeys.has(f.key) ? ' sel' : '';
@@ -736,7 +736,7 @@ function renderFileList(d) {
       h += `<div class="fitem${sel}" data-key="${esc(f.key)}" data-kind="${f.kind}" data-name="${esc(f.name)}">
         ${check}
         <div class="fic" data-thumb="${esc(f.key)}|${f.kind}">${iconFor(f.kind)}</div>
-        <div class="fmeta"><div class="fn" title="${esc(f.name)}">${esc(f.name)}</div><div class="fs">${fmtSize(f.size)} · ${fmtDate(f.lastModified).slice(0, 10)}</div></div></div>`;
+        <div class="fsub"><div class="fn" title="${esc(f.name)}">${esc(f.name)}</div><div class="fs">${fmtSize(f.size)} · ${fmtDate(f.lastModified).slice(0, 10)}</div></div></div>`;
     });
     body.innerHTML = h + '</div>';
     // 文件夹单击进入
@@ -1469,6 +1469,9 @@ function openUploadLinkModal() {
   const close = () => { $('#uploadModal').hidden = true; modal.querySelector('h3').textContent = '上传文件'; };
   $('#ulCancel').onclick = close;
   $('#ulUrl').onclick = (e) => { e.target.select(); document.execCommand('copy'); toast('已复制'); };
+  // 去掉滚动条，完整显示
+  list.style.maxHeight = 'none';
+  list.style.overflow = 'visible';
   $('#ulCreate').onclick = async () => {
     const pwd = $('#ulPwd').value;
     try {
@@ -1482,9 +1485,19 @@ function openUploadLinkModal() {
         password: pwd,
         maxUses: parseInt($('#ulMaxUses').value, 10),
       });
-      $('#ulUrl').value = p.url;
-      $('#ulResult').hidden = false;
-      $('#ulCreate').textContent = '重新生成';
+      // 只显示链接，隐藏表单
+      list.innerHTML = `
+        <div style="text-align:center;padding:20px 0">
+          <div style="font-size:16px;font-weight:600;margin-bottom:16px;color:var(--text)">上传链接已创建</div>
+          <label class="fld"><span>上传链接（点击复制）</span>
+            <input class="input" id="ulUrl2" readonly value="${esc(p.url)}" onclick="this.select();document.execCommand('copy');toast('已复制')" style="cursor:pointer;text-align:center">
+          </label>
+          <div style="display:flex;gap:8px;justify-content:center;margin-top:16px">
+            <button class="btn" onclick="$('#uploadModal').hidden=true">关闭</button>
+            <button class="btn btn-primary" onclick="openUploadLinkModal()">再创建一个</button>
+          </div>
+        </div>`;
+      try { await navigator.clipboard.writeText(p.url); } catch (e) {}
       loadUploadLinkList();
       loadSideUlLinks();
     } catch (e) { toast('创建失败：' + e.message); }
@@ -1557,10 +1570,12 @@ async function loadSideUlLinks() {
   } catch (e) { /* ignore */ }
 }
 let ulViewToken = null;
+let ulViewData = null;
 async function openUlLinkView(i) {
   const ul = ulLinks[i];
   if (!ul) return;
   ulViewToken = ul.token;
+  ulViewData = ul;
   try {
     const d = await apiGet(`/api/upload-links/${ul.token}/files`);
     state.nav = 'files';
@@ -1577,25 +1592,53 @@ function renderUlFilesView(ul, keys) {
     </div>
     <div style="margin-bottom:12px;display:flex;gap:8px">
       <button class="btn btn-sm" onclick="copyUlUrl('${ul.token}')">复制链接</button>
-      <button class="btn btn-sm" onclick="openUlEdit(ulLinks.find(x=>x.token==='${ul.token}'))">编辑</button>
-      <button class="btn btn-sm" onclick="nav('files');ulViewToken=null">返回文件</button>
+      <button class="btn btn-sm" onclick="openUlEdit(ulViewData)">编辑</button>
+      <button class="btn btn-sm" onclick="nav('files');ulViewToken=null;ulViewData=null">返回文件</button>
     </div>
-    <div id="ulFilesList"></div>`;
-  const box = $('#ulFilesList');
+    <div id="ulFilesGrid" class="fgrid"></div>`;
+  const grid = $('#ulFilesGrid');
   if (!keys.length) {
-    box.innerHTML = '<div class="card" style="text-align:center;color:var(--muted);padding:40px">暂无上传文件</div>';
+    grid.innerHTML = '<div class="card" style="text-align:center;color:var(--muted);padding:40px;grid-column:1/-1">暂无上传文件</div>';
     return;
   }
-  // 显示文件列表（简化版，复用文件卡片样式）
-  box.innerHTML = '<div class="card"><div style="display:flex;flex-direction:column;gap:8px">' +
-    keys.map(k => {
-      const name = k.split('/').pop();
-      return `<div style="display:flex;align-items:center;gap:10px;padding:10px;border-bottom:1px solid var(--line)">
-        <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(k)}">${esc(name)}</span>
-        <span style="font-size:12px;color:var(--muted)">${esc(k)}</span>
-        <button class="btn btn-sm" onclick="delUlFile('${ul.token}','${esc(k)}')">删除</button>
-      </div>`;
-    }).join('') + '</div></div>';
+  // 用和主视图一致的文件卡片
+  grid.innerHTML = keys.map((k, idx) => {
+    const name = k.split('/').pop();
+    const ext = name.split('.').pop().toLowerCase();
+    const isImg = ['jpg','jpeg','png','gif','webp','svg'].includes(ext);
+    return `
+    <div class="fitem" data-idx="${idx}">
+      <div class="fthumb">${isImg ? `<img loading="lazy" data-src="${esc(k)}" alt="">` : ic('file', 32)}</div>
+      <div class="fname" title="${esc(name)}">${esc(name)}</div>
+      <div class="fsub">${esc(ul.bucket)}</div>
+      <div style="display:flex;gap:6px;margin-top:8px">
+        <button class="btn btn-sm" onclick="previewUlFile(${idx})">预览</button>
+        <button class="btn btn-sm" onclick="downloadUlFile(${idx})">下载</button>
+        <button class="btn btn-sm" style="color:#dc2626" onclick="delUlFile('${ul.token}','${esc(k)}')">删除</button>
+      </div>
+    </div>`;
+  }).join('');
+  // 懒加载缩略图
+  grid.querySelectorAll('img[data-src]').forEach(img => {
+    const key = img.dataset.src;
+    apiGet(`/api/accounts/${ulViewData.accountId}/download?bucket=${encodeURIComponent(ulViewData.bucket)}&key=${encodeURIComponent(key)}&preview=1`)
+      .then(d => { img.src = d.url; img.removeAttribute('data-src'); })
+      .catch(() => {});
+  });
+  // 保存 keys 供预览/下载用
+  ulViewData._keys = keys;
+}
+function previewUlFile(idx) {
+  const k = ulViewData._keys[idx];
+  downloadUlFile(idx); // 简化：直接下载/预览
+}
+async function downloadUlFile(idx) {
+  const k = ulViewData._keys[idx];
+  const ul = ulViewData;
+  try {
+    const d = await apiGet(`/api/accounts/${ul.accountId}/download?bucket=${encodeURIComponent(ul.bucket)}&key=${encodeURIComponent(k)}`);
+    window.open(d.url, '_blank');
+  } catch (e) { toast('获取下载地址失败：' + e.message); }
 }
 function copyUlUrl(token) {
   const ul = ulLinks.find(x => x.token === token);
