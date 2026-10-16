@@ -341,6 +341,7 @@ async function toggleSwitcherRefreshBuckets() {
 }
 async function selectAccount(id) {
   state.accountId = id; state.bucket = ''; state.prefix = '';
+  try { localStorage.setItem('objdock-account', String(id)); } catch (e) {}
   const a = state.accounts.find(x => x.id === id);
   if (a && a.bucket) state.bucket = a.bucket;
   else {
@@ -1968,7 +1969,10 @@ async function afterLogin() {
   } catch (e) { state.accounts = []; }
   updateSwitcherLabel();
   if (state.accounts.length && !state.accountId) {
-    await selectAccount(state.accounts[0].id);
+    let lastId = 0;
+    try { lastId = parseInt(localStorage.getItem('objdock-account') || '0', 10); } catch (e) {}
+    const found = state.accounts.find(x => x.id === lastId);
+    await selectAccount(found ? found.id : state.accounts[0].id);
   }
   await loadSideFolders();
   loadSideUlLinks();
