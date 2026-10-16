@@ -1749,7 +1749,7 @@ async function loadAcctList() {
     const d = await apiGet('/api/accounts');
     state.accounts = d.accounts;
     updateSwitcherLabel();
-    if (!d.accounts.length) { box.innerHTML = '<div class="empty" style="padding:20px">还没有账户，点击下方按钮添加</div>'; return; }
+    if (!d.accounts.length) { box.innerHTML = '<div class="empty" style="padding:20px">' + t('wiz.noAccount') + '</div>'; return; }
     box.innerHTML = d.accounts.map(a => `
       <div class="acct-row" style="display:flex;align-items:center;gap:10px;padding:10px;border:1px solid var(--line);border-radius:10px;margin-bottom:8px">
         <span class="prov-ic">${(PROVIDERS.find(p => p.id === a.provider) || {}).icon || ic('bucket')}</span>
@@ -1809,7 +1809,7 @@ function renderWizard() {
         <div class="pi">${p.icon}</div><div class="pn">${p.name}</div></div>`).join('') +
       `</div><div class="modal-actions">
         <button class="btn" id="wizCancel">${t('common.cancel')}</button>
-        <button class="btn btn-primary" id="wizNext">下一步</button></div>`;
+        <button class="btn btn-primary" id="wizNext">${t('wiz.next')}</button></div>`;
   } else if (wiz.step === 2) {
     const p = PROVIDERS.find(x => x.id === wiz.provider);
     const ex = wiz.existing || {};
@@ -1823,26 +1823,26 @@ function renderWizard() {
     body += `<h3 style="margin-top:0">${isEdit ? '编辑账户' : p.icon + ' ' + p.name}</h3>${isEdit ? '' : `<p class="muted">${p.hint}</p>`}`;
     body += `<label class="fld"><span>起个名字（比如"我的 R2"）</span>
       <input class="input" id="wName" value="${esc(ex.name || '')}" placeholder="我的 R2"></label>`;
-    if (wiz.provider === 'r2') body += `<label class="fld"><span>Account ID（账户ID）</span>
-      <input class="input" id="wAccountId" value="${esc(acctId)}" placeholder="Cloudflare 面板右下角的 Account ID"></label>`;
+    if (wiz.provider === 'r2') body += `<label class="fld"><span>${t('wiz.accountId')}</span>
+      <input class="input" id="wAccountId" value="${esc(acctId)}" placeholder="${t('wiz.accountIdPh')}"></label>`;
     if (wiz.provider === 'oss' || wiz.provider === 'cos' || wiz.provider === 'qiniu')
-      body += `<label class="fld"><span>地域</span><select class="input" id="wRegion">${regionOptions(wiz.provider, ex.region)}</select></label>`;
+      body += `<label class="fld"><span>${t('wiz.region')}</span><select class="input" id="wRegion">${regionOptions(wiz.provider, ex.region)}</select></label>`;
     if (wiz.provider === 'b2')
       body += `<label class="fld"><span>S3 Endpoint</span>
       <input class="input" id="wEndpoint" value="${esc(ex.endpoint || '')}" placeholder="s3.us-west-004.backblazeb2.com">
       <div class="hint">在 B2 控制台点进桶，复制 Endpoint 那一串填进来</div></label>
       <button class="btn btn-sm" id="b2HelpBtn" style="margin-bottom:12px">📖 配置说明（CORS 必看）</button>`;
     if (wiz.provider === 'minio' || wiz.provider === 'custom')
-      body += `<label class="fld"><span>网关地址</span>
+      body += `<label class="fld"><span>${t('wiz.gateway')}</span>
       <input class="input" id="wEndpoint" value="${esc(ex.endpoint || '')}" placeholder="https://minio.example.com"></label>`;
-    body += `<label class="fld"><span>Access Key（访问密钥 ID）</span>
+    body += `<label class="fld"><span>${t('wiz.accessKey')}</span>
       <input class="input" id="wAK" value="${esc(ex.accessKey || '')}" autocomplete="off"></label>
-      <label class="fld"><span>Secret Key（机密访问密钥）</span>
+      <label class="fld"><span>${t('wiz.secretKey')}</span>
       <input class="input" id="wSK" type="password" autocomplete="new-password"
         placeholder="${wiz.existing ? '••••••••（已保存，留空不修改）' : ''}"></label>
-      <label class="fld"><span>储存桶（必填，可填多个）</span>
+      <label class="fld"><span>${t('wiz.buckets')}</span>
       <input class="input" id="wBucket" value="${esc(ex.bucket || '')}" placeholder="pic, assets —— 多个用英文逗号分隔"></label>
-      <label class="fld"><span>空间配额（可选）</span>
+      <label class="fld"><span>${t('wiz.quota')}</span>
         <div style="display:flex;gap:8px">
           <input class="input" id="wQuota" type="number" min="0" step="any" placeholder="留空则不显示"
             value="${ex.quotaBytes ? (ex.quotaBytes >= 1099511627776 ? (ex.quotaBytes / 1099511627776).toFixed(2).replace(/\.?0+$/, '') : (ex.quotaBytes / 1073741824).toFixed(2).replace(/\.?0+$/, '')) : ''}" style="flex:1">
@@ -1851,20 +1851,20 @@ function renderWizard() {
             <option value="1099511627776" ${ex.quotaBytes >= 1099511627776 ? 'selected' : ''}>TB</option>
           </select>
         </div>
-        <div class="hint">S3 协议查不到总空间，填了后仪表盘会显示使用率（仅用于展示）</div></label>
-      <label class="fld"><span>自定义域名（可选）</span>
+        <div class="hint">${t('wiz.quotaHint')}</div></label>
+      <label class="fld"><span>${t('wiz.domain')}</span>
         <input class="input" id="wPubDomain" placeholder="如 pic.example.com（桶绑定的公开域名）" value="${esc(ex.publicDomain || '')}">
-        <div class="hint">桶在服务商处绑定的公开域名，填了后分享时可直接给公开链接</div></label>
+        <div class="hint">${t('wiz.domainHint')}</div></label>
       <div id="wizErr" style="color:#ef4444;font-size:13px;min-height:20px"></div>
       <div class="modal-actions">
-        ${wiz.existing ? '' : '<button class="btn" id="wizBack">上一步</button>'}
-        <button class="btn" id="wizTest">测试连接</button>
+        ${wiz.existing ? '' : '<button class="btn" id="wizBack">' + t('wiz.prev') + '</button>'}
+        <button class="btn" id="wizTest">${t('wiz.test')}</button>
         <button class="btn btn-primary" id="wizSave">${wiz.existing ? t('common.save') : '添加'}</button></div>`;
   } else {
     const names = (wiz.createdNames && wiz.createdNames.length ? wiz.createdNames : []).map(esc).join('、');
-    body += `<div class="empty"><div class="big">${ic('checkCircle', 56)}</div><h3>添加成功！</h3>
+    body += `<div class="empty"><div class="big">${ic('checkCircle', 56)}</div><h3>${t('wiz.success')}</h3>
       <p class="muted">${names ? `已添加：${names}<br>` : ''}去左下角切换到新账户，开始管理你的对象存储吧</p></div>
-      <div class="modal-actions"><button class="btn btn-primary" id="wizDone">开始使用</button></div>`;
+      <div class="modal-actions"><button class="btn btn-primary" id="wizDone">${t('wiz.start')}</button></div>`;
   }
   $('#wizBody').innerHTML = body;
   $('#wizModal').hidden = false;
