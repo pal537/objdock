@@ -253,7 +253,8 @@ func (d *DB) ResetUserPassword(id int64, hash string) error {
 	if _, err := d.Exec(`UPDATE users SET password_hash=? WHERE id=?`, hash, id); err != nil {
 		return err
 	}
-	return d.DeleteUserSessions(id)
+	d.DeleteUserSessions(id)
+	return nil
 }
 
 func (d *DB) UpdateUser(id int64, displayName, hash string) error {
