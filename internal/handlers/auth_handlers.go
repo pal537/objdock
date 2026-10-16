@@ -11,6 +11,11 @@ import (
 // sessionTTL mirrors auth's 30-day session lifetime.
 const sessionTTL = 30 * 24 * time.Hour
 
+// GET /api/setup-status — public. Reports whether this is a fresh install.
+func (s *Server) handleSetupStatus(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, http.StatusOK, map[string]any{"needsSetup": s.DB.UserCount() == 0})
+}
+
 // POST /api/register {username, password, displayName?}
 // The first registered user becomes admin. Afterwards registration
 // requires the registration_enabled setting.

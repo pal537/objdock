@@ -66,6 +66,7 @@ func (s *Server) routes() {
 		s.ServeIndex(w, r)
 	})
 	// Auth (public)
+	m.HandleFunc("GET /api/setup-status", s.handleSetupStatus)
 	m.HandleFunc("POST /api/register", s.handleRegister)
 	m.HandleFunc("POST /api/login", s.handleLogin)
 	m.HandleFunc("POST /api/logout", s.handleLogout)

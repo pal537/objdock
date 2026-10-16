@@ -154,11 +154,17 @@ function renderAuth(mode) {
 function renderAuthForm(mode) {
   const isLogin = mode === 'login';
   $('#authForm').innerHTML = `
+    ${isLogin ? '' : '<div id="firstAdminHint" hidden style="background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8;border-radius:10px;padding:10px 14px;font-size:13px;margin-bottom:12px">这是全新安装，注册的第一个账号将成为<strong>管理员</strong>。</div>'}
     ${isLogin ? '' : '<label class="fld"><span>昵称</span><input class="input" id="aName" placeholder="怎么称呼你"></label>'}
     <label class="fld"><span>用户名</span><input class="input" id="aUser" autocomplete="username"></label>
     <label class="fld"><span>密码${isLogin ? '' : '（至少 6 位）'}</span><input class="input" id="aPass" type="password" autocomplete="${isLogin ? 'current-password' : 'new-password'}"></label>
     <button class="btn btn-primary" id="aGo" style="width:100%;padding:11px">${isLogin ? '登录' : '注册'}</button>
     <div id="aErr" class="muted" style="color:#ef4444;margin-top:10px;text-align:center"></div>`;
+  if (!isLogin) {
+    apiGet('/api/setup-status').then(d => {
+      if (d.needsSetup) $('#firstAdminHint').hidden = false;
+    }).catch(() => {});
+  }
   const go = async () => {
     const u = $('#aUser').value.trim(), p = $('#aPass').value;
     if (!u || !p) { $('#aErr').textContent = '请输入用户名和密码'; return; }
