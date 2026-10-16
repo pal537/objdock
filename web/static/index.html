@@ -64,8 +64,16 @@
 <div class="modal-backdrop" id="shareModal" hidden>
   <div class="modal">
     <h3>分享链接</h3>
-    <p class="muted">链接在有效期内任何人可下载，无需登录。</p>
-    <label class="fld"><span>有效期</span>
+    <div id="sharePublicWrap" hidden>
+      <label class="fld"><span>公开链接（桶自定义域名，永久有效）</span>
+        <div style="display:flex;gap:8px">
+          <input class="input" id="sharePublicUrl" readonly style="flex:1" onclick="this.select()">
+          <button class="btn" id="sharePublicCopy" style="flex:none">复制</button>
+        </div>
+      </label>
+      <div style="border-top:1px solid #e2e8f0;margin:12px 0"></div>
+    </div>
+    <label class="fld"><span>私密分享（经本站转发，可设有效期）</span>
       <select id="shareExpiry" class="input">
         <option value="3600">1 小时</option>
         <option value="86400">1 天</option>
@@ -79,7 +87,7 @@
     </div>
     <div class="modal-actions">
       <button class="btn" id="shareCancel">关闭</button>
-      <button class="btn btn-primary" id="shareGen">生成链接</button>
+      <button class="btn btn-primary" id="shareGen">生成私密链接</button>
     </div>
   </div>
 </div>

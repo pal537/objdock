@@ -185,13 +185,16 @@ func (s *Server) handleCreateShare(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	token := base64.RawURLEncoding.EncodeToString(tok)[:12]
+	now := time.Now().Unix()
 	sh := &db.Share{
 		Token:     token,
 		UserID:    u.ID,
 		AccountID: a.ID,
 		Bucket:    in.Bucket,
 		Key:       in.Key,
-		ExpiresAt: time.Now().Unix() + int64(exp),
+		Name:      in.Key[strings.LastIndex(in.Key, "/")+1:],
+		CreatedAt: now,
+		ExpiresAt: now + int64(exp),
 	}
 	if err := s.DB.CreateShare(sh); err != nil {
 		writeErr(w, http.StatusInternalServerError, "cannot create share")
@@ -203,6 +206,40 @@ func (s *Server) handleCreateShare(w http.ResponseWriter, r *http.Request) {
 	}
 	url := scheme + "://" + r.Host + "/s/" + token
 	writeJSON(w, http.StatusOK, map[string]any{"url": url, "expiresIn": exp})
+}
+
+// GET /api/shares — list my shares (login required).
+func (s *Server) handleListShares(w http.ResponseWriter, r *http.Request) {
+	u := s.currentUser(r)
+	shares, err := s.DB.SharesByUser(u.ID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "query failed")
+		return
+	}
+	scheme := "http"
+	if r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https" {
+		scheme = "https"
+	}
+	out := make([]map[string]any, 0, len(shares))
+	for _, sh := range shares {
+		out = append(out, map[string]any{
+			"token": sh.Token, "name": sh.Name, "bucket": sh.Bucket, "key": sh.Key,
+			"url":       scheme + "://" + r.Host + "/s/" + sh.Token,
+			"createdAt": sh.CreatedAt, "expiresAt": sh.ExpiresAt,
+			"expired":   time.Now().Unix() > sh.ExpiresAt,
+		})
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"shares": out})
+}
+
+// DELETE /api/shares/{token} — revoke a share (login required).
+func (s *Server) handleDeleteShare(w http.ResponseWriter, r *http.Request) {
+	u := s.currentUser(r)
+	if err := s.DB.DeleteShare(r.PathValue("token"), u.ID); err != nil {
+		writeErr(w, http.StatusInternalServerError, "delete failed")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
 }
 
 // GET /s/{token} — public redirect to a presigned URL.

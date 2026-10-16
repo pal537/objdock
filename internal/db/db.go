@@ -67,6 +67,7 @@ func (d *DB) migrate() error {
 			secret_enc TEXT NOT NULL,
 			bucket TEXT NOT NULL DEFAULT '',
 			quota_bytes INTEGER NOT NULL DEFAULT 0,
+			public_domain TEXT NOT NULL DEFAULT '',
 			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 		)`,
 		`CREATE INDEX IF NOT EXISTS idx_accounts_user ON accounts(user_id)`,
@@ -94,6 +95,21 @@ func (d *DB) migrate() error {
 		}
 	}
 	// 已存在的 accounts 表补 quota_bytes 列
+	if !d.hasColumn("accounts", "public_domain") {
+		if _, err := d.Exec(`ALTER TABLE accounts ADD COLUMN public_domain TEXT NOT NULL DEFAULT ''`); err != nil {
+			return fmt.Errorf("db migrate public_domain: %w", err)
+		}
+	}
+	if !d.hasColumn("shares", "name") {
+		if _, err := d.Exec(`ALTER TABLE shares ADD COLUMN name TEXT NOT NULL DEFAULT ''`); err != nil {
+			return fmt.Errorf("db migrate shares.name: %w", err)
+		}
+	}
+	if !d.hasColumn("shares", "created_at") {
+		if _, err := d.Exec(`ALTER TABLE shares ADD COLUMN created_at INTEGER NOT NULL DEFAULT 0`); err != nil {
+			return fmt.Errorf("db migrate shares.created_at: %w", err)
+		}
+	}
 	if !d.hasColumn("accounts", "quota_bytes") {
 		if _, err := d.Exec(`ALTER TABLE accounts ADD COLUMN quota_bytes INTEGER NOT NULL DEFAULT 0`); err != nil {
 			return fmt.Errorf("db migrate quota_bytes: %w", err)
@@ -259,13 +275,14 @@ type Account struct {
 	SecretEnc string
 	Bucket    string
 	QuotaBytes int64
+	PublicDomain string
 	CreatedAt time.Time
 }
 
 func (d *DB) CreateAccount(a *Account) (int64, error) {
-	res, err := d.Exec(`INSERT INTO accounts(user_id, name, provider, endpoint, region, access_key, secret_enc, bucket, quota_bytes)
-		VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		a.UserID, a.Name, a.Provider, a.Endpoint, a.Region, a.AccessKey, a.SecretEnc, a.Bucket, a.QuotaBytes)
+	res, err := d.Exec(`INSERT INTO accounts(user_id, name, provider, endpoint, region, access_key, secret_enc, bucket, quota_bytes, public_domain)
+		VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		a.UserID, a.Name, a.Provider, a.Endpoint, a.Region, a.AccessKey, a.SecretEnc, a.Bucket, a.QuotaBytes, a.PublicDomain)
 	if err != nil {
 		return 0, err
 	}
@@ -273,7 +290,7 @@ func (d *DB) CreateAccount(a *Account) (int64, error) {
 }
 
 func (d *DB) AccountsByUser(userID int64) ([]*Account, error) {
-	rows, err := d.Query(`SELECT id, user_id, name, provider, endpoint, region, access_key, secret_enc, bucket, created_at, quota_bytes
+	rows, err := d.Query(`SELECT id, user_id, name, provider, endpoint, region, access_key, secret_enc, bucket, created_at, quota_bytes, public_domain
 		FROM accounts WHERE user_id=? ORDER BY created_at`, userID)
 	if err != nil {
 		return nil, err
@@ -283,7 +300,7 @@ func (d *DB) AccountsByUser(userID int64) ([]*Account, error) {
 	for rows.Next() {
 		a := &Account{}
 		if err := rows.Scan(&a.ID, &a.UserID, &a.Name, &a.Provider, &a.Endpoint,
-			&a.Region, &a.AccessKey, &a.SecretEnc, &a.Bucket, &a.CreatedAt, &a.QuotaBytes); err != nil {
+			&a.Region, &a.AccessKey, &a.SecretEnc, &a.Bucket, &a.CreatedAt, &a.QuotaBytes, &a.PublicDomain); err != nil {
 			return nil, err
 		}
 		out = append(out, a)
@@ -293,10 +310,10 @@ func (d *DB) AccountsByUser(userID int64) ([]*Account, error) {
 
 func (d *DB) AccountByID(id, userID int64) (*Account, error) {
 	a := &Account{}
-	err := d.QueryRow(`SELECT id, user_id, name, provider, endpoint, region, access_key, secret_enc, bucket, created_at, quota_bytes
+	err := d.QueryRow(`SELECT id, user_id, name, provider, endpoint, region, access_key, secret_enc, bucket, created_at, quota_bytes, public_domain
 		FROM accounts WHERE id=? AND user_id=?`, id, userID).
 		Scan(&a.ID, &a.UserID, &a.Name, &a.Provider, &a.Endpoint,
-			&a.Region, &a.AccessKey, &a.SecretEnc, &a.Bucket, &a.CreatedAt, &a.QuotaBytes)
+			&a.Region, &a.AccessKey, &a.SecretEnc, &a.Bucket, &a.CreatedAt, &a.QuotaBytes, &a.PublicDomain)
 	if err != nil {
 		return nil, err
 	}
@@ -310,24 +327,50 @@ type Share struct {
 	AccountID int64
 	Bucket    string
 	Key       string
+	Name      string
+	CreatedAt int64
 	ExpiresAt int64
 }
 
 func (d *DB) CreateShare(sh *Share) error {
-	_, err := d.Exec(`INSERT INTO shares(token, user_id, account_id, bucket, key, expires_at)
-		VALUES(?, ?, ?, ?, ?, ?)`, sh.Token, sh.UserID, sh.AccountID, sh.Bucket, sh.Key, sh.ExpiresAt)
+	_, err := d.Exec(`INSERT INTO shares(token, user_id, account_id, bucket, key, name, created_at, expires_at)
+		VALUES(?, ?, ?, ?, ?, ?, ?, ?)`, sh.Token, sh.UserID, sh.AccountID, sh.Bucket, sh.Key, sh.Name, sh.CreatedAt, sh.ExpiresAt)
 	return err
 }
 
 func (d *DB) ShareByToken(token string) (*Share, error) {
 	sh := &Share{}
-	err := d.QueryRow(`SELECT token, user_id, account_id, bucket, key, expires_at
+	err := d.QueryRow(`SELECT token, user_id, account_id, bucket, key, name, created_at, expires_at
 		FROM shares WHERE token=?`, token).Scan(
-		&sh.Token, &sh.UserID, &sh.AccountID, &sh.Bucket, &sh.Key, &sh.ExpiresAt)
+		&sh.Token, &sh.UserID, &sh.AccountID, &sh.Bucket, &sh.Key, &sh.Name, &sh.CreatedAt, &sh.ExpiresAt)
 	if err != nil {
 		return nil, err
 	}
 	return sh, nil
+}
+
+func (d *DB) SharesByUser(userID int64) ([]*Share, error) {
+	rows, err := d.Query(`SELECT token, user_id, account_id, bucket, key, name, created_at, expires_at
+		FROM shares WHERE user_id=? ORDER BY created_at DESC`, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []*Share
+	for rows.Next() {
+		sh := &Share{}
+		if err := rows.Scan(&sh.Token, &sh.UserID, &sh.AccountID, &sh.Bucket, &sh.Key,
+			&sh.Name, &sh.CreatedAt, &sh.ExpiresAt); err != nil {
+			return nil, err
+		}
+		out = append(out, sh)
+	}
+	return out, rows.Err()
+}
+
+func (d *DB) DeleteShare(token string, userID int64) error {
+	_, err := d.Exec(`DELETE FROM shares WHERE token=? AND user_id=?`, token, userID)
+	return err
 }
 
 func (d *DB) PruneExpiredShares() {
@@ -336,9 +379,9 @@ func (d *DB) PruneExpiredShares() {
 
 func (d *DB) UpdateAccount(a *Account) error {
 	_, err := d.Exec(`UPDATE accounts SET name=?, provider=?, endpoint=?, region=?,
-		access_key=?, secret_enc=?, bucket=?, quota_bytes=? WHERE id=? AND user_id=?`,
+		access_key=?, secret_enc=?, bucket=?, quota_bytes=?, public_domain=? WHERE id=? AND user_id=?`,
 		a.Name, a.Provider, a.Endpoint, a.Region, a.AccessKey, a.SecretEnc,
-		a.Bucket, a.QuotaBytes, a.ID, a.UserID)
+		a.Bucket, a.QuotaBytes, a.PublicDomain, a.ID, a.UserID)
 	return err
 }
 

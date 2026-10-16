@@ -102,6 +102,7 @@ async function api(method, url, body) {
 const apiGet = (u) => api('GET', u);
 const apiPost = (u, b) => api('POST', u, b);
 const apiPut = (u, b) => api('PUT', u, b);
+const apiDelete = (u) => api('DELETE', u);
 const apiDel = (u) => api('DELETE', u);
 
 /* ---------- modal helpers ---------- */
@@ -818,8 +819,17 @@ let shareKey = '', shareName = '';
 function openShare(key, name) {
   shareKey = key; shareName = name;
   $('#shareResult').hidden = true;
+  const acct = state.accounts.find(a => a.id === state.accountId);
+  const pd = (acct && acct.publicDomain || '').trim();
+  if (pd) {
+    $('#sharePublicUrl').value = 'https://' + pd.replace(/^https?:\/\//, '').replace(/\/$/, '') + '/' + key.split('/').map(encodeURIComponent).join('/');
+    $('#sharePublicWrap').hidden = false;
+  } else {
+    $('#sharePublicWrap').hidden = true;
+  }
   $('#shareModal').hidden = false;
 }
+$('#sharePublicCopy').onclick = () => { $('#sharePublicUrl').select(); document.execCommand('copy'); toast('已复制'); };
 $('#shareCancel').onclick = () => $('#shareModal').hidden = true;
 $('#shareGen').onclick = async () => {
   const exp = parseInt($('#shareExpiry').value, 10);
@@ -967,6 +977,9 @@ function renderSettings() {
       <div id="acctList"></div>
       <button class="btn btn-primary" id="btnAddAcct" style="margin-top:12px">＋ 添加账户</button>
     </div>
+    <div class="card"><h3>${ic('share')}分享管理</h3><p class="desc">经本站转发的私密分享链接，可撤销</p>
+      <div id="shareList"><div class="muted">加载中…</div></div>
+    </div>
     <div class="card" id="regCard" hidden><h3>${ic('lock')}注册设置</h3><p class="desc">关闭后将无法注册新用户（仅管理员可见）</p>
       <label style="display:flex;gap:8px;align-items:center;cursor:pointer">
         <input type="checkbox" id="regToggle" style="width:18px;height:18px"> 允许新用户注册
@@ -974,6 +987,7 @@ function renderSettings() {
     </div>`;
   $('#btnAddAcct').onclick = () => openWizard();
   loadAcctList();
+  loadShareList();
   if (state.user.admin) {
     $('#regCard').hidden = false;
     apiGet('/api/settings').then(d => { $('#regToggle').checked = !!d.registrationEnabled; }).catch(() => {});
@@ -982,6 +996,33 @@ function renderSettings() {
       catch (err) { toast('保存失败：' + err.message); e.target.checked = !e.target.checked; }
     };
   }
+}
+async function loadShareList() {
+  const box = $('#shareList');
+  try {
+    const d = await apiGet('/api/shares');
+    const arr = d.shares || [];
+    if (!arr.length) { box.innerHTML = '<div class="muted">暂无分享</div>'; return; }
+    box.innerHTML = arr.map(sh => {
+      const exp = new Date(sh.expiresAt * 1000).toLocaleString('zh-CN', { hour12: false });
+      const st = sh.expired ? '<span style="color:#dc2626">已过期</span>' : `<span style="color:#16a34a">有效期至 ${esc(exp)}</span>`;
+      return `<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #f1f5f9">
+        <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(sh.key)}">${esc(sh.name)}</span>
+        <span style="font-size:12px;color:#64748b">${st}</span>
+        <button class="btn btn-sm" data-copy-share="${esc(sh.url)}">复制</button>
+        <button class="btn btn-sm" data-del-share="${esc(sh.token)}" style="color:#dc2626">撤销</button>
+      </div>`;
+    }).join('');
+    box.querySelectorAll('[data-copy-share]').forEach(b => b.onclick = () => {
+      navigator.clipboard.writeText(b.dataset.copyShare).then(() => toast('已复制'));
+    });
+    box.querySelectorAll('[data-del-share]').forEach(b => b.onclick = () => {
+      askConfirm('撤销分享', '确定撤销这个分享链接吗？', '撤销', async () => {
+        try { await apiDelete(`/api/shares/${b.dataset.delShare}`); toast('已撤销'); loadShareList(); }
+        catch (e) { toast('撤销失败：' + e.message); }
+      });
+    });
+  } catch (e) { box.innerHTML = '<div class="muted">加载失败</div>'; }
 }
 async function refreshAccounts() {
   try {
@@ -1094,6 +1135,9 @@ function renderWizard() {
           </select>
         </div>
         <div class="hint">S3 协议查不到总空间，填了后仪表盘会显示使用率（仅用于展示）</div></label>
+      <label class="fld"><span>自定义域名（可选）</span>
+        <input class="input" id="wPubDomain" placeholder="如 pic.example.com（桶绑定的公开域名）" value="${esc(ex.publicDomain || '')}">
+        <div class="hint">桶在服务商处绑定的公开域名，填了后分享时可直接给公开链接</div></label>
       <div id="wizErr" style="color:#ef4444;font-size:13px;min-height:20px"></div>
       <div class="modal-actions">
         ${wiz.existing ? '' : '<button class="btn" id="wizBack">上一步</button>'}
@@ -1156,6 +1200,7 @@ function wizardPayload() {
     accessKey: $('#wAK').value.trim(),
     secretKey: $('#wSK').value,
     bucket: $('#wBucket').value.trim(),
+    publicDomain: (($('#wPubDomain') || {}).value || '').trim().replace(/^https?:\/\//, '').replace(/\/$/, ''),
     quotaBytes: (() => {
       const v = parseFloat(($('#wQuota') || {}).value);
       const u = parseInt((($('#wQuotaUnit') || {}).value) || '1073741824', 10);

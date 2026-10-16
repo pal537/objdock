@@ -86,6 +86,8 @@ func (s *Server) routes() {
 	m.HandleFunc("GET /api/accounts/{id}/presign", s.requireLogin(s.handlePresign))
 	m.HandleFunc("POST /api/accounts/{id}/presign-batch", s.requireLogin(s.handlePresignBatch))
 	m.HandleFunc("POST /api/accounts/{id}/share", s.requireLogin(s.handleCreateShare))
+	m.HandleFunc("GET /api/shares", s.requireLogin(s.handleListShares))
+	m.HandleFunc("DELETE /api/shares/{token}", s.requireLogin(s.handleDeleteShare))
 	// Public short links (no login required).
 	m.HandleFunc("GET /s/{token}", s.handleShareRedirect)
 	m.HandleFunc("POST /api/accounts/{id}/mkdir", s.requireLogin(s.handleMkdir))
