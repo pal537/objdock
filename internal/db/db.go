@@ -466,6 +466,7 @@ type UploadLink struct {
 	AccountID    int64
 	Bucket       string
 	Prefix       string
+	Name         string
 	PasswordHash string
 	MaxUses      int64
 	UseCount     int64
