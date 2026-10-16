@@ -212,8 +212,8 @@ function renderShell() {
         </div>
         <div class="nav-item" data-nav="settings">${ic('settings')}<span>设置</span></div>
         <div class="acct-card" id="acctCard">
-          <div class="avatar">${esc((u.displayName || u.username)[0].toUpperCase())}</div>
-          <div><div class="sname">${esc(u.displayName || u.username)}</div><div class="ssub">${esc(u.username)}</div></div>
+          <div class="avatar">${esc(u.username[0].toUpperCase())}</div>
+          <div><div class="sname">${esc(u.username)}</div></div>
         </div>
       </div>
     </aside>
@@ -1110,7 +1110,7 @@ async function loadUserList() {
       const tag = x.admin ? '<span style="background:#dbeafe;color:#1d4ed8;font-size:11px;padding:2px 8px;border-radius:10px">管理员</span>' : '';
       const isSelf = x.username === state.user.username;
       return `<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #f1f5f9">
-        <span style="flex:1">${esc(x.displayName || x.username)} <span style="color:#94a3b8;font-size:12px">@${esc(x.username)}</span> ${tag}</span>
+        <span style="flex:1">${esc(x.username)} ${tag}</span>
         <span style="font-size:12px;color:#64748b">${dt} 注册</span>
         ${isSelf ? '<span style="font-size:12px;color:#94a3b8">自己</span>' : `
           <button class="btn btn-sm" data-reset-user="${x.id}" data-uname="${esc(x.username)}">重置密码</button>
@@ -1406,7 +1406,7 @@ function renderProfile() {
         newPassword: $('#pNew').value,
       });
       if (d.relogin) { toast('密码已修改，请重新登录'); setTimeout(() => location.reload(), 1200); return; }
-      toast('已保存'); state.user.displayName = $('#pName').value.trim() || state.user.username;
+      toast('已保存');
       renderShell(); await afterLogin();
     } catch (e) { $('#pErr').textContent = e.message; }
   };
