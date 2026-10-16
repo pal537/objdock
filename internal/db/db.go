@@ -265,7 +265,7 @@ func (d *DB) CreateAccount(a *Account) (int64, error) {
 }
 
 func (d *DB) AccountsByUser(userID int64) ([]*Account, error) {
-	rows, err := d.Query(`SELECT id, user_id, name, provider, endpoint, region, access_key, secret_enc, bucket, created_at
+	rows, err := d.Query(`SELECT id, user_id, name, provider, endpoint, region, access_key, secret_enc, bucket, created_at, quota_bytes
 		FROM accounts WHERE user_id=? ORDER BY created_at`, userID)
 	if err != nil {
 		return nil, err
@@ -275,7 +275,7 @@ func (d *DB) AccountsByUser(userID int64) ([]*Account, error) {
 	for rows.Next() {
 		a := &Account{}
 		if err := rows.Scan(&a.ID, &a.UserID, &a.Name, &a.Provider, &a.Endpoint,
-			&a.Region, &a.AccessKey, &a.SecretEnc, &a.Bucket, &a.CreatedAt); err != nil {
+			&a.Region, &a.AccessKey, &a.SecretEnc, &a.Bucket, &a.CreatedAt, &a.QuotaBytes); err != nil {
 			return nil, err
 		}
 		out = append(out, a)
@@ -285,10 +285,10 @@ func (d *DB) AccountsByUser(userID int64) ([]*Account, error) {
 
 func (d *DB) AccountByID(id, userID int64) (*Account, error) {
 	a := &Account{}
-	err := d.QueryRow(`SELECT id, user_id, name, provider, endpoint, region, access_key, secret_enc, bucket, created_at
+	err := d.QueryRow(`SELECT id, user_id, name, provider, endpoint, region, access_key, secret_enc, bucket, created_at, quota_bytes
 		FROM accounts WHERE id=? AND user_id=?`, id, userID).
 		Scan(&a.ID, &a.UserID, &a.Name, &a.Provider, &a.Endpoint,
-			&a.Region, &a.AccessKey, &a.SecretEnc, &a.Bucket, &a.CreatedAt)
+			&a.Region, &a.AccessKey, &a.SecretEnc, &a.Bucket, &a.CreatedAt, &a.QuotaBytes)
 	if err != nil {
 		return nil, err
 	}
