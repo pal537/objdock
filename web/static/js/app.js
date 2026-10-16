@@ -164,7 +164,7 @@ function renderAuth(mode) {
   <div class="auth-wrap"><div class="auth-card">
     <div class="logo">${ic('anchor', 30)}</div>
     <h1>ObjDock</h1>
-    <div class="sub">对象存储的码头 · 自托管，密钥不出你的服务器</div>
+    <div class="sub">${t('brand.tagline')}</div>
     <div class="auth-tabs">
       <button id="tabLogin" class="${mode === 'login' ? 'active' : ''}">登录</button>
       <button id="tabReg" class="${mode === 'register' ? 'active' : ''}">注册</button>
@@ -178,7 +178,7 @@ function renderAuth(mode) {
 function renderAuthForm(mode) {
   const isLogin = mode === 'login';
   $('#authForm').innerHTML = `
-    ${isLogin ? '' : '<div id="firstAdminHint" hidden style="background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8;border-radius:10px;padding:10px 14px;font-size:13px;margin-bottom:12px">这是全新安装，注册的第一个账号将成为<strong>管理员</strong>。</div>'}
+    ${isLogin ? '' : '<div id="firstAdminHint" hidden style="background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8;border-radius:10px;padding:10px 14px;font-size:13px;margin-bottom:12px">' + t('auth.firstAdmin') + '</div>'}
     <label class="fld"><span>用户名</span><input class="input" id="aUser" autocomplete="username"></label>
     <label class="fld"><span>密码${isLogin ? '' : '（至少 8 位，字母+数字）'}</span><input class="input" id="aPass" type="password" autocomplete="${isLogin ? 'current-password' : 'new-password'}"></label>
     ${isLogin ? '' : '<label class="fld"><span>确认密码</span><input class="input" id="aPass2" type="password" autocomplete="new-password"></label>'}
@@ -309,11 +309,11 @@ function toggleSwitcher() {
   dd.style.top = ''; dd.style.bottom = '';
   dd.style.visibility = 'hidden'; dd.hidden = false;
   let html = '<div class="dsec">账户</div>';
-  if (!state.accounts.length) html += '<div class="di" onclick="nav(\'settings\')">＋ 去设置里添加账户</div>';
+  if (!state.accounts.length) html += '<div class="di" onclick="nav(\'settings\')">' + t('account.goAdd') + '</div>';
   state.accounts.forEach(a => {
     html += `<div class="di ${a.id === state.accountId ? 'sel' : ''}" data-acct="${a.id}">${providerLogo(a.provider, 16)} ${esc(a.name)}</div>`;
   });
-  html += '<div class="dsec">存储桶</div><div id="ddBuckets"><div class="di muted">先选择账户…</div></div>';
+  html += '<div class="dsec">' + t('nav.folders') + '</div><div id="ddBuckets"><div class="di muted">' + t('account.selectFirst') + '</div></div>';
   dd.innerHTML = html;
   // 向上弹出：先显示测量高度，再定位到切换器上方
   const h = dd.offsetHeight;
@@ -343,7 +343,7 @@ async function toggleSwitcherRefreshBuckets() {
     if (cur && cur.bucket && !names.includes(cur.bucket)) names.unshift(cur.bucket);
     box.innerHTML = names.map(n =>
       `<div class="di ${n === state.bucket ? 'sel' : ''}" data-bucket="${esc(n)}">${ic('box', 15)} ${esc(n)}</div>`).join('')
-      || '<div class="di muted">没有存储桶</div>';
+      || '<div class="di muted">' + t('account.noBucket') + '</div>';
     $$('[data-bucket]', box).forEach(el => el.onclick = (e) => {
       e.stopPropagation();
       state.bucket = el.dataset.bucket; state.prefix = '';
@@ -373,7 +373,7 @@ function toggleAcctMenu() {
   const r = $('#acctCard').getBoundingClientRect();
   dd.style.left = r.left + 'px'; dd.style.top = (r.top - 130) + 'px';
   dd.innerHTML = `
-    <div class="di" id="mProfile">${ic('user')}修改登录信息</div>
+    <div class="di" id="mProfile">${ic('user')}${t('account.editProfile')}</div>
     <div class="di" id="mLogout">${ic('logout')}退出登录</div>`;
   dd.hidden = false;
   $('#mProfile').onclick = (e) => { e.stopPropagation(); dd.hidden = true; renderProfile(); };
@@ -387,7 +387,7 @@ async function renderDash() {
   if (!state.accountId || !state.bucket) {
     main.innerHTML = `<div class="card"><h3>${ic('dash')}${t('nav.dashboard')}</h3>
       <div class="empty"><div class="big">${ic('bucket', 56)}</div>
-      ${state.accounts.length ? '请先在左下角选择账户和存储桶' : '还没有绑定任何账户，去 <a href="javascript:nav(\'settings\')">设置</a> 添加第一个吧'}
+      ${state.accounts.length ? t('empty.noAccount') : t('empty.addFirst')}
       </div></div>`;
     return;
   }
@@ -551,7 +551,7 @@ async function renderFiles() {
   const main = $('#main');
   if (!state.accountId || !state.bucket) {
     main.innerHTML = `<div class="card"><h3>${ic('folder')}全部文件</h3>
-      <div class="empty"><div class="big">${ic('bucket', 56)}</div>请先在左下角选择账户和存储桶</div></div>`;
+      <div class="empty"><div class="big">${ic('bucket', 56)}</div>${t('empty.noAccount')}</div></div>`;
     return;
   }
   selKeys = new Set();
