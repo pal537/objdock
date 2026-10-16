@@ -494,11 +494,21 @@ async function renderFiles() {
   $('#btnDlSel').onclick = async () => {
     const keys = [...selKeys].filter(k => !k.endsWith('/'));
     if (!keys.length) { toast('所选没有可下载的文件'); return; }
-    toast(`准备下载 ${keys.length} 个文件…`);
-    for (const key of keys) {
-      await downloadFile(key, key.split('/').pop());
-      await new Promise(r => setTimeout(r, 400));
-    }
+    toast(`正在准备 ${keys.length} 个文件的下载链接…`);
+    try {
+      const p = await apiPost(`/api/accounts/${state.accountId}/presign-batch`,
+        { bucket: state.bucket, keys, op: 'download', expires: 600 });
+      const urls = p.urls || {};
+      let n = 0;
+      for (const key of keys) {
+        const url = urls[key];
+        if (!url) continue;
+        window.open(url, '_blank');
+        n++;
+        await new Promise(r => setTimeout(r, 500));
+      }
+      if (!n) toast('下载链接生成失败');
+    } catch (e) { toast('下载失败：' + e.message); }
   };
   $('#btnDelSel').onclick = deleteSelected;
   $('#btnClearSel').onclick = () => {

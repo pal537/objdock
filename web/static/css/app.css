@@ -422,12 +422,12 @@ table.ftable { width: 100%; border-collapse: collapse; font-size: 13.5px; }
 .empty .big { margin-bottom: 14px; }
 .empty .big .ic-svg { width: 56px; height: 56px; opacity: .4; }
 #toast {
-  position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%);
+  position: fixed; top: 28px; left: 50%; transform: translateX(-50%);
   background: #1e293b; color: #fff; padding: 12px 22px; border-radius: 12px; font-size: 13.5px;
-  box-shadow: var(--shadow-lg); z-index: 200; animation: toastUp .25s ease;
+  box-shadow: var(--shadow-lg); z-index: 200; animation: toastDown .25s ease;
   max-width: 80vw;
 }
-@keyframes toastUp { from { opacity: 0; transform: translateX(-50%) translateY(10px); } }
+@keyframes toastDown { from { opacity: 0; transform: translateX(-50%) translateY(-10px); } }
 .dropdown {
   position: fixed; background: #fff; border-radius: 13px; box-shadow: var(--shadow-lg);
   border: 1px solid var(--line); z-index: 90; min-width: 230px; max-width: 300px; padding: 6px;
