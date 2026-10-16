@@ -506,3 +506,7 @@ table.ftable { width: 100%; border-collapse: collapse; font-size: 13.5px; }
   .main { padding: 16px; }
   .ftable .ftime { display: none; }
 }
+
+[data-theme="dark"] .storage-switch { background: #1e293b !important; border-color: #334155 !important; }
+[data-theme="dark"] .storage-switch .sname { color: #f1f5f9 !important; }
+[data-theme="dark"] .storage-switch .ssub { color: #94a3b8 !important; }
