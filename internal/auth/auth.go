@@ -33,11 +33,22 @@ const (
 
 // HashPassword hashes with Argon2id, returning a self-describing string.
 func HashPassword(password string) (string, error) {
-	if len(password) < 6 {
-		return "", errors.New("password too short (min 6 characters)")
+	if len(password) < 8 {
+		return "", errors.New("password too short (min 8 characters)")
 	}
 	if len(password) > 128 {
 		return "", errors.New("password too long")
+	}
+	var hasLetter, hasDigit bool
+	for _, c := range password {
+		if (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') {
+			hasLetter = true
+		} else if c >= '0' && c <= '9' {
+			hasDigit = true
+		}
+	}
+	if !hasLetter || !hasDigit {
+		return "", errors.New("password must contain both letters and numbers")
 	}
 	salt := make([]byte, saltLen)
 	if _, err := rand.Read(salt); err != nil {
@@ -75,6 +86,23 @@ func NewSessionID() (string, error) {
 		return "", err
 	}
 	return base64.RawURLEncoding.EncodeToString(b), nil
+}
+
+// SetSessionCookieWithMaxAge writes the session cookie. If remember is false,
+// the cookie has no MaxAge (browser-session only).
+func SetSessionCookieWithMaxAge(w http.ResponseWriter, sessionID string, secure, remember bool) {
+	c := &http.Cookie{
+		Name:     sessionCookieName,
+		Value:    sessionID,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   secure,
+		SameSite: http.SameSiteLaxMode,
+	}
+	if remember {
+		c.MaxAge = int(sessionTTL.Seconds())
+	}
+	http.SetCookie(w, c)
 }
 
 // SetSessionCookie writes the session cookie (HttpOnly, SameSite=Lax).

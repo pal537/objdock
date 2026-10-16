@@ -219,6 +219,43 @@ func (d *DB) UserCount() int {
 	return n
 }
 
+func (d *DB) AllUsers() ([]*User, error) {
+	rows, err := d.Query(`SELECT id, username, password_hash, display_name, is_admin, created_at
+		FROM users ORDER BY created_at`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []*User
+	for rows.Next() {
+		u := &User{}
+		var adminInt int
+		if err := rows.Scan(&u.ID, &u.Username, &u.PasswordHash, &u.DisplayName, &adminInt, &u.CreatedAt); err != nil {
+			return nil, err
+		}
+		u.IsAdmin = adminInt == 1
+		out = append(out, u)
+	}
+	return out, rows.Err()
+}
+
+func (d *DB) DeleteUser(id int64) error {
+	for _, tbl := range []string{"shares", "accounts", "sessions"} {
+		if _, err := d.Exec(`DELETE FROM `+tbl+` WHERE user_id=?`, id); err != nil {
+			return err
+		}
+	}
+	_, err := d.Exec(`DELETE FROM users WHERE id=?`, id)
+	return err
+}
+
+func (d *DB) ResetUserPassword(id int64, hash string) error {
+	if _, err := d.Exec(`UPDATE users SET password_hash=? WHERE id=?`, hash, id); err != nil {
+		return err
+	}
+	return d.DeleteUserSessions(id)
+}
+
 func (d *DB) UpdateUser(id int64, displayName, hash string) error {
 	if hash != "" {
 		_, err := d.Exec(`UPDATE users SET display_name=?, password_hash=? WHERE id=?`,

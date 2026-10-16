@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -20,6 +21,11 @@ func (s *Server) handleSetupStatus(w http.ResponseWriter, r *http.Request) {
 // The first registered user becomes admin. Afterwards registration
 // requires the registration_enabled setting.
 func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
+	ip := auth.ClientIP(r)
+	if !s.RegLim3h.Allow(ip) || !s.RegLim24h.Allow(ip) {
+		writeErr(w, http.StatusTooManyRequests, "too many registrations from this IP, try again later")
+		return
+	}
 	var in struct {
 		Username    string `json:"username"`
 		Password    string `json:"password"`
@@ -67,6 +73,7 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	var in struct {
 		Username string `json:"username"`
 		Password string `json:"password"`
+		Remember *bool  `json:"remember"`
 	}
 	if err := decodeJSON(r, &in); err != nil {
 		writeErr(w, http.StatusBadRequest, "invalid request")
@@ -78,21 +85,30 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusUnauthorized, "invalid username or password")
 		return
 	}
-	s.login(w, r, u.ID)
+	remember := in.Remember == nil || *in.Remember
+	s.loginWithRemember(w, r, u.ID, remember)
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
 }
 
 func (s *Server) login(w http.ResponseWriter, r *http.Request, userID int64) {
+	s.loginWithRemember(w, r, userID, true)
+}
+
+func (s *Server) loginWithRemember(w http.ResponseWriter, r *http.Request, userID int64, remember bool) {
 	sid, err := auth.NewSessionID()
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, "cannot create session")
 		return
 	}
-	if err := s.DB.CreateSession(sid, userID, sessionTTL); err != nil {
+	ttl := sessionTTL
+	if !remember {
+		ttl = 12 * time.Hour
+	}
+	if err := s.DB.CreateSession(sid, userID, ttl); err != nil {
 		writeErr(w, http.StatusInternalServerError, "cannot create session")
 		return
 	}
-	auth.SetSessionCookie(w, sid, s.Secure)
+	auth.SetSessionCookieWithMaxAge(w, sid, s.Secure, remember)
 }
 
 // POST /api/logout
@@ -155,6 +171,74 @@ func (s *Server) handleUpdateMe(w http.ResponseWriter, r *http.Request) {
 		auth.ClearSessionCookie(w)
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "relogin": hash != ""})
+}
+
+// GET /api/admin/users — list all users (admin only, no passwords).
+func (s *Server) handleAdminListUsers(w http.ResponseWriter, r *http.Request) {
+	u := s.currentUser(r)
+	if !u.IsAdmin {
+		writeErr(w, http.StatusForbidden, "admin only")
+		return
+	}
+	users, err := s.DB.AllUsers()
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "query failed")
+		return
+	}
+	out := make([]map[string]any, 0, len(users))
+	for _, x := range users {
+		out = append(out, map[string]any{
+			"id": x.ID, "username": x.Username, "displayName": x.DisplayName,
+			"admin": x.IsAdmin, "createdAt": x.CreatedAt,
+		})
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"users": out, "total": len(out)})
+}
+
+// DELETE /api/admin/users/{id} — delete a user and all their data (admin only).
+func (s *Server) handleAdminDeleteUser(w http.ResponseWriter, r *http.Request) {
+	u := s.currentUser(r)
+	if !u.IsAdmin {
+		writeErr(w, http.StatusForbidden, "admin only")
+		return
+	}
+	id, _ := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if id == u.ID {
+		writeErr(w, http.StatusBadRequest, "cannot delete yourself")
+		return
+	}
+	if err := s.DB.DeleteUser(id); err != nil {
+		writeErr(w, http.StatusInternalServerError, "delete failed")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+}
+
+// POST /api/admin/users/{id}/reset-password {password} — admin resets a user's password.
+func (s *Server) handleAdminResetPassword(w http.ResponseWriter, r *http.Request) {
+	u := s.currentUser(r)
+	if !u.IsAdmin {
+		writeErr(w, http.StatusForbidden, "admin only")
+		return
+	}
+	id, _ := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	var in struct {
+		Password string `json:"password"`
+	}
+	if err := decodeJSON(r, &in); err != nil {
+		writeErr(w, http.StatusBadRequest, "invalid request")
+		return
+	}
+	hash, err := auth.HashPassword(in.Password)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	if err := s.DB.ResetUserPassword(id, hash); err != nil {
+		writeErr(w, http.StatusInternalServerError, "reset failed")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
 }
 
 // GET /api/settings -> {registrationEnabled}

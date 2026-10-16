@@ -18,6 +18,8 @@ type Server struct {
 	EncKey    []byte
 	Secure    bool // set Secure on cookies (true when served over HTTPS)
 	LoginLim  *auth.Limiter
+	RegLim3h  *auth.Limiter
+	RegLim24h *auth.Limiter
 	Static    http.FileSystem
 	ServeIndex http.HandlerFunc
 	mux       *http.ServeMux
@@ -32,6 +34,8 @@ func New(database *db.DB, encKey []byte, secure bool, static http.FileSystem, se
 		Static:     static,
 		ServeIndex: serveIndex,
 		LoginLim: auth.NewLimiter(10, 10*time.Minute, 30*time.Minute),
+		RegLim3h:  auth.NewLimiter(2, 3*time.Hour, 3*time.Hour),
+		RegLim24h: auth.NewLimiter(5, 24*time.Hour, 24*time.Hour),
 		mux:      http.NewServeMux(),
 	}
 	s.routes()
@@ -75,6 +79,9 @@ func (s *Server) routes() {
 	m.HandleFunc("PUT /api/me", s.requireLogin(s.handleUpdateMe))
 	m.HandleFunc("GET /api/settings", s.requireLogin(s.handleGetSettings))
 	m.HandleFunc("PUT /api/settings", s.requireLogin(s.handlePutSettings))
+	m.HandleFunc("GET /api/admin/users", s.requireLogin(s.handleAdminListUsers))
+	m.HandleFunc("DELETE /api/admin/users/{id}", s.requireLogin(s.handleAdminDeleteUser))
+	m.HandleFunc("POST /api/admin/users/{id}/reset-password", s.requireLogin(s.handleAdminResetPassword))
 	// Accounts
 	m.HandleFunc("GET /api/accounts", s.requireLogin(s.handleListAccounts))
 	m.HandleFunc("POST /api/accounts", s.requireLogin(s.handleCreateAccount))

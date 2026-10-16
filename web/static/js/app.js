@@ -14,6 +14,7 @@ const state = {
   thumbSize: localStorage.getItem('objdock_thumb') || 'medium',
   sort: localStorage.getItem('objdock_sort') || 'time-desc',
   selectMode: false,
+  users: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
   settings: {},
   statsCache: {},
 };
@@ -155,9 +156,10 @@ function renderAuthForm(mode) {
   const isLogin = mode === 'login';
   $('#authForm').innerHTML = `
     ${isLogin ? '' : '<div id="firstAdminHint" hidden style="background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8;border-radius:10px;padding:10px 14px;font-size:13px;margin-bottom:12px">这是全新安装，注册的第一个账号将成为<strong>管理员</strong>。</div>'}
-    ${isLogin ? '' : '<label class="fld"><span>昵称</span><input class="input" id="aName" placeholder="怎么称呼你"></label>'}
     <label class="fld"><span>用户名</span><input class="input" id="aUser" autocomplete="username"></label>
-    <label class="fld"><span>密码${isLogin ? '' : '（至少 6 位）'}</span><input class="input" id="aPass" type="password" autocomplete="${isLogin ? 'current-password' : 'new-password'}"></label>
+    <label class="fld"><span>密码${isLogin ? '' : '（至少 8 位，字母+数字）'}</span><input class="input" id="aPass" type="password" autocomplete="${isLogin ? 'current-password' : 'new-password'}"></label>
+    ${isLogin ? '' : '<label class="fld"><span>确认密码</span><input class="input" id="aPass2" type="password" autocomplete="new-password"></label>'}
+    ${isLogin ? '<label style="display:flex;gap:8px;align-items:center;cursor:pointer;margin:4px 0 12px;font-size:14px"><input type="checkbox" id="aRemember" checked style="width:16px;height:16px"> 记住我（30 天免登录）</label>' : ''}
     <button class="btn btn-primary" id="aGo" style="width:100%;padding:11px">${isLogin ? '登录' : '注册'}</button>
     <div id="aErr" class="muted" style="color:#ef4444;margin-top:10px;text-align:center"></div>`;
   if (!isLogin) {
@@ -169,8 +171,15 @@ function renderAuthForm(mode) {
     const u = $('#aUser').value.trim(), p = $('#aPass').value;
     if (!u || !p) { $('#aErr').textContent = '请输入用户名和密码'; return; }
     try {
-      if (isLogin) await apiPost('/api/login', { username: u, password: p });
-      else await apiPost('/api/register', { username: u, password: p, displayName: $('#aName').value.trim() });
+      if (isLogin) {
+        const remember = $('#aRemember').checked;
+        await apiPost('/api/login', { username: u, password: p, remember });
+      } else {
+        const p2 = $('#aPass2').value;
+        if (p !== p2) { $('#aErr').textContent = '两次输入的密码不一致'; return; }
+        if (p.length < 8) { $('#aErr').textContent = '密码至少 8 位'; return; }
+        await apiPost('/api/register', { username: u, password: p });
+      }
       await boot();
     } catch (e) { $('#aErr').textContent = e.message; }
   };
@@ -1031,6 +1040,9 @@ function renderSettings() {
         <input type="checkbox" id="regToggle" style="width:18px;height:18px"> 允许新用户注册
       </label>
     </div>
+    <div class="card" id="userCard" hidden><h3>${ic('users')}用户管理</h3><p class="desc">共 <b id="userTotal">0</b> 个用户（仅管理员可见，不显示密码）</p>
+      <div id="userList"><div class="muted">加载中…</div></div>
+    </div>
     <div class="card" id="siteCard" hidden><h3>${ic('settings')}站点设置</h3><p class="desc">分享链接用的公开地址（仅管理员可见）</p>
       <label class="fld"><span>站点地址</span>
         <div style="display:flex;gap:8px">
@@ -1045,6 +1057,8 @@ function renderSettings() {
   if (state.user.admin) {
     $('#regCard').hidden = false;
     $('#siteCard').hidden = false;
+    $('#userCard').hidden = false;
+    loadUserList();
     apiGet('/api/settings').then(d => { $('#siteUrl').value = d.siteUrl || ''; }).catch(() => {});
     $('#siteSave').onclick = async () => {
       try { await apiPut('/api/settings', { siteUrl: $('#siteUrl').value.trim() }); toast('已保存'); }
@@ -1080,6 +1094,40 @@ async function loadShareList() {
       askConfirm('撤销分享', '确定撤销这个分享链接吗？', '撤销', async () => {
         try { await apiDelete(`/api/shares/${b.dataset.delShare}`); toast('已撤销'); loadShareList(); }
         catch (e) { toast('撤销失败：' + e.message); }
+      });
+    });
+  } catch (e) { box.innerHTML = '<div class="muted">加载失败</div>'; }
+}
+async function loadUserList() {
+  const box = $('#userList');
+  try {
+    const d = await apiGet('/api/admin/users');
+    $('#userTotal').textContent = d.total;
+    const arr = d.users || [];
+    if (!arr.length) { box.innerHTML = '<div class="muted">暂无用户</div>'; return; }
+    box.innerHTML = arr.map(x => {
+      const dt = new Date(x.createdAt * 1000).toLocaleDateString('zh-CN');
+      const tag = x.admin ? '<span style="background:#dbeafe;color:#1d4ed8;font-size:11px;padding:2px 8px;border-radius:10px">管理员</span>' : '';
+      const isSelf = x.username === state.user.username;
+      return `<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #f1f5f9">
+        <span style="flex:1">${esc(x.displayName || x.username)} <span style="color:#94a3b8;font-size:12px">@${esc(x.username)}</span> ${tag}</span>
+        <span style="font-size:12px;color:#64748b">${dt} 注册</span>
+        ${isSelf ? '<span style="font-size:12px;color:#94a3b8">自己</span>' : `
+          <button class="btn btn-sm" data-reset-user="${x.id}" data-uname="${esc(x.username)}">重置密码</button>
+          <button class="btn btn-sm" data-del-user="${x.id}" data-uname="${esc(x.username)}" style="color:#dc2626">删除</button>`}
+      </div>`;
+    }).join('');
+    box.querySelectorAll('[data-del-user]').forEach(b => b.onclick = () => {
+      askConfirm('删除用户', `确定删除用户「${b.dataset.uname}」吗？其所有账户、分享、文件记录都会被删除，不可恢复。`, '删除', async () => {
+        try { await apiDelete(`/api/admin/users/${b.dataset.delUser}`); toast('已删除'); loadUserList(); }
+        catch (e) { toast('删除失败：' + e.message); }
+      });
+    });
+    box.querySelectorAll('[data-reset-user]').forEach(b => b.onclick = () => {
+      askPrompt('重置密码', `为「${b.dataset.uname}」设置新密码（至少 8 位，字母+数字）`, '', async (v) => {
+        if (!v || v.length < 8) { toast('密码至少 8 位'); return; }
+        try { await apiPost(`/api/admin/users/${b.dataset.resetUser}/reset-password`, { password: v }); toast('密码已重置'); }
+        catch (e) { toast('重置失败：' + e.message); }
       });
     });
   } catch (e) { box.innerHTML = '<div class="muted">加载失败</div>'; }
