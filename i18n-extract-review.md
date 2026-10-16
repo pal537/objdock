@@ -2,8 +2,32 @@
 
 共 **238** 条唯一中文字符串，已分配翻译键。
 
-| # | 翻译键 | 行号 | 出现次数 | 中文原文 |
-|---|--------|------|----------|----------|
+## 命名空间统计
+
+- `auth`: 6 条
+- `btn`: 13 条
+- `common`: 18 条
+- `dash`: 12 条
+- `err`: 1 条
+- `files`: 54 条
+- `layout`: 1 条
+- `modal`: 1 条
+- `nav`: 6 条
+- `provider`: 9 条
+- `region`: 19 条
+- `search`: 4 条
+- `settings`: 12 条
+- `share`: 14 条
+- `switcher`: 9 条
+- `upload`: 3 条
+- `upload_link`: 17 条
+- `users`: 9 条
+- `wizard`: 30 条
+
+## 完整映射表
+
+| # | 翻译键 | 行号 | 次数 | 中文原文 |
+|---|--------|------|------|----------|
 | 1 | `err.request_failed` | 103 | 1 | `请求失败(` |
 | 2 | `btn.confirm` | 117 | 1 | `确认` |
 | 3 | `modal.ask_confirm_actions` | 138 | 1 | `<br>    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px"><br>      <button class="btn" id="afC…` |
@@ -207,37 +231,37 @@
 | 201 | `wizard.field_keys` | 1821 | 1 | `<label class="fld"><span>Access Key（访问密钥 ID）</span><br>      <input class="input" id="wAK" value="${esc(ex.accessKey \|\…` |
 | 202 | `wizard.success` | 1848 | 1 | `<div class="empty"><div class="big">${ic('checkCircle', 56)}</div><h3>添加成功！</h3><br>      <p class="muted">${names ? ` |
 | 203 | `wizard.success_hint` | 1849 | 1 | ` : ''}去左下角切换到新账户，开始管理你的对象存储吧</p></div><br>      <div class="modal-actions"><button class="btn btn-primary" id="wizDone">…` |
-| 204 | `region.hangzhou` | 1858 | 1 | `华东1（杭州）` |
-| 205 | `region.shanghai` | 1858 | 1 | `华东2（上海）` |
-| 206 | `region.beijing` | 1858 | 1 | `华北2（北京）` |
-| 207 | `region.shenzhen` | 1858 | 1 | `华南1（深圳）` |
-| 208 | `region.hongkong` | 1858,1859 | 2 | `香港` |
-| 209 | `region.guangzhou` | 1859 | 1 | `广州` |
-| 210 | `region.shanghai2` | 1859 | 1 | `上海` |
-| 211 | `region.beijing2` | 1859 | 1 | `北京` |
-| 212 | `region.singapore` | 1859 | 1 | `新加坡` |
-| 213 | `region.huadong` | 1860 | 1 | `华东` |
-| 214 | `region.huabei` | 1860 | 1 | `华北` |
-| 215 | `region.huanan` | 1860 | 1 | `华南` |
-| 216 | `region.b2_us_west_phoenix` | 1861 | 1 | `美西 (凤凰城)` |
+| 204 | `region.oss_hangzhou` | 1858 | 1 | `华东1（杭州）` |
+| 205 | `region.oss_shanghai` | 1858 | 1 | `华东2（上海）` |
+| 206 | `region.oss_beijing` | 1858 | 1 | `华北2（北京）` |
+| 207 | `region.oss_shenzhen` | 1858 | 1 | `华南1（深圳）` |
+| 208 | `region.oss_hongkong` | 1858,1859 | 2 | `香港` |
+| 209 | `region.cos_guangzhou` | 1859 | 1 | `广州` |
+| 210 | `region.cos_shanghai` | 1859 | 1 | `上海` |
+| 211 | `region.cos_beijing` | 1859 | 1 | `北京` |
+| 212 | `region.cos_singapore` | 1859 | 1 | `新加坡` |
+| 213 | `region.qiniu_huadong` | 1860 | 1 | `华东` |
+| 214 | `region.qiniu_huabei` | 1860 | 1 | `华北` |
+| 215 | `region.qiniu_huanan` | 1860 | 1 | `华南` |
+| 216 | `region.b2_us_west` | 1861 | 1 | `美西 (凤凰城)` |
 | 217 | `region.b2_us_west_1` | 1861 | 1 | `美西1 (凤凰城)` |
 | 218 | `region.b2_us_west_2` | 1861 | 1 | `美西2 (凤凰城)` |
 | 219 | `region.b2_us_west_4` | 1861 | 1 | `美西4 (凤凰城)` |
 | 220 | `region.b2_us_east` | 1861 | 1 | `美东 (雷斯顿)` |
 | 221 | `region.b2_eu_central` | 1861 | 1 | `欧洲 (阿姆斯特丹)` |
-| 222 | `region.b2_ca` | 1861 | 1 | `加拿大 (多伦多)` |
-| 223 | `region.b2_ap` | 1884 | 1 | `<h3>Backblaze B2 配置说明</h3><br>    <div style="font-size:14px;line-height:1.7"><br>    <p><b>1. 创建 Application Key</b><br…` |
-| 224 | `wizard.b2_help` | 1937 | 1 | `请起个名字` |
-| 225 | `wizard.enter_name` | 1938 | 1 | `请填写 Access Key` |
-| 226 | `wizard.enter_ak` | 1939 | 1 | `请填写储存桶名称` |
-| 227 | `wizard.enter_bucket` | 1940 | 1 | `请填写 Secret Key` |
-| 228 | `wizard.enter_sk` | 1941 | 1 | `保存中…` |
-| 229 | `common.saving` | 1947 | 1 | `${ic('x', 13)} ${esc(r.bucket)}（${esc(r.error \|\| '失败')}）` |
-| 230 | `wizard.bucket_verify` | 1960 | 1 | `${ic('check', 14)} 连接成功：` |
-| 231 | `wizard.connect_ok` | 1969 | 1 | `已保存，但连接测试失败：` |
-| 232 | `wizard.saved_test_failed` | 1970 | 1 | `已保存，连接正常` |
-| 233 | `wizard.saved_ok` | 1971 | 1 | `已保存，连接测试失败：` |
-| 234 | `wizard.saved_test_failed2` | 1987 | 1 | `${b}（${(t.results \|\| []).map(r => r.error).filter(Boolean).join(',') \|\| '验证失败'}）` |
+| 222 | `region.b2_canada` | 1861 | 1 | `加拿大 (多伦多)` |
+| 223 | `wizard.b2_help` | 1884 | 1 | `<h3>Backblaze B2 配置说明</h3><br>    <div style="font-size:14px;line-height:1.7"><br>    <p><b>1. 创建 Application Key</b><br…` |
+| 224 | `wizard.enter_name` | 1937 | 1 | `请起个名字` |
+| 225 | `wizard.enter_ak` | 1938 | 1 | `请填写 Access Key` |
+| 226 | `wizard.enter_bucket` | 1939 | 1 | `请填写储存桶名称` |
+| 227 | `wizard.enter_sk` | 1940 | 1 | `请填写 Secret Key` |
+| 228 | `common.saving` | 1941 | 1 | `保存中…` |
+| 229 | `wizard.bucket_verify_fail` | 1947 | 1 | `${ic('x', 13)} ${esc(r.bucket)}（${esc(r.error \|\| '失败')}）` |
+| 230 | `wizard.bucket_verify_ok` | 1960 | 1 | `${ic('check', 14)} 连接成功：` |
+| 231 | `wizard.saved_test_failed` | 1969 | 1 | `已保存，但连接测试失败：` |
+| 232 | `wizard.saved_ok` | 1970 | 1 | `已保存，连接正常` |
+| 233 | `wizard.saved_test_failed2` | 1971 | 1 | `已保存，连接测试失败：` |
+| 234 | `wizard.failed_buckets` | 1987 | 1 | `${b}（${(t.results \|\| []).map(r => r.error).filter(Boolean).join(',') \|\| '验证失败'}）` |
 | 235 | `wizard.all_failed` | 1991 | 1 | `全部添加失败：` |
 | 236 | `wizard.partial_success` | 1992 | 1 | `已添加 ${created.join('、')}；失败：${failed.join('；')}` |
 | 237 | `settings.profile_page` | 2006 | 1 | `<br>    <div class="topbar"><h2>${ic('user')}修改登录信息</h2></div><br>    <div class="card" style="max-width:480px"><br>    …` |

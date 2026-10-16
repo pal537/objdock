@@ -113,7 +113,7 @@ let confirmCb = null, promptCb = null;
 function askConfirm(title, msg, okText, cb) {
   $('#confirmTitle').textContent = title;
   $('#confirmMsg').textContent = msg;
-  $('#confirmOk').textContent = okText || '确认';
+  $('#confirmOk').textContent = okText || t('common.confirm');
   confirmCb = cb;
   $('#confirmModal').hidden = false;
 }
@@ -190,7 +190,7 @@ function renderAuthForm(mode) {
       <option value="es">Español</option>
     </select></label>`}
     ${isLogin ? '<label style="display:flex;gap:8px;align-items:center;cursor:pointer;margin:4px 0 12px;font-size:14px"><input type="checkbox" id="aRemember" checked style="width:16px;height:16px"> 记住我（30 天免登录）</label>' : ''}
-    <button class="btn btn-primary" id="aGo" style="width:100%;padding:11px">${isLogin ? '登录' : '注册'}</button>
+    <button class="btn btn-primary" id="aGo" style="width:100%;padding:11px">${isLogin ? t('auth.login') : t('auth.register')}</button>
     <div id="aErr" class="muted" style="color:#ef4444;margin-top:10px;text-align:center"></div>`;
   if (!isLogin) {
     apiGet('/api/setup-status').then(d => {
@@ -199,14 +199,14 @@ function renderAuthForm(mode) {
   }
   const go = async () => {
     const u = $('#aUser').value.trim(), p = $('#aPass').value;
-    if (!u || !p) { $('#aErr').textContent = '请输入用户名和密码'; return; }
+    if (!u || !p) { $('#aErr').textContent = t('auth.inputUserPass'); return; }
     try {
       if (isLogin) {
         const remember = $('#aRemember').checked;
         await apiPost('/api/login', { username: u, password: p, remember });
       } else {
         const p2 = $('#aPass2').value;
-        if (p !== p2) { $('#aErr').textContent = '两次输入的密码不一致'; return; }
+        if (p !== p2) { $('#aErr').textContent = t('auth.passMismatch'); return; }
         if (p.length < 8) { $('#aErr').textContent = '密码至少 8 位'; return; }
         const lang = ($('#aLang') && $('#aLang').value) || 'en';
         await apiPost('/api/register', { username: u, password: p, language: lang });
@@ -596,7 +596,7 @@ async function renderFiles() {
   $('#btnUpload').onclick = () => $('#filePicker').click();
   $('#btnMkdir').onclick = () => {
     $('#promptInput').placeholder = '例如：我的照片';
-    askPrompt('新建文件夹', '在当前目录下创建一个新文件夹', '', async (v) => {
+    askPrompt(t('file.newFolder'), '在当前目录下创建一个新文件夹', '', async (v) => {
     v = v.trim().replace(/\//g, '');
     if (!v) return;
     try {
@@ -629,7 +629,7 @@ async function renderFiles() {
     // 多文件：浏览器端打包 zip
     const modal = $('#uploadModal'), list = $('#uploadList');
     list.innerHTML = '';
-    modal.querySelector('h3').textContent = '打包下载';
+    modal.querySelector('h3').textContent = t('file.batchDownload');
     $('#uploadModal').hidden = false;
     const row = document.createElement('div');
     row.style.cssText = 'padding:12px 0';
@@ -680,7 +680,7 @@ async function renderFiles() {
       $$('.fitem.sel', g).forEach(el => el.classList.remove('sel'));
       $$('.fitem .check', g).forEach(cb => cb.checked = false);
       $('#btnSelect').classList.remove('active');
-      $('#btnSelAll').textContent = '全选';
+      $('#btnSelAll').textContent = t('file.selectAll');
       updateSelBar();
     } else { loadFiles(); }
   };
@@ -694,7 +694,7 @@ async function renderFiles() {
       cb.checked = !every;
       const card = cb.closest('.fitem'); if (card) card.classList.toggle('sel', !every);
     });
-    $('#btnSelAll').textContent = every ? '全选' : '全不选';
+    $('#btnSelAll').textContent = every ? t('file.selectAll') : '全不选';
     updateSelBar();
   };
   $('#sortSel').value = state.sort;
@@ -902,7 +902,7 @@ function updateSelBar() {
 }
 function deleteSelected() {
   if (!selKeys.size) return;
-  askConfirm('删除文件', `确定删除选中的 ${selKeys.size} 个文件吗？此操作不可恢复。`, '删除', async () => {
+  askConfirm('删除文件', `确定删除选中的 ${selKeys.size} 个文件吗？此操作不可恢复。`, t('common.delete'), async () => {
     try {
       await apiPost(`/api/accounts/${state.accountId}/delete`, { bucket: state.bucket, keys: [...selKeys] });
       toast(`已删除 ${selKeys.size} 个`); selKeys.clear(); loadFiles();
@@ -910,7 +910,7 @@ function deleteSelected() {
   });
 }
 function renameObject(key, name) {
-  askPrompt('重命名', '新文件名', name, async (v) => {
+  askPrompt(t('common.rename'), '新文件名', name, async (v) => {
     v = v.trim();
     if (!v || v === name) return;
     const dst = state.prefix + v;
@@ -934,7 +934,7 @@ async function downloadFolder(prefix, name) {
     // 复用打包逻辑
     const modal = $('#uploadModal'), list = $('#uploadList');
     list.innerHTML = '';
-    modal.querySelector('h3').textContent = '打包下载';
+    modal.querySelector('h3').textContent = t('file.batchDownload');
     $('#uploadModal').hidden = false;
     const row = document.createElement('div');
     row.style.cssText = 'padding:12px 0';
@@ -992,7 +992,7 @@ async function editText(key, name) {
     $('#edSave').onclick = async () => {
       try {
         await apiPut(`/api/accounts/${state.accountId}/text`, { bucket: state.bucket, key, content: ta.value });
-        toast('已保存');
+        toast(t('msg.saved'));
         $('#uploadModal').hidden = true;
         modal.querySelector('h3').textContent = '上传文件';
         loadFiles();
@@ -1013,7 +1013,7 @@ function copyObject(srcKey, name, isMove) {
       <label class="fld"><span>目标路径（含文件名）</span><input class="input" id="cpPath" value="${esc(state.prefix + name)}"></label>
       <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
         <button class="btn" id="cpCancel">取消</button>
-        <button class="btn btn-primary" id="cpGo">${isMove ? '移动' : '复制'}</button>
+        <button class="btn btn-primary" id="cpGo">${isMove ? t('common.move') : t('common.copy')}</button>
       </div>`;
     $('#uploadModal').hidden = false;
     $('#cpCancel').onclick = () => { $('#uploadModal').hidden = true; modal.querySelector('h3').textContent = '上传文件'; };
@@ -1022,7 +1022,7 @@ function copyObject(srcKey, name, isMove) {
       const dstKey = $('#cpPath').value.trim().replace(/^\/+/, '');
       if (!dstKey) { toast('请输入目标路径'); return; }
       try {
-        toast(`正在${isMove ? '移动' : '复制'}…`);
+        toast(`正在${isMove ? t('common.move') : t('common.copy')}…`);
         $('#uploadModal').hidden = true; modal.querySelector('h3').textContent = '上传文件';
         await apiPost(`/api/accounts/${state.accountId}/copy`, {
           srcBucket: state.bucket, srcKey, dstBucket, dstKey, move: isMove,
@@ -1034,10 +1034,10 @@ function copyObject(srcKey, name, isMove) {
   }).catch(e => toast('获取桶列表失败：' + e.message));
 }
 function deleteSingle(key, name, isFolder) {
-  askConfirm('删除', `确定删除「${name}」吗？${isFolder ? '文件夹内的文件也会被删除，' : ''}此操作不可恢复。`, '删除', async () => {
+  askConfirm(t('common.delete'), `确定删除「${name}」吗？${isFolder ? '文件夹内的文件也会被删除，' : ''}此操作不可恢复。`, t('common.delete'), async () => {
     try {
       await apiPost(`/api/accounts/${state.accountId}/delete`, { bucket: state.bucket, keys: [key] });
-      toast('已删除'); loadFiles();
+      toast(t('msg.deleted')); loadFiles();
     } catch (e) { toast('删除失败：' + e.message); }
   });
 }
@@ -1045,7 +1045,7 @@ function fileAction(act, key, name, kind) {
   if (act === 'preview') openPreview(key, name, kind);
   else if (act === 'download') downloadFile(key, name);
   else if (act === 'share') openShare(key, name);
-  else if (act === 'rename') askPrompt('重命名', '新文件名', name, async (v) => {
+  else if (act === 'rename') askPrompt(t('common.rename'), '新文件名', name, async (v) => {
     v = v.trim();
     if (!v || v === name) return;
     const dst = state.prefix + v;
@@ -1054,10 +1054,10 @@ function fileAction(act, key, name, kind) {
       toast('已重命名'); loadFiles();
     } catch (e) { toast('重命名失败：' + e.message); }
   });
-  else if (act === 'delete') askConfirm('删除文件', `确定删除 ${name} 吗？此操作不可恢复。`, '删除', async () => {
+  else if (act === 'delete') askConfirm('删除文件', `确定删除 ${name} 吗？此操作不可恢复。`, t('common.delete'), async () => {
     try {
       await apiPost(`/api/accounts/${state.accountId}/delete`, { bucket: state.bucket, keys: [key] });
-      toast('已删除'); loadFiles();
+      toast(t('msg.deleted')); loadFiles();
     } catch (e) { toast('删除失败：' + e.message); }
   });
 }
@@ -1120,7 +1120,7 @@ function openShare(key, name) {
   }
   $('#shareModal').hidden = false;
 }
-$('#sharePublicCopy').onclick = () => { $('#sharePublicUrl').select(); document.execCommand('copy'); toast('已复制'); };
+$('#sharePublicCopy').onclick = () => { $('#sharePublicUrl').select(); document.execCommand('copy'); toast(t('msg.copied')); };
 $('#shareCancel').onclick = () => $('#shareModal').hidden = true;
 $('#shareGen').onclick = async () => {
   const exp = parseInt($('#shareExpiry').value, 10);
@@ -1135,7 +1135,7 @@ $('#shareGen').onclick = async () => {
     $('#sharePwd').value = '';
   } catch (e) { toast('生成失败：' + e.message); }
 };
-$('#shareCopy').onclick = () => { $('#shareUrl').select(); document.execCommand('copy'); toast('已复制'); };
+$('#shareCopy').onclick = () => { $('#shareUrl').select(); document.execCommand('copy'); toast(t('msg.copied')); };
 
 /* ---------- upload (centered modal, multi-file) ---------- */
 $('#uploadClose').onclick = () => { $('#uploadModal').hidden = true; };
@@ -1229,19 +1229,19 @@ document.addEventListener('contextmenu', (e) => {
   const isFolder = (item.dataset.kind === 'folder') || key.endsWith('/');
   const items = [];
   if (!isFolder) {
-    items.push({ label: '下载', icon: ic('download', 15), fn: () => downloadFile(key, name) });
+    items.push({ label: t('common.download'), icon: ic('download', 15), fn: () => downloadFile(key, name) });
     items.push({ label: '分享链接', icon: ic('share', 15), fn: () => openShare(key, name) });
     if (/\.(txt|md|json|js|css|html|xml|yml|yaml|ini|conf|cfg|log|sh|py|go|rs|ts|jsx|tsx)$/i.test(name)) {
       items.push({ label: '编辑文本', icon: ic('edit', 15), fn: () => editText(key, name) });
     }
     items.push({ label: '复制到…', icon: ic('copy', 15), fn: () => copyObject(key, name, false) });
     items.push({ label: '移动到…', icon: ic('move', 15), fn: () => copyObject(key, name, true) });
-    items.push({ label: '重命名', icon: ic('edit', 15), fn: () => renameObject(key, name) });
+    items.push({ label: t('common.rename'), icon: ic('edit', 15), fn: () => renameObject(key, name) });
   } else {
     items.push({ label: '进入', icon: ic('folder', 15), fn: () => enterFolder(key) });
     items.push({ label: '打包下载 (zip)', icon: ic('download', 15), fn: () => downloadFolder(key, name) });
   }
-  items.push({ label: '删除', icon: ic('trash', 15), danger: true, fn: () => deleteSingle(key, name, isFolder) });
+  items.push({ label: t('common.delete'), icon: ic('trash', 15), danger: true, fn: () => deleteSingle(key, name, isFolder) });
   showCtxMenu(e.clientX, e.clientY, items);
 });
 
@@ -1342,11 +1342,11 @@ function renderSettingsTab(tab) {
       $('#regToggle').checked = !!d.registrationEnabled;
     }).catch(() => {});
     $('#siteSave').onclick = async () => {
-      try { await apiPut('/api/settings', { siteUrl: $('#siteUrl').value.trim() }); toast('已保存'); }
+      try { await apiPut('/api/settings', { siteUrl: $('#siteUrl').value.trim() }); toast(t('msg.saved')); }
       catch (e) { toast('保存失败：' + e.message); }
     };
     $('#regToggle').onchange = async (e) => {
-      try { await apiPut('/api/settings', { registrationEnabled: e.target.checked }); toast('已保存'); }
+      try { await apiPut('/api/settings', { registrationEnabled: e.target.checked }); toast(t('msg.saved')); }
       catch (err) { toast('保存失败：' + err.message); e.target.checked = !e.target.checked; }
     };
   } else if (tab === 'user' && state.user.admin) {
@@ -1397,11 +1397,11 @@ async function loadShareList() {
       </div>`;
     }).join('');
     box.querySelectorAll('[data-copy-share]').forEach(b => b.onclick = () => {
-      navigator.clipboard.writeText(b.dataset.copyShare).then(() => toast('已复制'));
+      navigator.clipboard.writeText(b.dataset.copyShare).then(() => toast(t('msg.copied')));
     });
     box.querySelectorAll('[data-del-share]').forEach(b => b.onclick = () => {
       askConfirm('撤销分享', '确定撤销这个分享链接吗？', '撤销', async () => {
-        try { await apiDelete(`/api/shares/${b.dataset.delShare}`); toast('已撤销'); loadShareList(); }
+        try { await apiDelete(`/api/shares/${b.dataset.delShare}`); toast(t('msg.revoked')); loadShareList(); }
         catch (e) { toast('撤销失败：' + e.message); }
       });
     });
@@ -1427,8 +1427,8 @@ async function loadUserList() {
       </div>`;
     }).join('');
     box.querySelectorAll('[data-del-user]').forEach(b => b.onclick = () => {
-      askConfirm('删除用户', `确定删除用户「${b.dataset.uname}」吗？其所有账户、分享、文件记录都会被删除，不可恢复。`, '删除', async () => {
-        try { await apiDelete(`/api/admin/users/${b.dataset.delUser}`); toast('已删除'); loadUserList(); }
+      askConfirm('删除用户', `确定删除用户「${b.dataset.uname}」吗？其所有账户、分享、文件记录都会被删除，不可恢复。`, t('common.delete'), async () => {
+        try { await apiDelete(`/api/admin/users/${b.dataset.delUser}`); toast(t('msg.deleted')); loadUserList(); }
         catch (e) { toast('删除失败：' + e.message); }
       });
     });
@@ -1545,7 +1545,7 @@ function openUploadLinkModal() {
   $('#uploadModal').hidden = false;
   const close = () => { $('#uploadModal').hidden = true; modal.querySelector('h3').textContent = '上传文件'; };
   $('#ulCancel').onclick = close;
-  $('#ulUrl').onclick = (e) => { e.target.select(); document.execCommand('copy'); toast('已复制'); };
+  $('#ulUrl').onclick = (e) => { e.target.select(); document.execCommand('copy'); toast(t('msg.copied')); };
   // 去掉滚动条，完整显示
   list.style.maxHeight = 'none';
   list.style.overflow = 'visible';
@@ -1567,7 +1567,7 @@ function openUploadLinkModal() {
         <div style="text-align:center;padding:20px 0">
           <div style="font-size:16px;font-weight:600;margin-bottom:16px;color:var(--text)">上传链接已创建</div>
           <label class="fld"><span>上传链接（点击复制）</span>
-            <input class="input" id="ulUrl2" readonly value="${esc(p.url)}" onclick="this.select();document.execCommand('copy');toast('已复制')" style="cursor:pointer;text-align:center">
+            <input class="input" id="ulUrl2" readonly value="${esc(p.url)}" onclick="this.select();document.execCommand('copy');toast(t('msg.copied'))" style="cursor:pointer;text-align:center">
           </label>
           <div style="display:flex;gap:8px;justify-content:center;margin-top:16px">
             <button class="btn" onclick="$('#uploadModal').hidden=true">关闭</button>
@@ -1594,7 +1594,7 @@ async function loadUploadLinkList() {
       if (ul.hasPassword) tags.push('🔒密码');
       if (ul.maxUses > 0) tags.push(`${ul.useCount}/${ul.maxUses}次`);
       const tagHtml = tags.length ? ` <span style="font-size:11px;background:#f1f5f9;padding:2px 8px;border-radius:10px">${tags.join(' ')}</span>` : '';
-      const nm = ul.name || '未命名';
+      const nm = ul.name || t('msg.unnamed');
       return `<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #f1f5f9">
         <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(nm)}">${esc(nm)} <span style="color:#94a3b8;font-size:12px">${esc(ul.bucket)}${ul.prefix ? ' / ' + esc(ul.prefix) : ''}</span></span>
         <span style="font-size:12px;color:#64748b">${st}${tagHtml}</span>
@@ -1603,11 +1603,11 @@ async function loadUploadLinkList() {
       </div>`;
     }).join('');
     box.querySelectorAll('[data-copy-ul]').forEach(b => b.onclick = () => {
-      navigator.clipboard.writeText(b.dataset.copyUl).then(() => toast('已复制'));
+      navigator.clipboard.writeText(b.dataset.copyUl).then(() => toast(t('msg.copied')));
     });
     box.querySelectorAll('[data-del-ul]').forEach(b => b.onclick = () => {
       askConfirm('撤销上传链接', '确定撤销这个上传链接吗？', '撤销', async () => {
-        try { await apiDelete(`/api/upload-links/${b.dataset.delUl}`); toast('已撤销'); loadUploadLinkList(); if (typeof loadSideUlLinks === 'function') loadSideUlLinks(); }
+        try { await apiDelete(`/api/upload-links/${b.dataset.delUl}`); toast(t('msg.revoked')); loadUploadLinkList(); if (typeof loadSideUlLinks === 'function') loadSideUlLinks(); }
         catch (e) { toast('撤销失败：' + e.message); }
       });
     });
@@ -1627,7 +1627,7 @@ async function loadSideUlLinks() {
       return;
     }
     box.innerHTML = ulLinks.map((ul, i) => {
-      const nm = ul.name || '未命名';
+      const nm = ul.name || t('msg.unnamed');
       const exp = ul.expiresAt ? new Date(ul.expiresAt * 1000).toLocaleDateString('zh-CN') : '';
       return `
       <div class="nav-item" data-ul="${i}" style="font-size:13px" title="${esc(nm)}${exp ? '（有效期至 ' + exp + '）' : ''}">
@@ -1640,8 +1640,8 @@ async function loadSideUlLinks() {
         e.preventDefault();
         const ul = ulLinks[parseInt(el.dataset.ul, 10)];
         showCtxMenu(e.clientX, e.clientY, [
-          { label: '复制链接', icon: ic('copy', 15), fn: () => navigator.clipboard.writeText(ul.url).then(() => toast('已复制')) },
-          { label: '删除', icon: ic('trash', 15), danger: true, fn: () => delUlLink(ul) },
+          { label: '复制链接', icon: ic('copy', 15), fn: () => navigator.clipboard.writeText(ul.url).then(() => toast(t('msg.copied'))) },
+          { label: t('common.delete'), icon: ic('trash', 15), danger: true, fn: () => delUlLink(ul) },
         ]);
       };
     });
@@ -1651,7 +1651,7 @@ async function openUlLinkView(i) {
   const ul = ulLinks[i];
   if (!ul) return;
   const main = $('#main');
-  main.innerHTML = `<div class="topbar"><h2>${ic('link')} ${esc(ul.name || '未命名')}</h2></div>
+  main.innerHTML = `<div class="topbar"><h2>${ic('link')} ${esc(ul.name || t('msg.unnamed'))}</h2></div>
     <div style="margin-bottom:12px;font-size:13px;color:var(--muted)">上传链接 · 共 <span id="ulFileCount">0</span> 个文件 · <button class="btn btn-sm" onclick="nav('files')">返回文件</button></div>
     <div id="ulFileGrid" class="fgrid sz-m"><div class="card" style="grid-column:1/-1;text-align:center;color:var(--muted);padding:30px">加载中…</div></div>`;
   try {
@@ -1715,7 +1715,7 @@ async function ulFileDelete(idx) {
   if (!confirm(`删除 ${k.split('/').pop()}？`)) return;
   try {
     await apiPost(`/api/accounts/${ul.accountId}/delete`, { bucket: ul.bucket, keys: [k] });
-    toast('已删除');
+    toast(t('msg.deleted'));
     // 从记录中删除
     keys.splice(idx, 1);
     openUlLinkView(ulLinks.indexOf(ul));
@@ -1727,10 +1727,10 @@ async function ulFileDelete(idx) {
 
 
 function delUlLink(ul) {
-  askConfirm('删除上传链接', `确定删除「${ul.name}」吗？`, '删除', async () => {
+  askConfirm('删除上传链接', `确定删除「${ul.name}」吗？`, t('common.delete'), async () => {
     try {
       await apiDelete(`/api/upload-links/${ul.token}`);
-      toast('已删除');
+      toast(t('msg.deleted'));
       loadSideUlLinks();
       loadUploadLinkList();
     } catch (e) { toast('删除失败：' + e.message); }
@@ -1763,11 +1763,11 @@ async function loadAcctList() {
     $$('[data-test]', box).forEach(b => b.onclick = () => testAccount(parseInt(b.dataset.test, 10)));
     $$('[data-del]', box).forEach(b => b.onclick = () => {
       const a = state.accounts.find(x => x.id === parseInt(b.dataset.del, 10));
-      askConfirm('删除账户', `确定删除账户「${a.name}」吗？只删除本地配置，不影响云端数据。`, '删除', async () => {
+      askConfirm('删除账户', `确定删除账户「${a.name}」吗？只删除本地配置，不影响云端数据。`, t('common.delete'), async () => {
         try {
           await apiDel(`/api/accounts/${a.id}`);
           if (state.accountId === a.id) { state.accountId = null; state.bucket = ''; }
-          toast('已删除'); loadAcctList();
+          toast(t('msg.deleted')); loadAcctList();
         } catch (e) { toast('删除失败：' + e.message); }
       });
     });
@@ -1859,7 +1859,7 @@ function renderWizard() {
       <div class="modal-actions">
         ${wiz.existing ? '' : '<button class="btn" id="wizBack">上一步</button>'}
         <button class="btn" id="wizTest">测试连接</button>
-        <button class="btn btn-primary" id="wizSave">${wiz.existing ? '保存' : '添加'}</button></div>`;
+        <button class="btn btn-primary" id="wizSave">${wiz.existing ? t('common.save') : '添加'}</button></div>`;
   } else {
     const names = (wiz.createdNames && wiz.createdNames.length ? wiz.createdNames : []).map(esc).join('、');
     body += `<div class="empty"><div class="big">${ic('checkCircle', 56)}</div><h3>添加成功！</h3>
@@ -2037,7 +2037,7 @@ function renderProfile() {
         newPassword: $('#pNew').value,
       });
       if (d.relogin) { toast('密码已修改，请重新登录'); setTimeout(() => location.reload(), 1200); return; }
-      toast('已保存');
+      toast(t('msg.saved'));
       renderShell(); await afterLogin();
     } catch (e) { $('#pErr').textContent = e.message; }
   };

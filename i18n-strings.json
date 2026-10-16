@@ -1,0 +1,1971 @@
+[
+ {
+  "zh": "请求失败(",
+  "lines": [
+   103
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "确认",
+  "lines": [
+   117
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "\n    <div style=\"display:flex;gap:8px;justify-content:flex-end;margin-top:12px\">\n      <button class=\"btn\" id=\"afCancel\">取消</button>\n      <button class=\"btn btn-primary\" id=\"afOk\">确认</button>\n    </div>",
+  "lines": [
+   138
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "\n  <div class=\"auth-wrap\"><div class=\"auth-card\">\n    <div class=\"logo\">${ic('anchor', 30)}</div>\n    <h1>ObjDock</h1>\n    <div class=\"sub\">对象存储的码头 · 自托管，密钥不出你的服务器</div>\n    <div class=\"auth-tabs\">\n      <button id=\"tabLogin\" class=\"${mode === 'login' ? 'active' : ''}\">登录</button>\n      <button id=\"tabReg\" class=\"${mode === 'register' ? 'active' : ''}\">注册</button>\n    </div>\n    <div id=\"authForm\"></div>\n  </div></div>",
+  "lines": [
+   164
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "\n    ${isLogin ? '' : '<div id=\"firstAdminHint\" hidden style=\"background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8;border-radius:10px;padding:10px 14px;font-size:13px;margin-bottom:12px\">这是全新安装，注册的第一个账号将成为<strong>管理员</strong>。</div>'}\n    <label class=\"fld\"><span>用户名</span><input class=\"input\" id=\"aUser\" autocomplete=\"username\"></label>\n    <label class=\"fld\"><span>密码${isLogin ? '' : '（至少 8 位，字母+数字）'}</span><input class=\"input\" id=\"aPass\" type=\"password\" autocomplete=\"${isLogin ? 'current-password' : 'new-password'}\"></label>\n    ${isLogin ? '' : '<label class=\"fld\"><span>确认密码</span><input class=\"input\" id=\"aPass2\" type=\"password\" autocomplete=\"new-password\"></label>'}\n    ${isLogin ? '<label style=\"display:flex;gap:8px;align-items:center;cursor:pointer;margin:4px 0 12px;font-size:14px\"><input type=\"checkbox\" id=\"aRemember\" checked style=\"width:16px;height:16px\"> 记住我（30 天免登录）</label>' : ''}\n    <button class=\"btn btn-primary\" id=\"aGo\" style=\"width:100%;padding:11px\">${isLogin ? '登录' : '注册'}</button>\n    <div id=\"aErr\" class=\"muted\" style=\"color:#ef4444;margin-top:10px;text-align:center\"></div>",
+  "lines": [
+   181
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "请输入用户名和密码",
+  "lines": [
+   196
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "两次输入的密码不一致",
+  "lines": [
+   203
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "密码至少 8 位",
+  "lines": [
+   204,
+   1420
+  ],
+  "quote": "'",
+  "count": 2
+ },
+ {
+  "zh": "\n  <div class=\"layout\">\n    <aside class=\"sidebar\">\n      <div class=\"brand\">\n        <div class=\"logo-ic\">${ic('anchor')}</div>\n        <div><div class=\"t\">ObjDock</div><div class=\"s\">对象存储管理</div></div>\n      </div>\n      <div class=\"nav-item active\" data-nav=\"dash\">${ic('dash')}<span>仪表盘</span></div>\n      <div class=\"nav-item\" data-nav=\"files\">${ic('folder')}<span>全部文件</span></div>\n      <div class=\"nav-sec\">文件夹</div>\n      <div id=\"sideFolders\"></div>\n      <div class=\"nav-sec\" style=\"display:flex;align-items:center;justify-content:space-between\">\n        <span>上传链接</span><span id=\"ulCount\" style=\"font-size:11px;opacity:.6\"></span>\n      </div>\n      <div id=\"sideUlLinks\"></div>\n      <div class=\"side-foot\">\n        <div class=\"storage-switch\" id=\"switcher\">\n          <div class=\"avatar\" id=\"swAvatar\">${ic('bucket')}</div>\n          <div><div class=\"sname\" id=\"swName\">选择账户</div><div class=\"ssub\" id=\"swSub\">点击切换</div></div>\n        </div>\n        <div class=\"nav-item\" data-nav=\"settings\">${ic('settings')}<span>设置</span></div>\n        <div class=\"acct-card\" id=\"acctCard\">\n          <div class=\"avatar\">${esc(u.username[0].toUpperCase())}</div>\n          <div style=\"flex:1\"><div class=\"sname\">${esc(u.username)}</div></div>\n          <button id=\"themeBtn\" title=\"切换深色/浅色\" style=\"background:none;border:none;cursor:pointer;padding:6px;display:flex;align-items:center\"></button>\n        </div>\n      </div>\n    </aside>\n    <main class=\"main\" id=\"main\"></main>\n  </div>\n  <div class=\"dropdown\" id=\"dropdown\" hidden></div>",
+  "lines": [
+   221
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "选择账户",
+  "lines": [
+   291
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "选择存储桶",
+  "lines": [
+   292
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "点击切换",
+  "lines": [
+   292
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "<div class=\"dsec\">账户</div>",
+  "lines": [
+   303
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "<div class=\"di\" onclick=\"nav(\\'settings\\')\">＋ 去设置里添加账户</div>",
+  "lines": [
+   304
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "<div class=\"dsec\">存储桶</div><div id=\"ddBuckets\"><div class=\"di muted\">先选择账户…</div></div>",
+  "lines": [
+   308
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "<div class=\"di muted\">加载中…</div>",
+  "lines": [
+   330
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "<div class=\"di muted\">没有存储桶</div>",
+  "lines": [
+   338
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "<div class=\"di muted\">加载失败：${esc(e.message)}</div>",
+  "lines": [
+   347
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "\n    <div class=\"di\" id=\"mProfile\">${ic('user')}修改登录信息</div>\n    <div class=\"di\" id=\"mLogout\">${ic('logout')}退出登录</div>",
+  "lines": [
+   367
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "<div class=\"card\"><h3>${ic('dash')}仪表盘</h3>\n      <div class=\"empty\"><div class=\"big\">${ic('bucket', 56)}</div>\n      ${state.accounts.length ? '请先在左下角选择账户和存储桶' : '还没有绑定任何账户，去 <a href=\"javascript:nav(\\'settings\\')\">设置</a> 添加第一个吧'}\n      </div></div>",
+  "lines": [
+   380
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "<button class=\"bucket-chip${active}\" data-acct=\"${a.id}\" data-bucket=\"${esc(b)}\">\n          <span class=\"bc-acct\">${logo}<span style=\"margin-left:5px\">${esc(a.name)}</span></span><span class=\"bc-bucket\">${esc(b || '默认桶')}</span>\n        </button>",
+  "lines": [
+   396
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "<div class=\"topbar\"><h2>${ic('dash')}仪表盘</h2><div class=\"spacer\"></div>\n    <button class=\"btn btn-sm\" id=\"dashRefresh\">↻ 重新统计</button></div>\n    ${bucketBar}\n    <div id=\"dashBody\"><div class=\"empty\">统计中…</div></div>",
+  "lines": [
+   403
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "<div class=\"card\" id=\"quotaCard\"><h3>${ic('drive')}空间使用</h3>\n      <p class=\"desc\">配额 ${fmtSize(quota)} · 正在统计使用量…</p></div>",
+  "lines": [
+   425
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "<div class=\"card\"><h3>${ic('drive')}空间使用</h3>\n          <p class=\"desc\">配额 ${fmtSize(q)} · 使用量统计失败（${esc(e.message)}）</p></div>",
+  "lines": [
+   442
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "<div class=\"empty\">统计失败：${esc(e.message)}</div>",
+  "lines": [
+   445
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "<div class=\"ab\" style=\"height:${h.toFixed(0)}%;background:${bg}\"><span class=\"tip\">${x.k} · ${x.c} 个文件变动</span></div>",
+  "lines": [
+   480
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "<div class=\"muted\">暂无历史数据（每天访问仪表盘一次，攒够 2 天数据后生成趋势）</div>",
+  "lines": [
+   484
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "<div class=\"card\"><h3>${ic('drive')}空间使用</h3>\n      <p class=\"desc\">已用 ${fmtSize(d.totalSize)} / 总计 ${fmtSize(quota)}（${pct.toFixed(1)}%），剩余 ${fmtSize(left)}</p>\n      <div style=\"height:12px;background:#f1f5f9;border-radius:6px;overflow:hidden\">\n        <div style=\"height:100%;width:${pct.toFixed(1)}%;background:${barColor};border-radius:6px;transition:width .5s ease\"></div>\n      </div></div>",
+  "lines": [
+   501
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "\n    <div class=\"stat-grid\">\n      <div class=\"stat\"><div class=\"ic\" style=\"background:#dbeafe;color:#2563eb\">${ic('drive')}</div><div><div class=\"v\">${fmtSize(d.totalSize)}</div><div class=\"l\">总存储量</div><div class=\"s\">${d.truncated ? '约 ' : ''}${d.fileCount} 个文件${d.truncated ? '（仅扫描前 ' + d.scanned + ' 个）' : ''}</div></div></div>\n      <div class=\"stat\"><div class=\"ic\" style=\"background:#ede9fe;color:#7c3aed\">${ic('file')}</div><div><div class=\"v\">${d.fileCount}</div><div class=\"l\">文件</div><div class=\"s\">文件夹 ${d.byFolder.length} 个</div></div></div>\n      <div class=\"stat\"><div class=\"ic\" style=\"background:#fef3c7;color:#d97706\">${ic('layers')}</div><div><div class=\"v\">${fmtSize(d.avgSize)}</div><div class=\"l\">平均文件大小</div><div class=\"s\">最大 ${fmtSize(d.largest.size)}</div></div></div>\n      <div class=\"stat\"><div class=\"ic\" style=\"background:#dcfce7;color:#059669\">${ic('clock')}</div><div><div class=\"v\">${d.weekCount}</div><div class=\"l\">最近 7 天修改</div><div class=\"s\">最活跃 ${Object.keys(act).sort().pop() || '-'}</div></div></div>\n    </div>\n    <div class=\"panels\">\n      <div class=\"panel\"><h4>按文件夹统计存储</h4>\n        ${d.byFolder.map(f => ",
+  "lines": [
+   507
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": ").join('') || '<div class=\"muted\">无数据</div>'}\n      </div>\n      <div class=\"panel\"><h4>按类型统计存储</h4><div class=\"donut-wrap\">\n        <svg width=\"140\" height=\"140\" viewBox=\"0 0 140 140\"><circle cx=\"70\" cy=\"70\" r=\"54\" fill=\"#f1f5f9\"/>${segs}\n          <text x=\"70\" y=\"66\" text-anchor=\"middle\" font-size=\"13\" font-weight=\"700\">${fmtSize(d.totalSize)}</text>\n          <text x=\"70\" y=\"84\" text-anchor=\"middle\" font-size=\"11\" fill=\"#8a94a6\">总计</text></svg>\n        <div class=\"legend\">${d.byType.map((t, i) =>\n          ",
+  "lines": [
+   518
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": ").join('')}\n        </div></div>\n      </div>\n    </div>\n    <div class=\"card\"><h3>${ic('trend')}存储增长趋势</h3><p class=\"desc\">每天统计一次，记录总用量变化</p>${trendSvg}</div>\n    <div class=\"card\"><h3>${ic('calendar')}文件活跃度（近 30 天）</h3>\n      <p class=\"desc\">每天有文件新增或修改的天数统计，共 ${totalAct} 次变动</p>\n      <div class=\"activity-chart\">${bars}</div>\n      <div class=\"activity-legend\"><span>${days[0].label}</span><span>${days[29].label}</span></div></div>\n    ${quota > 0 ? '' : ",
+  "lines": [
+   526
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "<div class=\"card\"><h3>${ic('folder')}全部文件</h3>\n      <div class=\"empty\"><div class=\"big\">${ic('bucket', 56)}</div>请先在左下角选择账户和存储桶</div></div>",
+  "lines": [
+   545
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "\n    <div class=\"topbar\"><h2>${ic('folder')}全部文件</h2><div class=\"spacer\"></div>\n      <input class=\"input input-sm\" id=\"searchInput\" placeholder=\"🔍 全桶搜索…\" style=\"width:180px\">\n      <select class=\"input input-sm\" id=\"sortSel\" title=\"排序\">\n        <option value=\"time-desc\">时间 ↓ 新到旧</option>\n        <option value=\"time-asc\">时间 ↑ 旧到新</option>\n        <option value=\"size-desc\">大小 ↓ 大到小</option>\n        <option value=\"size-asc\">大小 ↑ 小到大</option>\n        <option value=\"name-asc\">名称 A-Z</option>\n        <option value=\"name-desc\">名称 Z-A</option>\n      </select>\n      <div class=\"view-toggle\" id=\"sizeSeg\">\n        <button data-sz=\"small\" class=\"${state.thumbSize === 'small' ? 'active' : ''}\">小</button>\n        <button data-sz=\"medium\" class=\"${state.thumbSize === 'medium' ? 'active' : ''}\">中</button>\n        <button data-sz=\"large\" class=\"${state.thumbSize === 'large' ? 'active' : ''}\">大</button>\n      </div>\n      <div class=\"view-toggle\">\n        <button id=\"vGrid\" class=\"${state.view === 'grid' ? 'active' : ''}\">${ic('grid', 15)}缩略图</button>\n        <button id=\"vList\" class=\"${state.view === 'list' ? 'active' : ''}\">${ic('list', 15)}列表</button>\n      </div>\n      <button class=\"btn btn-sm\" id=\"btnSelect\">${ic('check', 15)}选择</button>\n      <button class=\"btn btn-sm\" id=\"btnUpload\">${ic('upload', 15)}上传</button>\n      <button class=\"btn btn-sm\" id=\"btnUpLink\" title=\"生成公开上传链接，别人无需登录可上传文件到此目录\">🔗上传链接</button>\n      <button class=\"btn btn-sm\" id=\"btnMkdir\">${ic('folderPlus', 15)}新建文件夹</button>\n      <button class=\"btn btn-sm\" id=\"btnRefresh\">↻</button>\n    </div>\n    <div class=\"crumbs\" id=\"crumbs\"></div>\n    <div class=\"toolbar\" id=\"selBar\" hidden>\n      <span id=\"selCount\"></span>\n      <button class=\"btn btn-sm\" id=\"btnSelAll\">全选</button>\n      <button class=\"btn btn-sm\" id=\"btnDlSel\">${ic('download', 15)}下载所选</button>\n      <button class=\"btn btn-sm\" id=\"btnShareSel\">${ic('share', 15)}分享所选</button>\n      <button class=\"btn btn-sm\" id=\"btnDelSel\">${ic('trash', 15)}删除所选</button>\n      <button class=\"btn btn-sm\" id=\"btnClearSel\">退出选择</button>\n    </div>\n    <div id=\"fileBody\"><div class=\"empty\">加载中…</div></div>",
+  "lines": [
+   550
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "例如：我的照片",
+  "lines": [
+   590
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "新建文件夹",
+  "lines": [
+   591
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "在当前目录下创建一个新文件夹",
+  "lines": [
+   591
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "已创建",
+  "lines": [
+   596
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "创建失败：",
+  "lines": [
+   597,
+   1563
+  ],
+  "quote": "'",
+  "count": 2
+ },
+ {
+  "zh": "请选择要分享的文件",
+  "lines": [
+   614
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "所选没有可下载的文件",
+  "lines": [
+   619
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "打包下载",
+  "lines": [
+   624,
+   929
+  ],
+  "quote": "'",
+  "count": 2
+ },
+ {
+  "zh": "<div style=\"margin-bottom:8px\">正在打包 ${keys.length} 个文件…</div>\n      <div style=\"height:8px;background:#e2e8f0;border-radius:4px;overflow:hidden\">\n        <div class=\"ufill\" style=\"height:100%;width:0;background:#3b82f6;transition:width .2s\"></div></div>\n      <div class=\"ust\" style=\"font-size:12px;color:#64748b;margin-top:6px\"></div>",
+  "lines": [
+   628,
+   933
+  ],
+  "quote": "`",
+  "count": 2
+ },
+ {
+  "zh": "下载中：${name} (${n + 1}/${keys.length})",
+  "lines": [
+   644
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "下载 ${name} 失败：HTTP ${resp.status}",
+  "lines": [
+   646
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "正在生成 zip…",
+  "lines": [
+   651,
+   955
+  ],
+  "quote": "'",
+  "count": 2
+ },
+ {
+  "zh": "上传文件",
+  "lines": [
+   659,
+   963,
+   983,
+   989,
+   1011,
+   1018,
+   1529
+  ],
+  "quote": "'",
+  "count": 7
+ },
+ {
+  "zh": "已打包下载 ${n} 个文件",
+  "lines": [
+   660,
+   964
+  ],
+  "quote": "`",
+  "count": 2
+ },
+ {
+  "zh": "失败：",
+  "lines": [
+   662,
+   1024,
+   1956,
+   1998
+  ],
+  "quote": "'",
+  "count": 4
+ },
+ {
+  "zh": "全选",
+  "lines": [
+   675,
+   689
+  ],
+  "quote": "'",
+  "count": 2
+ },
+ {
+  "zh": "全不选",
+  "lines": [
+   689
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "<div class=\"empty\">加载失败：${esc(e.message)}</div>",
+  "lines": [
+   743,
+   1757
+  ],
+  "quote": "`",
+  "count": 2
+ },
+ {
+  "zh": "<div class=\"empty\"><div class=\"big\">${ic('folderOpen', 56)}</div>空文件夹，把文件拖进来上传吧</div>",
+  "lines": [
+   762
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "<div class=\"fitem folder-card\" data-folder=\"${esc(f.prefix)}\">\n        <div class=\"fic folder-ic\">${ic('folder')}</div>\n        <div class=\"fsub\"><div class=\"fn\">${esc(f.name)}</div><div class=\"fs\">文件夹</div></div></div>",
+  "lines": [
+   770
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "<div class=\"ftable-wrap\"><table class=\"ftable\"><thead><tr>${checkCol}<th>名称</th><th style=\"width:110px\">大小</th><th style=\"width:170px\">修改时间</th><th style=\"width:170px;text-align:right\">操作</th></tr></thead><tbody>",
+  "lines": [
+   838
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": " : ''}\n        <td><div class=\"fname\"><div class=\"fic-sm\" data-lthumb=\"${esc(f.key)}|${f.kind}\">${iconFor(f.kind)}</div>\n          <span class=\"nm clickable\" data-key=\"${esc(f.key)}\" data-kind=\"${f.kind}\" data-name=\"${esc(f.name)}\">${esc(f.name)}</span></div></td>\n        <td class=\"fsize\">${fmtSize(f.size)}</td><td class=\"ftime\">${fmtDate(f.lastModified)}</td>\n        <td><div class=\"row-actions\">\n          <button class=\"icon-btn\" data-act=\"preview\" title=\"预览\">${ic('eye')}</button>\n          <button class=\"icon-btn\" data-act=\"download\" title=\"下载\">${ic('download')}</button>\n          <button class=\"icon-btn\" data-act=\"share\" title=\"分享\">${ic('link')}</button>\n          <button class=\"icon-btn\" data-act=\"rename\" title=\"重命名\">${ic('pencil')}</button>\n          <button class=\"icon-btn danger\" data-act=\"delete\" title=\"删除\">${ic('trash')}</button>\n        </div></td></tr>",
+  "lines": [
+   846
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "已选 ${selKeys.size} / ${total} 个",
+  "lines": [
+   893
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "删除文件",
+  "lines": [
+   897,
+   1049
+  ],
+  "quote": "'",
+  "count": 2
+ },
+ {
+  "zh": "确定删除选中的 ${selKeys.size} 个文件吗？此操作不可恢复。",
+  "lines": [
+   897
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "删除",
+  "lines": [
+   897,
+   1029,
+   1029,
+   1049,
+   1236,
+   1413,
+   1627,
+   1713,
+   1749
+  ],
+  "quote": "'",
+  "count": 9
+ },
+ {
+  "zh": "已删除 ${selKeys.size} 个",
+  "lines": [
+   900
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "删除失败：",
+  "lines": [
+   901,
+   1033,
+   1053,
+   1415,
+   1705,
+   1719,
+   1754
+  ],
+  "quote": "'",
+  "count": 7
+ },
+ {
+  "zh": "重命名",
+  "lines": [
+   905,
+   1040,
+   1231
+  ],
+  "quote": "'",
+  "count": 3
+ },
+ {
+  "zh": "新文件名",
+  "lines": [
+   905,
+   1040
+  ],
+  "quote": "'",
+  "count": 2
+ },
+ {
+  "zh": "重命名成功",
+  "lines": [
+   911
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "重命名失败：",
+  "lines": [
+   912,
+   1047
+  ],
+  "quote": "'",
+  "count": 2
+ },
+ {
+  "zh": "正在列出「${name}」下的文件…",
+  "lines": [
+   921
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "文件夹是空的",
+  "lines": [
+   924
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "文件太多（${keys.length} 个），最多打包 5000 个",
+  "lines": [
+   925
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "下载中：${rel} (${n + 1}/${keys.length})",
+  "lines": [
+   948
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "下载 ${rel} 失败",
+  "lines": [
+   950
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "打包失败：",
+  "lines": [
+   965
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "正在加载…",
+  "lines": [
+   969
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "编辑 ",
+  "lines": [
+   973
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "<button class=\"btn\" id=\"edCancel\">取消</button><button class=\"btn btn-primary\" id=\"edSave\">保存</button>",
+  "lines": [
+   980
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "已保存",
+  "lines": [
+   987,
+   1337,
+   1341,
+   2023
+  ],
+  "quote": "'",
+  "count": 4
+ },
+ {
+  "zh": "保存失败：",
+  "lines": [
+   991,
+   1338,
+   1342
+  ],
+  "quote": "'",
+  "count": 3
+ },
+ {
+  "zh": "加载失败：",
+  "lines": [
+   993
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "移动到",
+  "lines": [
+   1002
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "复制到",
+  "lines": [
+   1002
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "\n      <label class=\"fld\"><span>目标桶</span><select class=\"input\" id=\"cpBucket\">${bOpts}</select></label>\n      <label class=\"fld\"><span>目标路径（含文件名）</span><input class=\"input\" id=\"cpPath\" value=\"${esc(state.prefix + name)}\"></label>\n      <div style=\"display:flex;gap:8px;justify-content:flex-end;margin-top:12px\">\n        <button class=\"btn\" id=\"cpCancel\">取消</button>\n        <button class=\"btn btn-primary\" id=\"cpGo\">${isMove ? '移动' : '复制'}</button>\n      </div>",
+  "lines": [
+   1003
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "请输入目标路径",
+  "lines": [
+   1015
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "正在${isMove ? '移动' : '复制'}…",
+  "lines": [
+   1017
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "移动成功",
+  "lines": [
+   1022
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "复制成功",
+  "lines": [
+   1022
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "获取桶列表失败：",
+  "lines": [
+   1026
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "确定删除「${name}」吗？${isFolder ? '文件夹内的文件也会被删除，' : ''}此操作不可恢复。",
+  "lines": [
+   1029
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "已删除",
+  "lines": [
+   1032,
+   1052,
+   1414,
+   1701,
+   1716,
+   1753
+  ],
+  "quote": "'",
+  "count": 6
+ },
+ {
+  "zh": "已重命名",
+  "lines": [
+   1046
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "确定删除 ${name} 吗？此操作不可恢复。",
+  "lines": [
+   1049
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "下载失败：",
+  "lines": [
+   1062,
+   1693
+  ],
+  "quote": "'",
+  "count": 2
+ },
+ {
+  "zh": "<div class=\"muted\">加载中…</div>",
+  "lines": [
+   1070
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "<img src=\"${esc(url)}\" style=\"max-width:100%;max-height:70vh;object-fit:contain;cursor:zoom-in\" onclick=\"window.open('${esc(url)}','_blank')\" title=\"点击查看大图\">",
+  "lines": [
+   1075
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "<div class=\"empty\"><div class=\"big\">${iconFor(kind)}</div>该格式不支持在线预览，请下载查看</div>",
+  "lines": [
+   1083
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "<div class=\"empty\">预览失败：${esc(e.message)}</div>",
+  "lines": [
+   1084
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "${keys[0].split('/').pop()} 等 ${keys.length} 个文件",
+  "lines": [
+   1095
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "已复制",
+  "lines": [
+   1115,
+   1130,
+   1383,
+   1531,
+   1589,
+   1626
+  ],
+  "quote": "'",
+  "count": 6
+ },
+ {
+  "zh": "分享密码至少 4 位",
+  "lines": [
+   1121
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "生成失败：",
+  "lines": [
+   1128
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "<span style=\"flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap\">${esc(f.name)}</span>\n      <span class=\"ust\" style=\"font-size:12px;color:#64748b;white-space:nowrap\">等待…</span>\n      <div class=\"ubar\" style=\"width:120px;height:6px;background:#e2e8f0;border-radius:3px;overflow:hidden\">\n        <div class=\"ufill\" style=\"height:100%;width:0;background:#3b82f6;border-radius:3px;transition:width .2s\"></div>\n      </div>",
+  "lines": [
+   1145
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "获取地址…",
+  "lines": [
+   1156
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "成功",
+  "lines": [
+   1175
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "失败",
+  "lines": [
+   1180
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "浏览器直传被拦截：去存储桶设置里配置 CORS，允许来源为本网站域名，允许方法 GET/PUT/HEAD，允许标头 *",
+  "lines": [
+   1183
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "完成：${done} 成功，${failed} 失败（悬停\"失败\"看原因；如为 CORS 问题请去桶设置配 CORS）",
+  "lines": [
+   1192
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "全部上传成功（${done} 个文件）",
+  "lines": [
+   1192
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "下载",
+  "lines": [
+   1224
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "分享链接",
+  "lines": [
+   1225
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "编辑文本",
+  "lines": [
+   1227
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "复制到…",
+  "lines": [
+   1229
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "移动到…",
+  "lines": [
+   1230
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "进入",
+  "lines": [
+   1233
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "打包下载 (zip)",
+  "lines": [
+   1234
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "<div class=\"muted\" style=\"padding:4px 12px;font-size:12px\">无文件夹</div>",
+  "lines": [
+   1248
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "填写 Account ID，地址自动生成",
+  "lines": [
+   1274
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "全球/区域 endpoint 自动处理",
+  "lines": [
+   1275
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "阿里云 OSS",
+  "lines": [
+   1276
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "选择地域，地址自动生成",
+  "lines": [
+   1276,
+   1277
+  ],
+  "quote": "'",
+  "count": 2
+ },
+ {
+  "zh": "腾讯云 COS",
+  "lines": [
+   1277
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "七牛云",
+  "lines": [
+   1278
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "S3 兼容接口",
+  "lines": [
+   1278,
+   1279
+  ],
+  "quote": "'",
+  "count": 2
+ },
+ {
+  "zh": "MinIO / 自建",
+  "lines": [
+   1280
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "填写你的网关地址",
+  "lines": [
+   1280
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "存储账户",
+  "lines": [
+   1286
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "分享管理",
+  "lines": [
+   1287
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "上传链接",
+  "lines": [
+   1288
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "站点设置",
+  "lines": [
+   1289
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "用户管理",
+  "lines": [
+   1290
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "外观",
+  "lines": [
+   1291
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "\n    <div class=\"topbar\"><h2>${ic('settings')}设置</h2></div>\n    <div style=\"display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap\">\n      ${visibleTabs.map(t => ",
+  "lines": [
+   1298
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "<div class=\"card\"><h3>${ic('bucket')}存储账户</h3><p class=\"desc\">绑定多个对象存储账户，左下角一键切换</p>\n      <div id=\"acctList\"></div>\n      <button class=\"btn btn-primary\" id=\"btnAddAcct\" style=\"margin-top:12px\">＋ 添加账户</button></div>",
+  "lines": [
+   1310
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "<div class=\"card\"><h3>${ic('share')}分享管理</h3><p class=\"desc\">经本站转发的私密分享链接，可撤销</p><div id=\"shareList\"><div class=\"muted\">加载中…</div></div></div>",
+  "lines": [
+   1316
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "<div class=\"card\"><h3>上传链接管理</h3><p class=\"desc\">别人可通过链接上传文件到你的桶，可撤销</p><div id=\"uploadLinkList\"><div class=\"muted\">加载中…</div></div></div>",
+  "lines": [
+   1319
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "<div class=\"card\"><h3>${ic('settings')}站点设置</h3><p class=\"desc\">分享链接用的公开地址（仅管理员可见）</p>\n      <label class=\"fld\"><span>站点地址</span>\n        <div style=\"display:flex;gap:8px\">\n          <input class=\"input\" id=\"siteUrl\" placeholder=\"如 https://oss.example.com\" style=\"flex:1\">\n          <button class=\"btn btn-primary\" id=\"siteSave\" style=\"flex:none\">保存</button>\n        </div><div class=\"hint\">留空则自动识别，用于生成私密分享短链</div></label></div>\n      <div class=\"card\"><h3>${ic('lock')}注册设置</h3><p class=\"desc\">关闭后将无法注册新用户（仅管理员可见）</p>\n      <label style=\"display:flex;gap:8px;align-items:center;cursor:pointer\">\n        <input type=\"checkbox\" id=\"regToggle\" style=\"width:18px;height:18px\"> 允许新用户注册\n      </label></div>",
+  "lines": [
+   1322
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "<div class=\"card\"><h3>${ic('users')}用户管理</h3><p class=\"desc\">共 <b id=\"userTotal\">0</b> 个用户（仅管理员可见，不显示密码）</p><div id=\"userList\"><div class=\"muted\">加载中…</div></div></div>",
+  "lines": [
+   1345
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "<div class=\"card\"><h3>${ic('settings')}外观</h3>\n      <label style=\"display:flex;gap:8px;align-items:center;cursor:pointer\">\n        <input type=\"checkbox\" id=\"themeToggle\" style=\"width:18px;height:18px\"> 深色模式\n      </label></div>",
+  "lines": [
+   1348
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "<div class=\"muted\">暂无分享</div>",
+  "lines": [
+   1367
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "<span style=\"color:#dc2626\">已过期</span>",
+  "lines": [
+   1370,
+   1575
+  ],
+  "quote": "'",
+  "count": 2
+ },
+ {
+  "zh": "<span style=\"color:#16a34a\">有效期至 ${esc(exp)}</span>",
+  "lines": [
+   1370,
+   1575
+  ],
+  "quote": "`",
+  "count": 2
+ },
+ {
+  "zh": "🔒密码",
+  "lines": [
+   1372,
+   1577
+  ],
+  "quote": "'",
+  "count": 2
+ },
+ {
+  "zh": "${sh.viewCount}/${sh.maxViews}次",
+  "lines": [
+   1373
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "<div style=\"display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #f1f5f9\">\n        <span style=\"flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap\" title=\"${esc(sh.key)}\">${esc(sh.name)}</span>\n        <span style=\"font-size:12px;color:#64748b\">${st}${tagHtml}</span>\n        <button class=\"btn btn-sm\" data-copy-share=\"${esc(sh.url)}\">复制</button>\n        <button class=\"btn btn-sm\" data-del-share=\"${esc(sh.token)}\" style=\"color:#dc2626\">撤销</button>\n      </div>",
+  "lines": [
+   1375
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "撤销分享",
+  "lines": [
+   1386
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "确定撤销这个分享链接吗？",
+  "lines": [
+   1386
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "撤销",
+  "lines": [
+   1386,
+   1592
+  ],
+  "quote": "'",
+  "count": 2
+ },
+ {
+  "zh": "已撤销",
+  "lines": [
+   1387,
+   1593
+  ],
+  "quote": "'",
+  "count": 2
+ },
+ {
+  "zh": "撤销失败：",
+  "lines": [
+   1388,
+   1594
+  ],
+  "quote": "'",
+  "count": 2
+ },
+ {
+  "zh": "<div class=\"muted\">加载失败</div>",
+  "lines": [
+   1391,
+   1425,
+   1597
+  ],
+  "quote": "'",
+  "count": 3
+ },
+ {
+  "zh": "<div class=\"muted\">暂无用户</div>",
+  "lines": [
+   1399
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "<span style=\"background:#dbeafe;color:#1d4ed8;font-size:11px;padding:2px 8px;border-radius:10px\">管理员</span>",
+  "lines": [
+   1402
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "<div style=\"display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #f1f5f9\">\n        <span style=\"flex:1\">${esc(x.username)} ${tag}</span>\n        <span style=\"font-size:12px;color:#64748b\">${dt} 注册</span>\n        ${isSelf ? '<span style=\"font-size:12px;color:#94a3b8\">自己</span>' : ",
+  "lines": [
+   1404
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "删除用户",
+  "lines": [
+   1413
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "确定删除用户「${b.dataset.uname}」吗？其所有账户、分享、文件记录都会被删除，不可恢复。",
+  "lines": [
+   1413
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "重置密码",
+  "lines": [
+   1419
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "为「${b.dataset.uname}」设置新密码（至少 8 位，字母+数字）",
+  "lines": [
+   1419
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "密码已重置",
+  "lines": [
+   1421
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "重置失败：",
+  "lines": [
+   1422
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "<div style=\"background:#fff;padding:20px 36px;border-radius:14px;font-size:18px;color:#3b82f6;box-shadow:0 8px 30px rgba(0,0,0,.15)\">松开以上传文件</div>",
+  "lines": [
+   1437
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "<div class=\"empty\">搜索中…</div>",
+  "lines": [
+   1460
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "<div class=\"empty\">没有找到包含 “${esc(q)}” 的文件（扫描了 ${d.scanned} 个）</div>",
+  "lines": [
+   1465
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "<div class=\"muted\" style=\"padding:8px 4px\">找到 ${results.length} 个结果${d.truncated ? '（只显示前 100 个）' : ''}，扫描了 ${d.scanned} 个文件</div>",
+  "lines": [
+   1469
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "<div class=\"empty\">搜索失败：${esc(e.message)}</div>",
+  "lines": [
+   1482
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "创建上传链接",
+  "lines": [
+   1488
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "\n    <label class=\"fld\"><span>链接名称 *</span>\n      <input class=\"input\" id=\"ulName\" placeholder=\"如：小王上传资料\" maxlength=\"50\">\n      <div class=\"hint\">显示在左侧菜单，方便区分</div></label>\n    <label class=\"fld\"><span>上传到路径</span>\n      <input class=\"input\" id=\"ulPrefix\" value=\"${esc(state.prefix || '')}\" placeholder=\"默认为当前目录：${esc(state.prefix || '根目录')}\">\n      <div class=\"hint\">别人上传的文件会存到这个目录下</div></label>\n    <label class=\"fld\"><span>有效期</span>\n      <select class=\"input\" id=\"ulExpiry\">\n        <option value=\"3600\">1 小时</option>\n        <option value=\"18000\">5 小时</option>\n        <option value=\"43200\">12 小时</option>\n        <option value=\"86400\">1 天</option>\n        <option value=\"259200\">3 天</option>\n        <option value=\"604800\" selected>7 天</option>\n        <option value=\"1296000\">15 天</option>\n        <option value=\"2592000\">30 天</option>\n        <option value=\"7776000\">90 天</option>\n        <option value=\"0\">永久</option>\n      </select></label>\n    <div style=\"display:flex;gap:10px\">\n      <label class=\"fld\" style=\"flex:1\"><span>访问密码（可选）</span>\n        <input class=\"input\" id=\"ulPwd\" type=\"password\" placeholder=\"留空则无密码\"></label>\n      <label class=\"fld\" style=\"flex:1\"><span>最多使用次数</span>\n        <select class=\"input\" id=\"ulMaxUses\">\n          <option value=\"0\">不限制</option>\n          <option value=\"10\">10 次</option>\n          <option value=\"50\">50 次</option>\n          <option value=\"100\">100 次</option>\n        </select></label>\n    </div>\n    <div id=\"ulResult\" hidden>\n      <label class=\"fld\"><span>上传链接（点击复制）</span>\n        <input class=\"input\" id=\"ulUrl\" readonly onclick=\"this.select()\" style=\"cursor:pointer\"></label>\n    </div>\n    <div style=\"display:flex;gap:8px;justify-content:flex-end;margin-top:12px\">\n      <button class=\"btn\" id=\"ulCancel\">取消</button>\n      <button class=\"btn btn-primary\" id=\"ulCreate\">创建链接</button>\n    </div>",
+  "lines": [
+   1489
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "请填写链接名称",
+  "lines": [
+   1539
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "\n        <div style=\"text-align:center;padding:20px 0\">\n          <div style=\"font-size:16px;font-weight:600;margin-bottom:16px;color:var(--text)\">上传链接已创建</div>\n          <label class=\"fld\"><span>上传链接（点击复制）</span>\n            <input class=\"input\" id=\"ulUrl2\" readonly value=\"${esc(p.url)}\" onclick=\"this.select();document.execCommand('copy');toast('已复制')\" style=\"cursor:pointer;text-align:center\">\n          </label>\n          <div style=\"display:flex;gap:8px;justify-content:center;margin-top:16px\">\n            <button class=\"btn\" onclick=\"$('#uploadModal').hidden=true\">关闭</button>\n            <button class=\"btn btn-primary\" onclick=\"openUploadLinkModal()\">再创建一个</button>\n          </div>\n        </div>",
+  "lines": [
+   1549
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "<div class=\"muted\">暂无上传链接</div>",
+  "lines": [
+   1572
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "${ul.useCount}/${ul.maxUses}次",
+  "lines": [
+   1578
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "未命名",
+  "lines": [
+   1580,
+   1613
+  ],
+  "quote": "'",
+  "count": 2
+ },
+ {
+  "zh": "<div style=\"display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #f1f5f9\">\n        <span style=\"flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap\" title=\"${esc(nm)}\">${esc(nm)} <span style=\"color:#94a3b8;font-size:12px\">${esc(ul.bucket)}${ul.prefix ? ' / ' + esc(ul.prefix) : ''}</span></span>\n        <span style=\"font-size:12px;color:#64748b\">${st}${tagHtml}</span>\n        <button class=\"btn btn-sm\" data-copy-ul=\"${esc(ul.url)}\">复制</button>\n        <button class=\"btn btn-sm\" data-del-ul=\"${esc(ul.token)}\" style=\"color:#dc2626\">撤销</button>\n      </div>",
+  "lines": [
+   1581
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "撤销上传链接",
+  "lines": [
+   1592
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "确定撤销这个上传链接吗？",
+  "lines": [
+   1592
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "个",
+  "lines": [
+   1607
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "<div style=\"font-size:12px;color:var(--muted);padding:4px 12px\">暂无</div>",
+  "lines": [
+   1609
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "\n      <div class=\"nav-item\" data-ul=\"${i}\" style=\"font-size:13px\" title=\"${esc(nm)}${exp ? '（有效期至 ' + exp + '）' : ''}\">\n        ${ic('link', 15)}<span style=\"flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap\">${esc(nm)}</span>\n      </div>",
+  "lines": [
+   1615
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "复制链接",
+  "lines": [
+   1626
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "<div class=\"topbar\"><h2>${ic('link')} ${esc(ul.name || '未命名')}</h2></div>\n    <div style=\"margin-bottom:12px;font-size:13px;color:var(--muted)\">上传链接 · 共 <span id=\"ulFileCount\">0</span> 个文件 · <button class=\"btn btn-sm\" onclick=\"nav('files')\">返回文件</button></div>\n    <div id=\"ulFileGrid\" class=\"fgrid sz-m\"><div class=\"card\" style=\"grid-column:1/-1;text-align:center;color:var(--muted);padding:30px\">加载中…</div></div>",
+  "lines": [
+   1637
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "<div class=\"card\" style=\"grid-column:1/-1;text-align:center;color:var(--muted);padding:40px\">暂无上传文件</div>",
+  "lines": [
+   1646
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "<div class=\"fitem\">\n        <div class=\"fic\" data-ulthumb=\"${esc(k)}\" data-isimg=\"${isImg ? '1' : '0'}\" style=\"height:140px\">${ic('file', 32)}</div>\n        <div class=\"fsub\" style=\"padding:10px 12px\">\n          <div class=\"fn\" title=\"${esc(name)}\" style=\"font-weight:600;font-size:14px;margin-bottom:4px\">${esc(name)}</div>\n          <div class=\"fs\" style=\"font-size:12px;color:var(--muted);margin-bottom:8px\">${esc(k)}</div>\n          <div style=\"display:flex;gap:6px\">\n            <button class=\"btn btn-sm\" onclick=\"ulFileDownload(${idx})\">下载</button>\n            <button class=\"btn btn-sm\" style=\"color:#dc2626\" onclick=\"ulFileDelete(${idx})\">删除</button>\n          </div>\n        </div>\n      </div>",
+  "lines": [
+   1655
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "<div class=\"card\" style=\"grid-column:1/-1;text-align:center;color:#dc2626;padding:30px\">加载失败：${esc(e.message)}</div>",
+  "lines": [
+   1681
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "删除 ${k.split('/').pop()}？",
+  "lines": [
+   1698
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "删除上传链接",
+  "lines": [
+   1713
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "确定删除「${ul.name}」吗？",
+  "lines": [
+   1713
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "<div class=\"empty\" style=\"padding:20px\">还没有账户，点击下方按钮添加</div>",
+  "lines": [
+   1735
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "\n      <div class=\"acct-row\" style=\"display:flex;align-items:center;gap:10px;padding:10px;border:1px solid var(--line);border-radius:10px;margin-bottom:8px\">\n        <span class=\"prov-ic\">${(PROVIDERS.find(p => p.id === a.provider) || {}).icon || ic('bucket')}</span>\n        <div style=\"flex:1\"><div style=\"font-weight:600\">${esc(a.name)}</div>\n          <div class=\"muted\">${esc(a.provider)} · ${esc(a.endpoint)}${a.bucket ? ' · ' + ic('box', 13) + ' ' + esc(a.bucket) : ''}</div></div>\n        <button class=\"btn btn-sm\" data-edit=\"${a.id}\">编辑</button>\n        <button class=\"btn btn-sm\" data-test=\"${a.id}\">测试</button>\n        <button class=\"btn btn-sm\" data-del=\"${a.id}\" style=\"color:#ef4444\">删除</button>\n      </div>",
+  "lines": [
+   1736
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "删除账户",
+  "lines": [
+   1749
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "确定删除账户「${a.name}」吗？只删除本地配置，不影响云端数据。",
+  "lines": [
+   1749
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "测试连接中…",
+  "lines": [
+   1760,
+   1941
+  ],
+  "quote": "'",
+  "count": 2
+ },
+ {
+  "zh": "连接成功，找到 ${d.buckets.length} 个存储桶",
+  "lines": [
+   1763
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "连接成功（密钥无权列出全部桶，已用指定桶验证）",
+  "lines": [
+   1763
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "连接失败：",
+  "lines": [
+   1764
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "<div class=\"modal\" style=\"width:520px;position:relative\"><button class=\"modal-x\" id=\"wizX\" title=\"关闭\">\\u00d7</button><div id=\"wizBody\"></div></div>",
+  "lines": [
+   1782
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "<div class=\"wiz-steps\">${['选择服务商', '填写密钥', '完成'].map((s, i) =>\n    ",
+  "lines": [
+   1787
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "<h3 style=\"margin-top:0\">选择服务商</h3><div class=\"prov-grid\">",
+  "lines": [
+   1790
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "</div><div class=\"modal-actions\">\n        <button class=\"btn\" id=\"wizCancel\">取消</button>\n        <button class=\"btn btn-primary\" id=\"wizNext\">下一步</button></div>",
+  "lines": [
+   1793
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "<h3 style=\"margin-top:0\">${isEdit ? '编辑账户' : p.icon + ' ' + p.name}</h3>${isEdit ? '' : ",
+  "lines": [
+   1806
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "<label class=\"fld\"><span>起个名字（比如\"我的 R2\"）</span>\n      <input class=\"input\" id=\"wName\" value=\"${esc(ex.name || '')}\" placeholder=\"我的 R2\"></label>",
+  "lines": [
+   1807
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "<label class=\"fld\"><span>Account ID（账户ID）</span>\n      <input class=\"input\" id=\"wAccountId\" value=\"${esc(acctId)}\" placeholder=\"Cloudflare 面板右下角的 Account ID\"></label>",
+  "lines": [
+   1809
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "<label class=\"fld\"><span>地域</span><select class=\"input\" id=\"wRegion\">${regionOptions(wiz.provider, ex.region)}</select></label>",
+  "lines": [
+   1812
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "<label class=\"fld\"><span>S3 Endpoint</span>\n      <input class=\"input\" id=\"wEndpoint\" value=\"${esc(ex.endpoint || '')}\" placeholder=\"s3.us-west-004.backblazeb2.com\">\n      <div class=\"hint\">在 B2 控制台点进桶，复制 Endpoint 那一串填进来</div></label>\n      <button class=\"btn btn-sm\" id=\"b2HelpBtn\" style=\"margin-bottom:12px\">📖 配置说明（CORS 必看）</button>",
+  "lines": [
+   1814
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "<label class=\"fld\"><span>网关地址</span>\n      <input class=\"input\" id=\"wEndpoint\" value=\"${esc(ex.endpoint || '')}\" placeholder=\"https://minio.example.com\"></label>",
+  "lines": [
+   1819
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "<label class=\"fld\"><span>Access Key（访问密钥 ID）</span>\n      <input class=\"input\" id=\"wAK\" value=\"${esc(ex.accessKey || '')}\" autocomplete=\"off\"></label>\n      <label class=\"fld\"><span>Secret Key（机密访问密钥）</span>\n      <input class=\"input\" id=\"wSK\" type=\"password\" autocomplete=\"new-password\"\n        placeholder=\"${wiz.existing ? '••••••••（已保存，留空不修改）' : ''}\"></label>\n      <label class=\"fld\"><span>储存桶（必填，可填多个）</span>\n      <input class=\"input\" id=\"wBucket\" value=\"${esc(ex.bucket || '')}\" placeholder=\"pic, assets —— 多个用英文逗号分隔\"></label>\n      <label class=\"fld\"><span>空间配额（可选）</span>\n        <div style=\"display:flex;gap:8px\">\n          <input class=\"input\" id=\"wQuota\" type=\"number\" min=\"0\" step=\"any\" placeholder=\"留空则不显示\"\n            value=\"${ex.quotaBytes ? (ex.quotaBytes >= 1099511627776 ? (ex.quotaBytes / 1099511627776).toFixed(2).replace(/\\.?0+$/, '') : (ex.quotaBytes / 1073741824).toFixed(2).replace(/\\.?0+$/, '')) : ''}\" style=\"flex:1\">\n          <select class=\"input\" id=\"wQuotaUnit\" style=\"width:90px;flex:none\">\n            <option value=\"1073741824\">GB</option>\n            <option value=\"1099511627776\" ${ex.quotaBytes >= 1099511627776 ? 'selected' : ''}>TB</option>\n          </select>\n        </div>\n        <div class=\"hint\">S3 协议查不到总空间，填了后仪表盘会显示使用率（仅用于展示）</div></label>\n      <label class=\"fld\"><span>自定义域名（可选）</span>\n        <input class=\"input\" id=\"wPubDomain\" placeholder=\"如 pic.example.com（桶绑定的公开域名）\" value=\"${esc(ex.publicDomain || '')}\">\n        <div class=\"hint\">桶在服务商处绑定的公开域名，填了后分享时可直接给公开链接</div></label>\n      <div id=\"wizErr\" style=\"color:#ef4444;font-size:13px;min-height:20px\"></div>\n      <div class=\"modal-actions\">\n        ${wiz.existing ? '' : '<button class=\"btn\" id=\"wizBack\">上一步</button>'}\n        <button class=\"btn\" id=\"wizTest\">测试连接</button>\n        <button class=\"btn btn-primary\" id=\"wizSave\">${wiz.existing ? '保存' : '添加'}</button></div>",
+  "lines": [
+   1821
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "<div class=\"empty\"><div class=\"big\">${ic('checkCircle', 56)}</div><h3>添加成功！</h3>\n      <p class=\"muted\">${names ? ",
+  "lines": [
+   1848
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": " : ''}去左下角切换到新账户，开始管理你的对象存储吧</p></div>\n      <div class=\"modal-actions\"><button class=\"btn btn-primary\" id=\"wizDone\">开始使用</button></div>",
+  "lines": [
+   1849
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "华东1（杭州）",
+  "lines": [
+   1858
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "华东2（上海）",
+  "lines": [
+   1858
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "华北2（北京）",
+  "lines": [
+   1858
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "华南1（深圳）",
+  "lines": [
+   1858
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "香港",
+  "lines": [
+   1858,
+   1859
+  ],
+  "quote": "'",
+  "count": 2
+ },
+ {
+  "zh": "广州",
+  "lines": [
+   1859
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "上海",
+  "lines": [
+   1859
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "北京",
+  "lines": [
+   1859
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "新加坡",
+  "lines": [
+   1859
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "华东",
+  "lines": [
+   1860
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "华北",
+  "lines": [
+   1860
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "华南",
+  "lines": [
+   1860
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "美西 (凤凰城)",
+  "lines": [
+   1861
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "美西1 (凤凰城)",
+  "lines": [
+   1861
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "美西2 (凤凰城)",
+  "lines": [
+   1861
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "美西4 (凤凰城)",
+  "lines": [
+   1861
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "美东 (雷斯顿)",
+  "lines": [
+   1861
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "欧洲 (阿姆斯特丹)",
+  "lines": [
+   1861
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "加拿大 (多伦多)",
+  "lines": [
+   1861
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "<h3>Backblaze B2 配置说明</h3>\n    <div style=\"font-size:14px;line-height:1.7\">\n    <p><b>1. 创建 Application Key</b><br>\n    B2 控制台 → Application Keys → Add a New Application Key<br>\n    名字随便起，桶选你的桶，权限选 Read and Write。<br>\n    创建后复制 <b>keyID</b>（填 Access Key）和 <b>applicationKey</b>（填 Secret Key）。<br>\n    <span style=\"color:#ef4444\">注意：applicationKey 只显示一次，关掉就看不到了！</span></p>\n    <p><b>2. 复制 Endpoint</b><br>\n    B2 控制台点进你的桶，复制 <b>Endpoint</b> 那一串（如 s3.us-west-004.backblazeb2.com），填到上面的 S3 Endpoint 输入框。</p>\n    <p><b>3. 配置 CORS（否则上传会失败）</b><br>\n    B2 网页版的 CORS 设置对 S3 接口不全，需要用命令行：<br>\n    <code style=\"background:#f1f5f9;padding:2px 6px;border-radius:4px\">pip install b2</code><br>\n    <code style=\"background:#f1f5f9;padding:2px 6px;border-radius:4px\">b2 account authorize</code>（输入 keyID 和 applicationKey）<br>\n    然后执行：<br>\n    <code style=\"background:#f1f5f9;padding:2px 6px;border-radius:4px;display:block;margin:6px 0;white-space:pre-wrap\">b2 bucket update 你的桶名 allPrivate --cors-rules '[{\"corsRuleName\":\"objdock\",\"allowedOrigins\":[\"https://你的ObjDock域名\"],\"allowedOperations\":[\"s3_get\",\"s3_put\",\"s3_head\",\"s3_post\",\"s3_delete\"],\"allowedHeaders\":[\"*\"],\"maxAgeSeconds\":3600}]'</code>\n    把 <b>你的桶名</b> 和 <b>你的ObjDock域名</b> 换成实际的。执行完等几分钟再生效。</p>\n    <p><b>4. 回到这里点\"测试连接\"</b>，通了再点添加。</p>\n    </div>",
+  "lines": [
+   1884
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "请起个名字",
+  "lines": [
+   1937
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "请填写 Access Key",
+  "lines": [
+   1938
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "请填写储存桶名称",
+  "lines": [
+   1939
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "请填写 Secret Key",
+  "lines": [
+   1940
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "保存中…",
+  "lines": [
+   1941
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "${ic('x', 13)} ${esc(r.bucket)}（${esc(r.error || '失败')}）",
+  "lines": [
+   1947
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "${ic('check', 14)} 连接成功：",
+  "lines": [
+   1960
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "已保存，但连接测试失败：",
+  "lines": [
+   1969
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "已保存，连接正常",
+  "lines": [
+   1970
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "已保存，连接测试失败：",
+  "lines": [
+   1971
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "${b}（${(t.results || []).map(r => r.error).filter(Boolean).join(',') || '验证失败'}）",
+  "lines": [
+   1987
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "全部添加失败：",
+  "lines": [
+   1991
+  ],
+  "quote": "'",
+  "count": 1
+ },
+ {
+  "zh": "已添加 ${created.join('、')}；失败：${failed.join('；')}",
+  "lines": [
+   1992
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "\n    <div class=\"topbar\"><h2>${ic('user')}修改登录信息</h2></div>\n    <div class=\"card\" style=\"max-width:480px\">\n      <label class=\"fld\"><span>用户名（不可修改）</span><input class=\"input\" value=\"${esc(u.username)}\" disabled></label>\n      <h4 style=\"margin:18px 0 8px\">修改密码（不改请留空）</h4>\n      <label class=\"fld\"><span>当前密码</span><input class=\"input\" id=\"pCur\" type=\"password\"></label>\n      <label class=\"fld\"><span>新密码（至少 8 位，字母+数字）</span><input class=\"input\" id=\"pNew\" type=\"password\"></label>\n      <div id=\"pErr\" style=\"color:#ef4444;font-size:13px;min-height:20px\"></div>\n      <button class=\"btn btn-primary\" id=\"pSave\">保存</button>\n    </div>",
+  "lines": [
+   2006
+  ],
+  "quote": "`",
+  "count": 1
+ },
+ {
+  "zh": "密码已修改，请重新登录",
+  "lines": [
+   2022
+  ],
+  "quote": "'",
+  "count": 1
+ }
+]
