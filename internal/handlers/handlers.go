@@ -100,6 +100,7 @@ func (s *Server) routes() {
 	m.HandleFunc("POST /api/accounts/{id}/upload-link", s.requireLogin(s.handleCreateUploadLink))
 	m.HandleFunc("GET /api/upload-links", s.requireLogin(s.handleListUploadLinks))
 	m.HandleFunc("DELETE /api/upload-links/{token}", s.requireLogin(s.handleDeleteUploadLink))
+	m.HandleFunc("PUT /api/upload-links/{token}", s.requireLogin(s.handleUpdateUploadLink))
 	m.HandleFunc("GET /u/{token}", s.handleUploadPage)
 	m.HandleFunc("POST /u/{token}", s.handleUploadPage)
 	m.HandleFunc("GET /api/upload-token/{token}/presign", s.handleUploadTokenPresign)

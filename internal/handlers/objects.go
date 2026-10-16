@@ -407,6 +407,7 @@ func (s *Server) handleCreateUploadLink(w http.ResponseWriter, r *http.Request) 
 	var in struct {
 		Bucket   string `json:"bucket"`
 		Prefix   string `json:"prefix"`
+		Name     string `json:"name"`
 		Password string `json:"password"`
 		MaxUses  int64  `json:"maxUses"`
 		Expires  int    `json:"expires"`
@@ -444,8 +445,12 @@ func (s *Server) handleCreateUploadLink(w http.ResponseWriter, r *http.Request) 
 	if exp == 0 {
 		expiresAt = now + 100*365*24*3600
 	}
+	if in.Name == "" {
+		writeErr(w, http.StatusBadRequest, "name is required")
+		return
+	}
 	ul := &db.UploadLink{
-		Token: token, UserID: u.ID, AccountID: a.ID, Bucket: in.Bucket, Prefix: prefix,
+		Token: token, UserID: u.ID, AccountID: a.ID, Bucket: in.Bucket, Prefix: prefix, Name: in.Name,
 		PasswordHash: pwHash, MaxUses: in.MaxUses, ExpiresAt: expiresAt, CreatedAt: now,
 	}
 	if err := s.DB.CreateUploadLink(ul); err != nil {
@@ -467,7 +472,7 @@ func (s *Server) handleListUploadLinks(w http.ResponseWriter, r *http.Request) {
 	out := make([]map[string]any, 0, len(links))
 	for _, ul := range links {
 		out = append(out, map[string]any{
-			"token": ul.Token, "bucket": ul.Bucket, "prefix": ul.Prefix,
+			"token": ul.Token, "bucket": ul.Bucket, "prefix": ul.Prefix, "name": ul.Name,
 			"url":       base + "/u/" + ul.Token,
 			"createdAt": ul.CreatedAt, "expiresAt": ul.ExpiresAt,
 			"expired":   time.Now().Unix() > ul.ExpiresAt,
@@ -476,6 +481,25 @@ func (s *Server) handleListUploadLinks(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"links": out})
+}
+
+// PUT /api/upload-links/{token} — update name/prefix/expiry.
+func (s *Server) handleUpdateUploadLink(w http.ResponseWriter, r *http.Request) {
+	u := s.currentUser(r)
+	var in struct {
+		Name    string `json:"name"`
+		Prefix  string `json:"prefix"`
+		Expires int64  `json:"expiresAt"`
+	}
+	if err := decodeJSON(r, &in); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad request")
+		return
+	}
+	if err := s.DB.UpdateUploadLink(r.PathValue("token"), u.ID, in.Name, in.Prefix, in.Expires); err != nil {
+		writeErr(w, http.StatusInternalServerError, "update failed")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
 }
 
 // DELETE /api/upload-links/{token} — revoke.
@@ -537,7 +561,10 @@ func (s *Server) renderUploadPage(w http.ResponseWriter, token string, pwFailed 
 		}
 	}
 	brandHtml := `<div style="text-align:center;margin-bottom:20px">
-		<div style="font-size:28px;font-weight:800;color:#1e293b">📦 ObjDock</div>
+		<div style="display:flex;align-items:center;justify-content:center;gap:10px">
+			<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="3"/><line x1="12" y1="8" x2="12" y2="22"/><path d="M5 12H2a10 10 0 0 0 20 0h-3"/></svg>
+			<span style="font-size:26px;font-weight:800;color:#1e293b">ObjDock</span>
+		</div>
 	</div>`
 	inviteHtml := ""
 	if ownerName != "" {
@@ -551,7 +578,9 @@ func (s *Server) renderUploadPage(w http.ResponseWriter, token string, pwFailed 
 	upSection := ""
 	if needPw {
 		pwSection = `<div id="pwWrap" style="text-align:center">
-			<div style="font-size:48px;margin-bottom:16px">🔒</div>
+			<div style="margin-bottom:16px;text-align:center">
+				<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="1.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+			</div>
 			<h2 style="margin:0 0 8px;font-size:20px">需要密码</h2>
 			<p style="color:#64748b;font-size:14px;margin:0 0 20px">此上传链接受密码保护</p>` + msg + `
 			<input type="password" id="upPw" placeholder="输入密码" autofocus
@@ -591,7 +620,9 @@ h2 { text-align: center; margin: 0 0 8px; font-size: 22px; }
 .done-msg { text-align: center; padding: 20px; color: #16a34a; font-size: 16px; font-weight: 600; }
 </style></head><body>
 <div class="card">` + brandHtml + pwSection + `
-	<div class="logo">📤</div>
+	<div class="logo" style="text-align:center;margin-bottom:12px">
+		<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+	</div>
 	<h2>上传文件</h2>` + inviteHtml + `
 	<p class="sub">无需登录，直接上传到对方的存储空间</p>
 	<div class="drop" id="dropZone" onclick="document.getElementById('fileInput').click()">
@@ -969,7 +1000,10 @@ func (s *Server) renderSharePage(w http.ResponseWriter, sh *db.Share, files []ma
 		ownerName = u.Username
 	}
 	brandHtml := `<div style="text-align:center;margin-bottom:24px">
-		<div style="font-size:32px;font-weight:800;color:#1e293b;letter-spacing:-0.5px">📦 ObjDock</div>
+		<div style="display:flex;align-items:center;justify-content:center;gap:10px">
+			<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="3"/><line x1="12" y1="8" x2="12" y2="22"/><path d="M5 12H2a10 10 0 0 0 20 0h-3"/></svg>
+			<span style="font-size:28px;font-weight:800;color:#1e293b;letter-spacing:-0.5px">ObjDock</span>
+		</div>
 		<div style="font-size:13px;color:#94a3b8;margin-top:4px">对象存储分享</div>
 	</div>`
 	ownerHtml := ""

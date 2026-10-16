@@ -92,6 +92,7 @@ func (d *DB) migrate() error {
 			account_id INTEGER NOT NULL,
 			bucket TEXT NOT NULL,
 			prefix TEXT NOT NULL DEFAULT '',
+			name TEXT NOT NULL DEFAULT '',
 			password_hash TEXT NOT NULL DEFAULT '',
 			max_uses INTEGER NOT NULL DEFAULT 0,
 			use_count INTEGER NOT NULL DEFAULT 0,
@@ -142,6 +143,11 @@ func (d *DB) migrate() error {
 	if !d.hasColumn("shares", "created_at") {
 		if _, err := d.Exec(`ALTER TABLE shares ADD COLUMN created_at INTEGER NOT NULL DEFAULT 0`); err != nil {
 			return fmt.Errorf("db migrate shares.created_at: %w", err)
+		}
+	}
+	if !d.hasColumn("upload_links", "name") {
+		if _, err := d.Exec(`ALTER TABLE upload_links ADD COLUMN name TEXT NOT NULL DEFAULT ''`); err != nil {
+			return fmt.Errorf("db migrate upload_links.name: %w", err)
 		}
 	}
 	if !d.hasColumn("accounts", "quota_bytes") {
@@ -476,9 +482,9 @@ func (d *DB) CreateUploadLink(ul *UploadLink) error {
 
 func (d *DB) UploadLinkByToken(token string) (*UploadLink, error) {
 	ul := &UploadLink{}
-	err := d.QueryRow(`SELECT token, user_id, account_id, bucket, prefix, password_hash, max_uses, use_count, expires_at, created_at
+	err := d.QueryRow(`SELECT token, user_id, account_id, bucket, prefix, name, password_hash, max_uses, use_count, expires_at, created_at
 		FROM upload_links WHERE token=?`, token).Scan(
-		&ul.Token, &ul.UserID, &ul.AccountID, &ul.Bucket, &ul.Prefix, &ul.PasswordHash, &ul.MaxUses, &ul.UseCount, &ul.ExpiresAt, &ul.CreatedAt)
+		&ul.Token, &ul.UserID, &ul.AccountID, &ul.Bucket, &ul.Prefix, &ul.Name, &ul.PasswordHash, &ul.MaxUses, &ul.UseCount, &ul.ExpiresAt, &ul.CreatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -486,7 +492,7 @@ func (d *DB) UploadLinkByToken(token string) (*UploadLink, error) {
 }
 
 func (d *DB) UploadLinksByUser(userID int64) ([]*UploadLink, error) {
-	rows, err := d.Query(`SELECT token, user_id, account_id, bucket, prefix, password_hash, max_uses, use_count, expires_at, created_at
+	rows, err := d.Query(`SELECT token, user_id, account_id, bucket, prefix, name, password_hash, max_uses, use_count, expires_at, created_at
 		FROM upload_links WHERE user_id=? ORDER BY created_at DESC`, userID)
 	if err != nil {
 		return nil, err
@@ -495,13 +501,19 @@ func (d *DB) UploadLinksByUser(userID int64) ([]*UploadLink, error) {
 	var out []*UploadLink
 	for rows.Next() {
 		ul := &UploadLink{}
-		if err := rows.Scan(&ul.Token, &ul.UserID, &ul.AccountID, &ul.Bucket, &ul.Prefix,
+		if err := rows.Scan(&ul.Token, &ul.UserID, &ul.AccountID, &ul.Bucket, &ul.Prefix, &ul.Name,
 			&ul.PasswordHash, &ul.MaxUses, &ul.UseCount, &ul.ExpiresAt, &ul.CreatedAt); err != nil {
 			return nil, err
 		}
 		out = append(out, ul)
 	}
 	return out, rows.Err()
+}
+
+func (d *DB) UpdateUploadLink(token string, userID int64, name, prefix string, expiresAt int64) error {
+	_, err := d.Exec(`UPDATE upload_links SET name=?, prefix=?, expires_at=? WHERE token=<redacted> AND user_id=?`,
+		name, prefix, expiresAt, token, userID)
+	return err
 }
 
 func (d *DB) DeleteUploadLink(token string, userID int64) error {

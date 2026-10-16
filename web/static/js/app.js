@@ -207,6 +207,10 @@ function renderShell() {
       <div class="nav-item" data-nav="files">${ic('folder')}<span>全部文件</span></div>
       <div class="nav-sec">文件夹</div>
       <div id="sideFolders"></div>
+      <div class="nav-sec" style="display:flex;align-items:center;justify-content:space-between">
+        <span>上传链接</span><span id="ulCount" style="font-size:11px;opacity:.6"></span>
+      </div>
+      <div id="sideUlLinks"></div>
       <div class="side-foot">
         <div class="storage-switch" id="switcher">
           <div class="avatar" id="swAvatar">${ic('bucket')}</div>
@@ -1233,7 +1237,7 @@ function renderSettingsTab(tab) {
     c.innerHTML = `<div class="card"><h3>${ic('share')}分享管理</h3><p class="desc">经本站转发的私密分享链接，可撤销</p><div id="shareList"><div class="muted">加载中…</div></div></div>`;
     loadShareList();
   } else if (tab === 'upload') {
-    c.innerHTML = `<div class="card"><h3>📤 上传链接管理</h3><p class="desc">别人可通过链接上传文件到你的桶，可撤销</p><div id="uploadLinkList"><div class="muted">加载中…</div></div></div>`;
+    c.innerHTML = `<div class="card"><h3>上传链接管理</h3><p class="desc">别人可通过链接上传文件到你的桶，可撤销</p><div id="uploadLinkList"><div class="muted">加载中…</div></div></div>`;
     loadUploadLinkList();
   } else if (tab === 'site' && state.user.admin) {
     c.innerHTML = `<div class="card"><h3>${ic('settings')}站点设置</h3><p class="desc">分享链接用的公开地址（仅管理员可见）</p>
@@ -1402,6 +1406,9 @@ function openUploadLinkModal() {
   list.innerHTML = '';
   modal.querySelector('h3').textContent = '创建上传链接';
   list.innerHTML = `
+    <label class="fld"><span>链接名称 *</span>
+      <input class="input" id="ulName" placeholder="如：小王上传资料" maxlength="50">
+      <div class="hint">显示在左侧菜单，方便区分</div></label>
     <label class="fld"><span>上传到路径</span>
       <input class="input" id="ulPrefix" value="${esc(state.prefix || '')}" placeholder="默认为当前目录：${esc(state.prefix || '根目录')}">
       <div class="hint">别人上传的文件会存到这个目录下</div></label>
@@ -1444,9 +1451,12 @@ function openUploadLinkModal() {
   $('#ulCreate').onclick = async () => {
     const pwd = $('#ulPwd').value;
     try {
+      const name = $('#ulName').value.trim();
+      if (!name) { toast('请填写链接名称'); return; }
       const p = await apiPost(`/api/accounts/${state.accountId}/upload-link`, {
         bucket: state.bucket,
         prefix: $('#ulPrefix').value.trim(),
+        name,
         expires: parseInt($('#ulExpiry').value, 10),
         password: pwd,
         maxUses: parseInt($('#ulMaxUses').value, 10),
@@ -1455,6 +1465,7 @@ function openUploadLinkModal() {
       $('#ulResult').hidden = false;
       $('#ulCreate').textContent = '重新生成';
       loadUploadLinkList();
+      loadSideUlLinks();
     } catch (e) { toast('创建失败：' + e.message); }
   };
 }
@@ -1489,6 +1500,72 @@ async function loadUploadLinkList() {
       });
     });
   } catch (e) { box.innerHTML = '<div class="muted">加载失败</div>'; }
+}
+let ulLinks = [];
+async function loadSideUlLinks() {
+  const box = $('#sideUlLinks');
+  if (!box) return;
+  try {
+    const d = await apiGet('/api/upload-links');
+    ulLinks = d.links || [];
+    $('#ulCount').textContent = ulLinks.length ? ulLinks.length + '个' : '';
+    if (!ulLinks.length) {
+      box.innerHTML = '<div style="font-size:12px;color:var(--muted);padding:4px 12px">暂无</div>';
+      return;
+    }
+    box.innerHTML = ulLinks.map((ul, i) => `
+      <div class="nav-item" data-ul="${i}" style="font-size:13px">
+        ${ic('link', 15)}<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(ul.name)}">${esc(ul.name)}</span>
+      </div>`).join('');
+    box.querySelectorAll('[data-ul]').forEach(el => {
+      el.onclick = () => openUlLinkView(parseInt(el.dataset.ul, 10));
+      el.oncontextmenu = (e) => {
+        e.preventDefault();
+        const ul = ulLinks[parseInt(el.dataset.ul, 10)];
+        showCtxMenu(e.clientX, e.clientY, [
+          { label: '复制链接', icon: ic('copy', 15), fn: () => navigator.clipboard.writeText(ul.url).then(() => toast('已复制')) },
+          { label: '编辑', icon: ic('edit', 15), fn: () => openUlEdit(ul) },
+          { label: '删除', icon: ic('trash', 15), danger: true, fn: () => delUlLink(ul) },
+        ]);
+      };
+    });
+  } catch (e) { /* ignore */ }
+}
+function openUlLinkView(i) {
+  const ul = ulLinks[i];
+  if (!ul) return;
+  // 切换到该链接的桶和路径
+  const acct = state.accounts.find(a => a.buckets && a.buckets.includes(ul.bucket));
+  if (acct) {
+    state.accountId = acct.id;
+    state.bucket = ul.bucket;
+  }
+  state.prefix = ul.prefix || '';
+  state.nav = 'files';
+  renderNav();
+  loadFiles();
+  toast(`正在查看「${ul.name}」上传的内容`);
+}
+function openUlEdit(ul) {
+  askPrompt('编辑上传链接', '名称', ul.name, async (name) => {
+    if (!name.trim()) { toast('名称不能为空'); return; }
+    try {
+      await apiPut(`/api/upload-links/${ul.token}`, { name: name.trim(), prefix: ul.prefix, expiresAt: ul.expiresAt });
+      toast('已保存');
+      loadSideUlLinks();
+      loadUploadLinkList();
+    } catch (e) { toast('保存失败：' + e.message); }
+  });
+}
+function delUlLink(ul) {
+  askConfirm('删除上传链接', `确定删除「${ul.name}」吗？`, '删除', async () => {
+    try {
+      await apiDelete(`/api/upload-links/${ul.token}`);
+      toast('已删除');
+      loadSideUlLinks();
+      loadUploadLinkList();
+    } catch (e) { toast('删除失败：' + e.message); }
+  });
 }
 async function refreshAccounts() {
   try {
@@ -1792,6 +1869,7 @@ async function afterLogin() {
     await selectAccount(state.accounts[0].id);
   }
   await loadSideFolders();
+  loadSideUlLinks();
   nav('dash');
 }
 document.addEventListener('DOMContentLoaded', boot);
