@@ -79,6 +79,12 @@ func (d *DB) migrate() error {
 			key TEXT NOT NULL,
 			expires_at INTEGER NOT NULL
 		)`,
+		`CREATE TABLE IF NOT EXISTS upload_link_files (
+			token TEXT NOT NULL,
+			key TEXT NOT NULL,
+			created_at INTEGER NOT NULL,
+			PRIMARY KEY (token, key)
+		)`,
 		`CREATE TABLE IF NOT EXISTS share_items (
 			token TEXT NOT NULL,
 			key TEXT NOT NULL,
@@ -515,6 +521,29 @@ func (d *DB) UpdateUploadLink(token string, userID int64, name, prefix string, e
 	_, err := d.Exec(`UPDATE upload_links SET name=?, prefix=?, expires_at=? WHERE token=<redacted> AND user_id=?`,
 		name, prefix, expiresAt, token, userID)
 	return err
+}
+
+func (d *DB) RecordUploadLinkFile(token, key string) error {
+	_, err := d.Exec(`INSERT OR IGNORE INTO upload_link_files(token, key, created_at) VALUES(?, ?, ?)`,
+		token, key, time.Now().Unix())
+	return err
+}
+
+func (d *DB) UploadLinkFiles(token string) ([]string, error) {
+	rows, err := d.Query(`SELECT key FROM upload_link_files WHERE token=? ORDER BY created_at DESC`, token)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []string
+	for rows.Next() {
+		var k string
+		if err := rows.Scan(&k); err != nil {
+			return nil, err
+		}
+		out = append(out, k)
+	}
+	return out, rows.Err()
 }
 
 func (d *DB) DeleteUploadLink(token string, userID int64) error {

@@ -483,6 +483,22 @@ func (s *Server) handleListUploadLinks(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"links": out})
 }
 
+// GET /api/upload-links/{token}/files — list files uploaded via this link.
+func (s *Server) handleUploadLinkFiles(w http.ResponseWriter, r *http.Request) {
+	u := s.currentUser(r)
+	token := r.PathValue("token")
+	ul, err := s.DB.UploadLinkByToken(token)
+	if err != nil || ul.UserID != u.ID {
+		writeErr(w, http.StatusNotFound, "not found")
+		return
+	}
+	keys, _ := s.DB.UploadLinkFiles(token)
+	writeJSON(w, http.StatusOK, map[string]any{
+		"name": ul.Name, "bucket": ul.Bucket, "prefix": ul.Prefix,
+		"keys": keys,
+	})
+}
+
 // PUT /api/upload-links/{token} — update name/prefix/expiry.
 func (s *Server) handleUpdateUploadLink(w http.ResponseWriter, r *http.Request) {
 	u := s.currentUser(r)
@@ -726,6 +742,8 @@ func (s *Server) handleUploadTokenPresign(w http.ResponseWriter, r *http.Request
 		return
 	}
 	fullKey := ul.Prefix + key[strings.LastIndex(key, "/")+1:]
+	// 记录这个链接上传的文件
+	s.DB.RecordUploadLinkFile(token, fullKey)
 	a, err := s.DB.AccountByID(ul.AccountID, ul.UserID)
 	if err != nil {
 		writeErr(w, http.StatusBadGateway, "account unavailable")

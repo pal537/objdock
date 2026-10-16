@@ -127,6 +127,27 @@ function askPrompt(title, msg, def, cb) {
   $('#promptModal').hidden = false;
   setTimeout(() => $('#promptInput').focus(), 50);
 }
+function askForm(title, fields, onOk) {
+  const modal = $('#promptModal');
+  modal.querySelector('h3').textContent = title;
+  const body = $('#promptBody');
+  body.innerHTML = fields.map((f, i) => `
+    <label class="fld"><span>${esc(f.label)}</span>
+      <input class="input" id="af-${i}" type="${f.type || 'text'}" value="${esc(f.value || '')}" placeholder="${esc(f.placeholder || '')}">
+    </label>`).join('') + `
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
+      <button class="btn" id="afCancel">取消</button>
+      <button class="btn btn-primary" id="afOk">确认</button>
+    </div>`;
+  $('#promptModal').hidden = false;
+  $('#afCancel').onclick = () => { $('#promptModal').hidden = true; };
+  $('#afOk').onclick = () => {
+    const vals = {};
+    fields.forEach((f, i) => { vals[f.key] = $('#af-' + i).value; });
+    $('#promptModal').hidden = true;
+    onOk(vals);
+  };
+}
 $('#promptCancel').onclick = () => { $('#promptModal').hidden = true; promptCb = null; };
 $('#promptOk').onclick = () => {
   $('#promptModal').hidden = true;
@@ -1535,25 +1556,79 @@ async function loadSideUlLinks() {
     });
   } catch (e) { /* ignore */ }
 }
-function openUlLinkView(i) {
+let ulViewToken = null;
+async function openUlLinkView(i) {
   const ul = ulLinks[i];
   if (!ul) return;
-  // 切换到该链接的账户/桶/路径
-  if (ul.accountId) state.accountId = ul.accountId;
-  if (ul.bucket) state.bucket = ul.bucket;
-  state.prefix = ul.prefix || '';
-  updateSwitcherLabel();
-  loadSideFolders();
-  nav('files');
+  ulViewToken = ul.token;
+  try {
+    const d = await apiGet(`/api/upload-links/${ul.token}/files`);
+    state.nav = 'files';
+    renderUlFilesView(ul, d.keys || []);
+  } catch (e) { toast('加载失败：' + e.message); }
+}
+function renderUlFilesView(ul, keys) {
+  const main = $('#main');
+  const exp = ul.expiresAt ? new Date(ul.expiresAt * 1000).toLocaleString('zh-CN', { hour12: false }) : '永久';
+  main.innerHTML = `
+    <div class="topbar">
+      <h2>${ic('link')} ${esc(ul.name || '未命名')}</h2>
+      <div style="font-size:12px;color:var(--muted)">上传链接 · 有效期至 ${exp} · 共 ${keys.length} 个文件</div>
+    </div>
+    <div style="margin-bottom:12px;display:flex;gap:8px">
+      <button class="btn btn-sm" onclick="copyUlUrl('${ul.token}')">复制链接</button>
+      <button class="btn btn-sm" onclick="openUlEdit(ulLinks.find(x=>x.token==='${ul.token}'))">编辑</button>
+      <button class="btn btn-sm" onclick="nav('files');ulViewToken=null">返回文件</button>
+    </div>
+    <div id="ulFilesList"></div>`;
+  const box = $('#ulFilesList');
+  if (!keys.length) {
+    box.innerHTML = '<div class="card" style="text-align:center;color:var(--muted);padding:40px">暂无上传文件</div>';
+    return;
+  }
+  // 显示文件列表（简化版，复用文件卡片样式）
+  box.innerHTML = '<div class="card"><div style="display:flex;flex-direction:column;gap:8px">' +
+    keys.map(k => {
+      const name = k.split('/').pop();
+      return `<div style="display:flex;align-items:center;gap:10px;padding:10px;border-bottom:1px solid var(--line)">
+        <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(k)}">${esc(name)}</span>
+        <span style="font-size:12px;color:var(--muted)">${esc(k)}</span>
+        <button class="btn btn-sm" onclick="delUlFile('${ul.token}','${esc(k)}')">删除</button>
+      </div>`;
+    }).join('') + '</div></div>';
+}
+function copyUlUrl(token) {
+  const ul = ulLinks.find(x => x.token === token);
+  if (ul) navigator.clipboard.writeText(ul.url).then(() => toast('已复制'));
+}
+async function delUlFile(token, key) {
+  // 删除 S3 上的文件
+  const ul = ulLinks.find(x => x.token === token);
+  if (!ul || !confirm(`确定删除 ${key.split('/').pop()} 吗？`)) return;
+  try {
+    await apiDelete(`/api/accounts/${ul.accountId}/objects?bucket=${encodeURIComponent(ul.bucket)}&key=${encodeURIComponent(key)}`);
+    toast('已删除');
+    openUlLinkView(ulLinks.indexOf(ul));
+  } catch (e) { toast('删除失败：' + e.message); }
 }
 function openUlEdit(ul) {
-  askPrompt('编辑上传链接', '名称', ul.name, async (name) => {
-    if (!name.trim()) { toast('名称不能为空'); return; }
+  if (!ul) return;
+  const exp = ul.expiresAt ? new Date(ul.expiresAt * 1000).toISOString().slice(0, 16) : '';
+  askForm('编辑上传链接', [
+    { key: 'name', label: '链接名称 *', value: ul.name || '', placeholder: '如：小王上传资料' },
+    { key: 'prefix', label: '上传路径', value: ul.prefix || '', placeholder: '留空为根目录' },
+    { key: 'expiresAt', label: '有效期至（留空为永久）', value: exp, type: 'datetime-local' },
+  ], async (vals) => {
+    if (!vals.name.trim()) { toast('名称不能为空'); return; }
+    let expTs = 0;
+    if (vals.expiresAt) expTs = Math.floor(new Date(vals.expiresAt).getTime() / 1000);
+    else expTs = Math.floor(Date.now() / 1000) + 100 * 365 * 86400; // 永久
     try {
-      await apiPut(`/api/upload-links/${ul.token}`, { name: name.trim(), prefix: ul.prefix, expiresAt: ul.expiresAt });
+      await apiPut(`/api/upload-links/${ul.token}`, { name: vals.name.trim(), prefix: vals.prefix.trim(), expiresAt: expTs });
       toast('已保存');
       loadSideUlLinks();
       loadUploadLinkList();
+      if (ulViewToken === ul.token) openUlLinkView(ulLinks.findIndex(x => x.token === ul.token));
     } catch (e) { toast('保存失败：' + e.message); }
   });
 }

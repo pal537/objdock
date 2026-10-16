@@ -510,3 +510,6 @@ table.ftable { width: 100%; border-collapse: collapse; font-size: 13.5px; }
 [data-theme="dark"] .storage-switch { background: #1e293b !important; border-color: #334155 !important; }
 [data-theme="dark"] .storage-switch .sname { color: #f1f5f9 !important; }
 [data-theme="dark"] .storage-switch .ssub { color: #94a3b8 !important; }
+
+[data-theme="dark"] .nav-item:hover { background: #334155 !important; color: #f1f5f9 !important; }
+[data-theme="dark"] .nav-item:hover span { color: #f1f5f9 !important; }
