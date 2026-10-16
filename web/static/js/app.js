@@ -393,14 +393,15 @@ async function loadDash(quota) {
   }).join('');
   // trend line
   const trend = d.trend || [];
-  let trendSvg = '<div class="muted">暂无历史数据（每天统计一次后生成趋势）</div>';
-  if (trend.length >= 2) {
-    const max = Math.max(...trend.map(p => p.totalSize), 1);
-    const W = 600, H = 110, pts = trend.map((p, i) =>
-      `${(i / (trend.length - 1) * W).toFixed(1)},${(H - 8 - (p.totalSize / max) * (H - 20)).toFixed(1)}`).join(' ');
-    trendSvg = `<svg class="trend" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
+  let trendSvg = '<div class="muted">暂无历史数据（每天访问仪表盘一次，攒够 2 天数据后生成趋势）</div>';
+  const validTrend = trend.filter(p => p.day && typeof p.totalSize === 'number');
+  if (validTrend.length >= 2) {
+    const max = Math.max(...validTrend.map(p => p.totalSize), 1);
+    const W = 600, H = 110, pts = validTrend.map((p, i) =>
+      `${(i / (validTrend.length - 1) * W).toFixed(1)},${(H - 8 - (p.totalSize / max) * (H - 20)).toFixed(1)}`).join(' ');
+    trendSvg = `<svg class="trend" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="width:100%;height:110px;display:block">
       <polyline points="${pts}" fill="none" stroke="#3b82f6" stroke-width="2"/></svg>
-      <div class="muted">${esc(trend[0].day)} → ${esc(trend[trend.length - 1].day)}，${fmtSize(trend[0].totalSize)} → ${fmtSize(trend[trend.length - 1].totalSize)}</div>`;
+      <div class="muted">${esc(validTrend[0].day)} → ${esc(validTrend[validTrend.length - 1].day)}，${fmtSize(validTrend[0].totalSize)} → ${fmtSize(validTrend[validTrend.length - 1].totalSize)}</div>`;
   }
   const acct = state.accounts.find(x => x.id === state.accountId) || {};
   quota = acct.quotaBytes || quota || 0;
