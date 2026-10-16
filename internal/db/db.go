@@ -481,9 +481,9 @@ type UploadLink struct {
 }
 
 func (d *DB) CreateUploadLink(ul *UploadLink) error {
-	_, err := d.Exec(`INSERT INTO upload_links(token, user_id, account_id, bucket, prefix, password_hash, max_uses, use_count, expires_at, created_at)
-		VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		ul.Token, ul.UserID, ul.AccountID, ul.Bucket, ul.Prefix, ul.PasswordHash, ul.MaxUses, ul.UseCount, ul.ExpiresAt, ul.CreatedAt)
+	_, err := d.Exec(`INSERT INTO upload_links(token, user_id, account_id, bucket, prefix, name, password_hash, max_uses, use_count, expires_at, created_at)
+		VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		ul.Token, ul.UserID, ul.AccountID, ul.Bucket, ul.Prefix, ul.Name, ul.PasswordHash, ul.MaxUses, ul.UseCount, ul.ExpiresAt, ul.CreatedAt)
 	return err
 }
 

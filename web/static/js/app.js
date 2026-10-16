@@ -1562,7 +1562,6 @@ async function loadSideUlLinks() {
         const ul = ulLinks[parseInt(el.dataset.ul, 10)];
         showCtxMenu(e.clientX, e.clientY, [
           { label: '复制链接', icon: ic('copy', 15), fn: () => navigator.clipboard.writeText(ul.url).then(() => toast('已复制')) },
-          { label: '编辑', icon: ic('edit', 15), fn: () => openUlEdit(ul) },
           { label: '删除', icon: ic('trash', 15), danger: true, fn: () => delUlLink(ul) },
         ]);
       };
@@ -1572,32 +1571,61 @@ async function loadSideUlLinks() {
 async function openUlLinkView(i) {
   const ul = ulLinks[i];
   if (!ul) return;
-  // 直接用主文件浏览器，切换到该链接的账户/桶/路径
-  if (ul.accountId) state.accountId = ul.accountId;
-  if (ul.bucket) state.bucket = ul.bucket;
-  state.prefix = ul.prefix || '';
-  updateSwitcherLabel();
-  await loadSideFolders();
-  nav('files');
-  toast(`查看「${ul.name || '未命名'}」的上传目录`);
+  const main = $('#main');
+  main.innerHTML = `<div class="topbar"><h2>${ic('link')} ${esc(ul.name || '未命名')}</h2></div>
+    <div style="margin-bottom:12px;font-size:13px;color:var(--muted)">上传链接 · 共 <span id="ulFileCount">0</span> 个文件 · <button class="btn btn-sm" onclick="nav('files')">返回文件</button></div>
+    <div id="ulFileGrid" class="fgrid sz-m"><div class="card" style="grid-column:1/-1;text-align:center;color:var(--muted);padding:30px">加载中…</div></div>`;
+  try {
+    const d = await apiGet(`/api/upload-links/${ul.token}/files`);
+    const keys = d.keys || [];
+    $('#ulFileCount').textContent = keys.length;
+    const grid = $('#ulFileGrid');
+    if (!keys.length) {
+      grid.innerHTML = '<div class="card" style="grid-column:1/-1;text-align:center;color:var(--muted);padding:40px">暂无上传文件</div>';
+      return;
+    }
+    // 保存到全局供下载用
+    window._ulView = { ul, keys };
+    grid.innerHTML = keys.map((k, idx) => {
+      const name = k.split('/').pop();
+      return `<div class="fitem">
+        <div class="fic">${ic('file', 32)}</div>
+        <div class="fsub"><div class="fn" title="${esc(name)}">${esc(name)}</div><div class="fs">${esc(ul.bucket)}</div></div>
+        <div style="display:flex;gap:6px;padding:0 12px 12px">
+          <button class="btn btn-sm" onclick="ulFileDownload(${idx})">下载</button>
+          <button class="btn btn-sm" style="color:#dc2626" onclick="ulFileDelete(${idx})">删除</button>
+        </div>
+      </div>`;
+    }).join('');
+  } catch (e) {
+    $('#ulFileGrid').innerHTML = `<div class="card" style="grid-column:1/-1;text-align:center;color:#dc2626;padding:30px">加载失败：${esc(e.message)}</div>`;
+  }
+}
+async function ulFileDownload(idx) {
+  const { ul, keys } = window._ulView;
+  const k = keys[idx];
+  try {
+    const d = await apiGet(`/api/accounts/${ul.accountId}/download?bucket=${encodeURIComponent(ul.bucket)}&key=${encodeURIComponent(k)}`);
+    window.open(d.url, '_blank');
+  } catch (e) { toast('下载失败：' + e.message); }
+}
+async function ulFileDelete(idx) {
+  const { ul, keys } = window._ulView;
+  const k = keys[idx];
+  if (!confirm(`删除 ${k.split('/').pop()}？`)) return;
+  try {
+    await apiDelete(`/api/accounts/${ul.accountId}/objects?bucket=${encodeURIComponent(ul.bucket)}&key=${encodeURIComponent(k)}`);
+    toast('已删除');
+    // 从记录中删除
+    keys.splice(idx, 1);
+    openUlLinkView(ulLinks.indexOf(ul));
+  } catch (e) { toast('删除失败：' + e.message); }
 }
 
 
 
 
-function openUlEdit(ul) {
-  if (!ul) return;
-  askPrompt('编辑上传链接', '链接名称', ul.name || '', async (name) => {
-    name = name.trim();
-    if (!name) { toast('名称不能为空'); return; }
-    try {
-      await apiPut(`/api/upload-links/${ul.token}`, { name, prefix: ul.prefix || '', expiresAt: ul.expiresAt || 0 });
-      toast('已保存');
-      await loadSideUlLinks();
-      if (typeof loadUploadLinkList === 'function') loadUploadLinkList();
-    } catch (e) { toast('保存失败：' + e.message); }
-  });
-}
+
 function delUlLink(ul) {
   askConfirm('删除上传链接', `确定删除「${ul.name}」吗？`, '删除', async () => {
     try {
