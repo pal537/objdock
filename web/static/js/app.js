@@ -798,30 +798,64 @@ $('#shareGen').onclick = async () => {
 };
 $('#shareCopy').onclick = () => { $('#shareUrl').select(); document.execCommand('copy'); toast('已复制'); };
 
-/* ---------- upload ---------- */
+/* ---------- upload (centered modal, multi-file) ---------- */
+$('#uploadClose').onclick = () => { $('#uploadModal').hidden = true; };
 $('#filePicker').addEventListener('change', async (e) => {
   const files = Array.from(e.target.files);
   e.target.value = '';
   if (!files.length || !state.accountId) return;
-  for (const f of files) {
-    const key = state.prefix + f.name;
+  const list = $('#uploadList');
+  list.innerHTML = '';
+  $('#uploadModal').hidden = false;
+  let done = 0, failed = 0;
+  const rows = files.map(f => {
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f1f5f9';
+    row.innerHTML = `<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(f.name)}</span>
+      <span class="ust" style="font-size:12px;color:#64748b;white-space:nowrap">等待…</span>
+      <div class="ubar" style="width:120px;height:6px;background:#e2e8f0;border-radius:3px;overflow:hidden">
+        <div class="ufill" style="height:100%;width:0;background:#3b82f6;border-radius:3px;transition:width .2s"></div>
+      </div>`;
+    list.appendChild(row);
+    return { f, st: row.querySelector('.ust'), fill: row.querySelector('.ufill') };
+  });
+  for (const r of rows) {
+    const key = state.prefix + r.f.name;
     try {
-      toast(`上传中：${f.name}…`);
+      r.st.textContent = '获取地址…';
       const p = await apiGet(`/api/accounts/${state.accountId}/presign?bucket=${encodeURIComponent(state.bucket)}&key=${encodeURIComponent(key)}&op=upload&expires=3600`);
       await new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest();
         xhr.open('PUT', p.url);
-        xhr.setRequestHeader('Content-Type', f.type || 'application/octet-stream');
+        xhr.setRequestHeader('Content-Type', r.f.type || 'application/octet-stream');
         xhr.upload.onprogress = (ev) => {
-          if (ev.lengthComputable) toast(`上传中：${f.name} ${Math.round(ev.loaded / ev.total * 100)}%`, 900);
+          if (ev.lengthComputable) {
+            const pc = Math.round(ev.loaded / ev.total * 100);
+            r.fill.style.width = pc + '%';
+            r.st.textContent = pc + '%';
+          }
         };
         xhr.onload = () => (xhr.status >= 200 && xhr.status < 300) ? resolve() : reject(new Error('HTTP ' + xhr.status));
-        xhr.onerror = () => reject(new Error('网络错误'));
-        xhr.send(f);
+        xhr.onerror = () => reject(new Error('网络错误（检查存储桶 CORS 配置）'));
+        xhr.send(r.f);
       });
-      toast(`上传完成：${f.name}`);
-    } catch (err) { toast(`上传失败 ${f.name}：${err.message}`); }
+      r.fill.style.width = '100%';
+      r.fill.style.background = '#22c55e';
+      r.st.textContent = '成功';
+      r.st.style.color = '#16a34a';
+      done++;
+    } catch (err) {
+      r.fill.style.background = '#ef4444';
+      r.st.textContent = '失败';
+      r.st.style.color = '#dc2626';
+      r.st.title = err.message;
+      failed++;
+    }
   }
+  const sum = document.createElement('div');
+  sum.style.cssText = 'padding:12px 0 0;font-weight:600';
+  sum.textContent = failed ? `完成：${done} 成功，${failed} 失败（悬停"失败"看原因）` : `全部上传成功（${done} 个文件）`;
+  list.appendChild(sum);
   delete state.statsCache[state.accountId + '/' + state.bucket];
   if ($('.nav-item.active')?.dataset.nav === 'files') loadFiles();
 });
