@@ -385,7 +385,7 @@ const DONUT_COLORS = ['#8b5cf6', '#f59e0b', '#10b981', '#3b82f6', '#ef4444', '#6
 async function renderDash() {
   const main = $('#main');
   if (!state.accountId || !state.bucket) {
-    main.innerHTML = `<div class="card"><h3>${ic('dash')}仪表盘</h3>
+    main.innerHTML = `<div class="card"><h3>${ic('dash')}${t('nav.dashboard')}</h3>
       <div class="empty"><div class="big">${ic('bucket', 56)}</div>
       ${state.accounts.length ? '请先在左下角选择账户和存储桶' : '还没有绑定任何账户，去 <a href="javascript:nav(\'settings\')">设置</a> 添加第一个吧'}
       </div></div>`;
@@ -408,7 +408,7 @@ async function renderDash() {
     });
     if (chips.length > 1) bucketBar = `<div class="bucket-bar">${chips.join('')}</div>`;
   }
-  main.innerHTML = `<div class="topbar"><h2>${ic('dash')}仪表盘</h2><div class="spacer"></div>
+  main.innerHTML = `<div class="topbar"><h2>${ic('dash')}${t('nav.dashboard')}</h2><div class="spacer"></div>
     <button class="btn btn-sm" id="dashRefresh">↻ 重新统计</button></div>
     ${bucketBar}
     <div id="dashBody"><div class="empty">${t('dash.statistics')}</div></div>`;
@@ -1304,7 +1304,7 @@ function renderSettings(tab) {
     return true;
   });
   main.innerHTML = `
-    <div class="topbar"><h2>${ic('settings')}设置</h2></div>
+    <div class="topbar"><h2>${ic('settings')}${t('nav.settings')}</h2></div>
     <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
       ${visibleTabs.map(t => `<button class="btn btn-sm ${t.id === tab ? 'btn-primary' : ''}" data-stab="${t.id}">${t.label}</button>`).join('')}
     </div>
