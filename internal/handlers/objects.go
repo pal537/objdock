@@ -1211,5 +1211,7 @@ func (s *Server) handleDeleteObjects(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	// 同步清理 upload_link_files 中的记录
+	_ = s.DB.DeleteUploadLinkFilesByKeys(in.Keys)
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "deleted": len(in.Keys)})
 }

@@ -529,6 +529,25 @@ func (d *DB) RecordUploadLinkFile(token, key string) error {
 	return err
 }
 
+// DeleteUploadLinkFilesByKeys 删除指定 key 在 upload_link_files 中的记录（文件被删时同步清理）
+func (d *DB) DeleteUploadLinkFilesByKeys(keys []string) error {
+	if len(keys) == 0 {
+		return nil
+	}
+	q := `DELETE FROM upload_link_files WHERE key IN (`
+	args := make([]any, len(keys))
+	for i, k := range keys {
+		if i > 0 {
+			q += ","
+		}
+		q += "?"
+		args[i] = k
+	}
+	q += ")"
+	_, err := d.Exec(q, args...)
+	return err
+}
+
 func (d *DB) UploadLinkFiles(token string) ([]string, error) {
 	rows, err := d.Query(`SELECT key FROM upload_link_files WHERE token=? ORDER BY created_at DESC`, token)
 	if err != nil {
