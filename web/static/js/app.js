@@ -1513,10 +1513,14 @@ async function loadSideUlLinks() {
       box.innerHTML = '<div style="font-size:12px;color:var(--muted);padding:4px 12px">暂无</div>';
       return;
     }
-    box.innerHTML = ulLinks.map((ul, i) => `
-      <div class="nav-item" data-ul="${i}" style="font-size:13px">
-        ${ic('link', 15)}<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(ul.name)}">${esc(ul.name)}</span>
-      </div>`).join('');
+    box.innerHTML = ulLinks.map((ul, i) => {
+      const nm = ul.name || '未命名';
+      const exp = ul.expiresAt ? new Date(ul.expiresAt * 1000).toLocaleDateString('zh-CN') : '';
+      return `
+      <div class="nav-item" data-ul="${i}" style="font-size:13px" title="${esc(nm)}${exp ? '（有效期至 ' + exp + '）' : ''}">
+        ${ic('link', 15)}<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(nm)}</span>
+      </div>`;
+    }).join('');
     box.querySelectorAll('[data-ul]').forEach(el => {
       el.onclick = () => openUlLinkView(parseInt(el.dataset.ul, 10));
       el.oncontextmenu = (e) => {
@@ -1534,17 +1538,13 @@ async function loadSideUlLinks() {
 function openUlLinkView(i) {
   const ul = ulLinks[i];
   if (!ul) return;
-  // 切换到该链接的桶和路径
-  const acct = state.accounts.find(a => a.buckets && a.buckets.includes(ul.bucket));
-  if (acct) {
-    state.accountId = acct.id;
-    state.bucket = ul.bucket;
-  }
+  // 切换到该链接的账户/桶/路径
+  if (ul.accountId) state.accountId = ul.accountId;
+  if (ul.bucket) state.bucket = ul.bucket;
   state.prefix = ul.prefix || '';
-  state.nav = 'files';
-  renderNav();
-  loadFiles();
-  toast(`正在查看「${ul.name}」上传的内容`);
+  updateSwitcherLabel();
+  loadSideFolders();
+  nav('files');
 }
 function openUlEdit(ul) {
   askPrompt('编辑上传链接', '名称', ul.name, async (name) => {

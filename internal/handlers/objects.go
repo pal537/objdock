@@ -472,7 +472,7 @@ func (s *Server) handleListUploadLinks(w http.ResponseWriter, r *http.Request) {
 	out := make([]map[string]any, 0, len(links))
 	for _, ul := range links {
 		out = append(out, map[string]any{
-			"token": ul.Token, "bucket": ul.Bucket, "prefix": ul.Prefix, "name": ul.Name,
+			"token": ul.Token, "accountId": ul.AccountID, "bucket": ul.Bucket, "prefix": ul.Prefix, "name": ul.Name,
 			"url":       base + "/u/" + ul.Token,
 			"createdAt": ul.CreatedAt, "expiresAt": ul.ExpiresAt,
 			"expired":   time.Now().Unix() > ul.ExpiresAt,
