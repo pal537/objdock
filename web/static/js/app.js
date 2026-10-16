@@ -1628,9 +1628,12 @@ async function openUlLinkView(i) {
 async function ulFileDownload(idx) {
   const { ul, keys } = window._ulView;
   const k = keys[idx];
+  const name = k.split('/').pop();
   try {
     const d = await apiGet(`/api/accounts/${ul.accountId}/presign?bucket=${encodeURIComponent(ul.bucket)}&key=${encodeURIComponent(k)}&op=download&expires=600`);
-    window.open(d.url, '_blank');
+    const a = document.createElement('a');
+    a.href = d.url; a.download = name; a.target = '_blank';
+    document.body.appendChild(a); a.click(); a.remove();
   } catch (e) { toast('下载失败：' + e.message); }
 }
 async function ulFileDelete(idx) {
