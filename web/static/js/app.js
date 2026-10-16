@@ -912,18 +912,37 @@ async function editText(key, name) {
   } catch (e) { toast('加载失败：' + e.message); }
 }
 function copyObject(srcKey, name, isMove) {
-  askPrompt(isMove ? '移动到' : '复制到', '目标路径（相对于桶根目录，含文件名）', state.prefix + name, async (v) => {
-    v = v.trim().replace(/^\/+/, '');
-    if (!v) return;
-    try {
-      toast(`正在${isMove ? '移动' : '复制'}…`);
-      await apiPost(`/api/accounts/${state.accountId}/copy`, {
-        srcBucket: state.bucket, srcKey, dstBucket: state.bucket, dstKey: v, move: isMove,
-      });
-      toast(isMove ? '移动成功' : '复制成功');
-      loadFiles();
-    } catch (e) { toast('失败：' + e.message); }
-  });
+  // 先拿桶列表
+  apiGet(`/api/accounts/${state.accountId}/buckets`).then(d => {
+    const buckets = d.buckets || [state.bucket];
+    const bOpts = buckets.map(b => `<option value="${esc(b)}" ${b === state.bucket ? 'selected' : ''}>${esc(b)}</option>`).join('');
+    const modal = $('#uploadModal'), list = $('#uploadList');
+    list.innerHTML = '';
+    modal.querySelector('h3').textContent = isMove ? '移动到' : '复制到';
+    list.innerHTML = `
+      <label class="fld"><span>目标桶</span><select class="input" id="cpBucket">${bOpts}</select></label>
+      <label class="fld"><span>目标路径（含文件名）</span><input class="input" id="cpPath" value="${esc(state.prefix + name)}"></label>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
+        <button class="btn" id="cpCancel">取消</button>
+        <button class="btn btn-primary" id="cpGo">${isMove ? '移动' : '复制'}</button>
+      </div>`;
+    $('#uploadModal').hidden = false;
+    $('#cpCancel').onclick = () => { $('#uploadModal').hidden = true; modal.querySelector('h3').textContent = '上传文件'; };
+    $('#cpGo').onclick = async () => {
+      const dstBucket = $('#cpBucket').value;
+      const dstKey = $('#cpPath').value.trim().replace(/^\/+/, '');
+      if (!dstKey) { toast('请输入目标路径'); return; }
+      try {
+        toast(`正在${isMove ? '移动' : '复制'}…`);
+        $('#uploadModal').hidden = true; modal.querySelector('h3').textContent = '上传文件';
+        await apiPost(`/api/accounts/${state.accountId}/copy`, {
+          srcBucket: state.bucket, srcKey, dstBucket, dstKey, move: isMove,
+        });
+        toast(isMove ? '移动成功' : '复制成功');
+        loadFiles();
+      } catch (e) { toast('失败：' + e.message); }
+    };
+  }).catch(e => toast('获取桶列表失败：' + e.message));
 }
 function deleteSingle(key, name, isFolder) {
   askConfirm('删除', `确定删除「${name}」吗？${isFolder ? '文件夹内的文件也会被删除，' : ''}此操作不可恢复。`, '删除', async () => {
