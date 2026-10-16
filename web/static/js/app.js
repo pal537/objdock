@@ -857,10 +857,10 @@ function renderFileList(d) {
         <td class="fsize">${fmtSize(f.size)}</td><td class="ftime">${fmtDate(f.lastModified)}</td>
         <td><div class="row-actions">
           <button class="icon-btn" data-act="preview" title="预览">${ic('eye')}</button>
-          <button class="icon-btn" data-act="download" title="下载">${ic('download')}</button>
-          <button class="icon-btn" data-act="share" title="分享">${ic('link')}</button>
-          <button class="icon-btn" data-act="rename" title="重命名">${ic('pencil')}</button>
-          <button class="icon-btn danger" data-act="delete" title="删除">${ic('trash')}</button>
+          <button class="icon-btn" data-act="download" title="${t('act.download')}">${ic('download')}</button>
+          <button class="icon-btn" data-act="share" title="${t('act.share')}">${ic('link')}</button>
+          <button class="icon-btn" data-act="rename" title="${t('act.rename')}">${ic('pencil')}</button>
+          <button class="icon-btn danger" data-act="delete" title="${t('act.delete')}">${ic('trash')}</button>
         </div></td></tr>`;
     });
     body.innerHTML = h + '</tbody></table></div>';
@@ -985,7 +985,7 @@ async function editText(key, name) {
     list.appendChild(ta);
     const btnRow = document.createElement('div');
     btnRow.style.cssText = 'margin-top:12px;display:flex;gap:8px;justify-content:flex-end';
-    btnRow.innerHTML = '<button class="btn" id="edCancel">取消</button><button class="btn btn-primary" id="edSave">保存</button>';
+    btnRow.innerHTML = '<button class="btn" id="edCancel">' + t('common.cancel') + '</button><button class="btn btn-primary" id="edSave">' + t('common.save') + '</button>';
     list.appendChild(btnRow);
     $('#uploadModal').hidden = false;
     $('#edCancel').onclick = () => { $('#uploadModal').hidden = true; modal.querySelector('h3').textContent = '上传文件'; };
@@ -996,7 +996,7 @@ async function editText(key, name) {
         $('#uploadModal').hidden = true;
         modal.querySelector('h3').textContent = '上传文件';
         loadFiles();
-      } catch (e) { toast('保存失败：' + e.message); }
+      } catch (e) { toast(t('msg.saveFail') + e.message); }
     };
   } catch (e) { toast('加载失败：' + e.message); }
 }
@@ -1321,21 +1321,21 @@ function renderSettingsTab(tab) {
     $('#btnAddAcct').onclick = () => openWizard();
     loadAcctList();
   } else if (tab === 'share') {
-    c.innerHTML = `<div class="card"><h3>${ic('share')}${t('settings.share')}</h3><p class="desc">经本站转发的私密分享链接，可撤销</p><div id="shareList"><div class="muted">${t('common.loading')}</div></div></div>`;
+    c.innerHTML = `<div class="card"><h3>${ic('share')}${t('settings.share')}</h3><p class="desc">${t('settings.shareDesc')}</p><div id="shareList"><div class="muted">${t('common.loading')}</div></div></div>`;
     loadShareList();
   } else if (tab === 'upload') {
-    c.innerHTML = `<div class="card"><h3>${t('settings.uploadLinks')}</h3><p class="desc">别人可通过链接上传文件到你的桶，可撤销</p><div id="uploadLinkList"><div class="muted">${t('common.loading')}</div></div></div>`;
+    c.innerHTML = `<div class="card"><h3>${t('settings.uploadLinks')}</h3><p class="desc">${t('settings.uploadDesc')}</p><div id="uploadLinkList"><div class="muted">${t('common.loading')}</div></div></div>`;
     loadUploadLinkList();
   } else if (tab === 'site' && state.user.admin) {
-    c.innerHTML = `<div class="card"><h3>${ic('settings')}${t('settings.site')}</h3><p class="desc">分享链接用的公开地址（仅管理员可见）</p>
-      <label class="fld"><span>站点地址</span>
+    c.innerHTML = `<div class="card"><h3>${ic('settings')}${t('settings.site')}</h3><p class="desc">${t('settings.siteUrlDesc')}</p>
+      <label class="fld"><span>${t('settings.siteUrl')}</span>
         <div style="display:flex;gap:8px">
-          <input class="input" id="siteUrl" placeholder="如 https://oss.example.com" style="flex:1">
-          <button class="btn btn-primary" id="siteSave" style="flex:none">保存</button>
-        </div><div class="hint">留空则自动识别，用于生成私密分享短链</div></label></div>
-      <div class="card"><h3>${ic('lock')}注册设置</h3><p class="desc">关闭后将无法注册新用户（仅管理员可见）</p>
+          <input class="input" id="siteUrl" placeholder="${t('settings.sitePh')}" style="flex:1">
+          <button class="btn btn-primary" id="siteSave" style="flex:none">${t('common.save')}</button>
+        </div><div class="hint">${t('settings.siteHint')}</div></label></div>
+      <div class="card"><h3>${ic('lock')}${t('settings.regTitle')}</h3><p class="desc">${t('settings.regDesc')}</p>
       <label style="display:flex;gap:8px;align-items:center;cursor:pointer">
-        <input type="checkbox" id="regToggle" style="width:18px;height:18px"> 允许新用户注册
+        <input type="checkbox" id="regToggle" style="width:18px;height:18px"> ${t('settings.allowReg')}
       </label></div>`;
     apiGet('/api/settings').then(d => {
       $('#siteUrl').value = d.siteUrl || '';
@@ -1343,11 +1343,11 @@ function renderSettingsTab(tab) {
     }).catch(() => {});
     $('#siteSave').onclick = async () => {
       try { await apiPut('/api/settings', { siteUrl: $('#siteUrl').value.trim() }); toast(t('msg.saved')); }
-      catch (e) { toast('保存失败：' + e.message); }
+      catch (e) { toast(t('msg.saveFail') + e.message); }
     };
     $('#regToggle').onchange = async (e) => {
       try { await apiPut('/api/settings', { registrationEnabled: e.target.checked }); toast(t('msg.saved')); }
-      catch (err) { toast('保存失败：' + err.message); e.target.checked = !e.target.checked; }
+      catch (err) { toast(t('msg.saveFail') + err.message); e.target.checked = !e.target.checked; }
     };
   } else if (tab === 'user' && state.user.admin) {
     c.innerHTML = `<div class="card"><h3>${ic('users')}${t('settings.users')}</h3><p class="desc">共 <b id="userTotal">0</b> 个用户（仅管理员可见，不显示密码）</p><div id="userList"><div class="muted">${t('common.loading')}</div></div></div>`;
@@ -2028,7 +2028,7 @@ function renderProfile() {
       <label class="fld"><span>当前密码</span><input class="input" id="pCur" type="password"></label>
       <label class="fld"><span>新密码（至少 8 位，字母+数字）</span><input class="input" id="pNew" type="password"></label>
       <div id="pErr" style="color:#ef4444;font-size:13px;min-height:20px"></div>
-      <button class="btn btn-primary" id="pSave">保存</button>
+      <button class="btn btn-primary" id="pSave">${t('common.save')}</button>
     </div>`;
   $('#pSave').onclick = async () => {
     try {
