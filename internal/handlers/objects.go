@@ -199,10 +199,6 @@ func (s *Server) handleCreateShare(w http.ResponseWriter, r *http.Request) {
 	if exp < 0 || exp > 100*365*24*3600 {
 		exp = 7 * 24 * 3600
 	}
-	expiresAt := now + int64(exp)
-	if exp == 0 {
-		expiresAt = now + 100*365*24*3600
-	}
 	tok := make([]byte, 9)
 	if _, err := rand.Read(tok); err != nil {
 		writeErr(w, http.StatusInternalServerError, "cannot generate token")
@@ -210,6 +206,10 @@ func (s *Server) handleCreateShare(w http.ResponseWriter, r *http.Request) {
 	}
 	token := base64.RawURLEncoding.EncodeToString(tok)[:12]
 	now := time.Now().Unix()
+	expiresAt := now + int64(exp)
+	if exp == 0 {
+		expiresAt = now + 100*365*24*3600
+	}
 	pwHash := ""
 	if in.Password != "" {
 		// 上传链接密码：简单 SHA256，不做长度/复杂度限制
@@ -420,10 +420,6 @@ func (s *Server) handleCreateUploadLink(w http.ResponseWriter, r *http.Request) 
 	if exp < 0 || exp > 100*365*24*3600 {
 		exp = 7 * 24 * 3600
 	}
-	expiresAt := now + int64(exp)
-	if exp == 0 {
-		expiresAt = now + 100*365*24*3600
-	}
 	tok := make([]byte, 9)
 	if _, err := rand.Read(tok); err != nil {
 		writeErr(w, http.StatusInternalServerError, "cannot generate token")
@@ -444,6 +440,10 @@ func (s *Server) handleCreateUploadLink(w http.ResponseWriter, r *http.Request) 
 		prefix += "/"
 	}
 	now := time.Now().Unix()
+	expiresAt := now + int64(exp)
+	if exp == 0 {
+		expiresAt = now + 100*365*24*3600
+	}
 	ul := &db.UploadLink{
 		Token: token, UserID: u.ID, AccountID: a.ID, Bucket: in.Bucket, Prefix: prefix,
 		PasswordHash: pwHash, MaxUses: in.MaxUses, ExpiresAt: expiresAt, CreatedAt: now,
