@@ -250,7 +250,7 @@ function renderShell() {
         <div class="acct-card" id="acctCard">
           <div class="avatar">${esc(u.username[0].toUpperCase())}</div>
           <div style="flex:1"><div class="sname">${esc(u.username)}</div></div>
-          <button id="themeBtn" title="${t('theme.toggle')}" style="background:none;border:none;cursor:pointer;padding:6px;display:flex;align-items:center"></button>
+          <button id="themeBtn" title="' + t('theme.toggle') + '" style="background:none;border:none;cursor:pointer;padding:6px;display:flex;align-items:center"></button>
         </div>
       </div>
     </aside>
@@ -409,7 +409,7 @@ async function renderDash() {
     if (chips.length > 1) bucketBar = `<div class="bucket-bar">${chips.join('')}</div>`;
   }
   main.innerHTML = `<div class="topbar"><h2>${ic('dash')}${t('nav.dashboard')}</h2><div class="spacer"></div>
-    <button class="btn btn-sm" id="dashRefresh">↻ 重新统计</button></div>
+    <button class="btn btn-sm" id="dashRefresh">${t('dash.recalc')}</button></div>
     ${bucketBar}
     <div id="dashBody"><div class="empty">${t('dash.statistics')}</div></div>`;
   // 绑定切换
@@ -557,7 +557,7 @@ async function renderFiles() {
   selKeys = new Set();
   main.innerHTML = `
     <div class="topbar"><h2>${ic('folder')}${t('nav.files')}</h2><div class="spacer"></div>
-      <input class="input input-sm" id="searchInput" placeholder="${t('file.search')}" style="width:180px">
+      <input class="input input-sm" id="searchInput" placeholder="' + t('file.search') + '" style="width:180px">
       <select class="input input-sm" id="sortSel" title="排序">
         <option value="time-desc">${t('sort.timeDesc')}</option>
         <option value="time-asc">${t('sort.timeAsc')}</option>
@@ -843,7 +843,7 @@ function renderFileList(d) {
     }
   } else {
     const checkCol = state.selectMode ? '<th class="check-cell"></th>' : '';
-    let h = `<div class="ftable-wrap"><table class="ftable"><thead><tr>${checkCol}<th>名称</th><th style="width:110px">大小</th><th style="width:170px">修改时间</th><th style="width:170px;text-align:right">操作</th></tr></thead><tbody>`;
+    let h = `<div class="ftable-wrap"><table class="ftable"><thead><tr>${checkCol}<th>名称</th><th style="width:110px">大小</th><th style="width:170px">${t('file.modTime')}</th><th style="width:170px;text-align:right">操作</th></tr></thead><tbody>`;
     d.folders.slice().sort((a, b) => a.name.localeCompare(b.name, 'zh-CN')).forEach(f => {
       h += `<tr>${state.selectMode ? '<td class="check-cell"></td>' : ''}
         <td><div class="fname clickable" data-folder="${esc(f.prefix)}"><div class="fic-sm folder">${ic('folder')}</div>
@@ -1088,7 +1088,7 @@ async function openPreview(key, name, kind) {
       const t = await (await fetch(url)).text();
       body.innerHTML = `<pre>${esc(t.slice(0, 200000))}</pre>`;
     }
-    else body.innerHTML = `<div class="empty"><div class="big">${iconFor(kind)}</div>该格式不支持在线预览，请下载查看</div>`;
+    else body.innerHTML = `<div class="empty"><div class="big">${iconFor(kind)}</div>${t('file.noPreview')}</div>`;
   } catch (e) { $('#previewBody').innerHTML = `<div class="empty">预览失败：${esc(e.message)}</div>`; }
 }
 $('#previewClose').onclick = () => { $('#previewModal').hidden = true; $('#previewBody').innerHTML = ''; };
@@ -1253,7 +1253,7 @@ async function loadSideFolders(topData) {
     const d = topData || await apiGet(`/api/accounts/${state.accountId}/objects?bucket=${encodeURIComponent(state.bucket)}&prefix=`);
     box.innerHTML = d.folders.map(f =>
       `<div class="folder-item" data-p="${esc(f.prefix)}">${ic('folder', 15)} ${esc(f.name)}</div>`).join('')
-      || '<div class="muted" style="padding:4px 12px;font-size:12px">无文件夹</div>';
+      || '<div class="muted" style="padding:4px 12px;font-size:12px">' + t('folder.none') + '</div>';
     $$('.folder-item', box).forEach(el => el.onclick = () => {
       state.prefix = el.dataset.p;
       nav('files');
@@ -1330,7 +1330,7 @@ function renderSettingsTab(tab) {
     c.innerHTML = `<div class="card"><h3>${ic('settings')}${t('settings.site')}</h3><p class="desc">${t('settings.siteUrlDesc')}</p>
       <label class="fld"><span>${t('settings.siteUrl')}</span>
         <div style="display:flex;gap:8px">
-          <input class="input" id="siteUrl" placeholder="${t('settings.sitePh')}" style="flex:1">
+          <input class="input" id="siteUrl" placeholder="' + t('settings.sitePh') + '" style="flex:1">
           <button class="btn btn-primary" id="siteSave" style="flex:none">${t('common.save')}</button>
         </div><div class="hint">${t('settings.siteHint')}</div></label></div>
       <div class="card"><h3>${ic('lock')}${t('settings.regTitle')}</h3><p class="desc">${t('settings.regDesc')}</p>
@@ -1381,7 +1381,7 @@ async function loadShareList() {
   try {
     const d = await apiGet('/api/shares');
     const arr = d.shares || [];
-    if (!arr.length) { box.innerHTML = '<div class="muted">暂无分享</div>'; return; }
+    if (!arr.length) { box.innerHTML = '<div class="muted">' + t('empty.noShare') + '</div>'; return; }
     box.innerHTML = arr.map(sh => {
       const exp = new Date(sh.expiresAt * 1000).toLocaleString('zh-CN', { hour12: false });
       let st = sh.expired ? '<span style="color:#dc2626">已过期</span>' : `<span style="color:#16a34a">有效期至 ${esc(exp)}</span>`;
@@ -1413,7 +1413,7 @@ async function loadUserList() {
     const d = await apiGet('/api/admin/users');
     $('#userTotal').textContent = d.total;
     const arr = d.users || [];
-    if (!arr.length) { box.innerHTML = '<div class="muted">暂无用户</div>'; return; }
+    if (!arr.length) { box.innerHTML = '<div class="muted">' + t('empty.noUser') + '</div>'; return; }
     box.innerHTML = arr.map(x => {
       const dt = new Date(x.createdAt).toLocaleDateString('zh-CN');
       const tag = x.admin ? '<span style="background:#dbeafe;color:#1d4ed8;font-size:11px;padding:2px 8px;border-radius:10px">管理员</span>' : '';
@@ -1422,7 +1422,7 @@ async function loadUserList() {
         <span style="flex:1">${esc(x.username)} ${tag}</span>
         <span style="font-size:12px;color:#64748b">${dt} 注册</span>
         ${isSelf ? '<span style="font-size:12px;color:#94a3b8">自己</span>' : `
-          <button class="btn btn-sm" data-reset-user="${x.id}" data-uname="${esc(x.username)}">重置密码</button>
+          <button class="btn btn-sm" data-reset-user="${x.id}" data-uname="${esc(x.username)}">${t('user.resetPwd')}</button>
           <button class="btn btn-sm" data-del-user="${x.id}" data-uname="${esc(x.username)}" style="color:#dc2626">删除</button>`}
       </div>`;
     }).join('');
@@ -1451,7 +1451,7 @@ function initDragUpload() {
     if (overlay) return;
     overlay = document.createElement('div');
     overlay.style.cssText = 'position:fixed;inset:0;background:rgba(59,130,246,.12);border:3px dashed #3b82f6;z-index:9999;display:flex;align-items:center;justify-content:center;pointer-events:none;margin:12px;border-radius:16px';
-    overlay.innerHTML = '<div style="background:#fff;padding:20px 36px;border-radius:14px;font-size:18px;color:#3b82f6;box-shadow:0 8px 30px rgba(0,0,0,.15)">松开以上传文件</div>';
+    overlay.innerHTML = '<div style="background:#fff;padding:20px 36px;border-radius:14px;font-size:18px;color:#3b82f6;box-shadow:0 8px 30px rgba(0,0,0,.15)">' + t('upload.dropHint') + '</div>';
     document.body.appendChild(overlay);
   };
   const hideOverlay = () => { if (overlay) { overlay.remove(); overlay = null; } };
@@ -1474,7 +1474,7 @@ function initDragUpload() {
 }
 async function doSearch(q) {
   const body = $('#fileBody');
-  body.innerHTML = '<div class="empty">搜索中…</div>';
+  body.innerHTML = '<div class="empty">' + t('common.searching') + '</div>';
   try {
     const d = await apiGet(`/api/accounts/${state.accountId}/search?bucket=${encodeURIComponent(state.bucket)}&q=${encodeURIComponent(q)}`);
     const results = d.results || [];
@@ -1505,7 +1505,7 @@ function openUploadLinkModal() {
   modal.querySelector('h3').textContent = t('upload.createLink');
   list.innerHTML = `
     <label class="fld"><span>${t('upload.linkName')}</span>
-      <input class="input" id="ulName" placeholder="${t('upload.namePh')}" maxlength="50">
+      <input class="input" id="ulName" placeholder="' + t('upload.namePh') + '" maxlength="50">
       <div class="hint">${t('upload.nameHint')}</div></label>
     <label class="fld"><span>${t('upload.toPath')}</span>
       <input class="input" id="ulPrefix" value="${esc(state.prefix || '')}" placeholder="默认为当前目录：${esc(state.prefix || '根目录')}">
@@ -1525,7 +1525,7 @@ function openUploadLinkModal() {
       </select></label>
     <div style="display:flex;gap:10px">
       <label class="fld" style="flex:1"><span>${t('upload.pwd')}</span>
-        <input class="input" id="ulPwd" type="password" placeholder="${t('upload.noPwd')}"></label>
+        <input class="input" id="ulPwd" type="password" placeholder="' + t('upload.noPwd') + '"></label>
       <label class="fld" style="flex:1"><span>${t('upload.maxUses')}</span>
         <select class="input" id="ulMaxUses">
           <option value="0">${t('upload.unlimited')}</option>
@@ -1565,7 +1565,7 @@ function openUploadLinkModal() {
       // 只显示链接，隐藏表单
       list.innerHTML = `
         <div style="text-align:center;padding:20px 0">
-          <div style="font-size:16px;font-weight:600;margin-bottom:16px;color:var(--text)">上传链接已创建</div>
+          <div style="font-size:16px;font-weight:600;margin-bottom:16px;color:var(--text)">${t('upload.created')}</div>
           <label class="fld"><span>${t('upload.result')}</span>
             <input class="input" id="ulUrl2" readonly value="${esc(p.url)}" onclick="this.select();document.execCommand('copy');toast(t('msg.copied'))" style="cursor:pointer;text-align:center">
           </label>
@@ -1586,7 +1586,7 @@ async function loadUploadLinkList() {
   try {
     const d = await apiGet('/api/upload-links');
     const arr = d.links || [];
-    if (!arr.length) { box.innerHTML = '<div class="muted">暂无上传链接</div>'; return; }
+    if (!arr.length) { box.innerHTML = '<div class="muted">' + t('empty.noUploadLink') + '</div>'; return; }
     box.innerHTML = arr.map(ul => {
       const exp = new Date(ul.expiresAt * 1000).toLocaleString('zh-CN', { hour12: false });
       const st = ul.expired ? '<span style="color:#dc2626">已过期</span>' : `<span style="color:#16a34a">有效期至 ${esc(exp)}</span>`;
