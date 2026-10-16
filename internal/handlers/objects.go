@@ -5,6 +5,8 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"net/http"
+
+	"github.com/pal537/objdock/internal/auth"
 	"path"
 	"strconv"
 	"strings"
@@ -163,9 +165,11 @@ func (s *Server) handleCreateShare(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var in struct {
-		Bucket  string `json:"bucket"`
-		Key     string `json:"key"`
-		Expires int    `json:"expires"`
+		Bucket   string `json:"bucket"`
+		Key      string `json:"key"`
+		Expires  int    `json:"expires"`
+		Password string `json:"password"`
+		MaxViews int64  `json:"maxViews"`
 	}
 	if err := decodeJSON(r, &in); err != nil || in.Bucket == "" || in.Key == "" {
 		writeErr(w, http.StatusBadRequest, "bucket and key are required")
@@ -186,15 +190,26 @@ func (s *Server) handleCreateShare(w http.ResponseWriter, r *http.Request) {
 	}
 	token := base64.RawURLEncoding.EncodeToString(tok)[:12]
 	now := time.Now().Unix()
+	pwHash := ""
+	if in.Password != "" {
+		h, err := auth.HashPassword(in.Password)
+		if err != nil {
+			writeErr(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		pwHash = h
+	}
 	sh := &db.Share{
-		Token:     token,
-		UserID:    u.ID,
-		AccountID: a.ID,
-		Bucket:    in.Bucket,
-		Key:       in.Key,
-		Name:      in.Key[strings.LastIndex(in.Key, "/")+1:],
-		CreatedAt: now,
-		ExpiresAt: now + int64(exp),
+		Token:        token,
+		UserID:       u.ID,
+		AccountID:    a.ID,
+		Bucket:       in.Bucket,
+		Key:          in.Key,
+		Name:         in.Key[strings.LastIndex(in.Key, "/")+1:],
+		CreatedAt:    now,
+		ExpiresAt:    now + int64(exp),
+		PasswordHash: pwHash,
+		MaxViews:     in.MaxViews,
 	}
 	if err := s.DB.CreateShare(sh); err != nil {
 		writeErr(w, http.StatusInternalServerError, "cannot create share")
@@ -202,6 +217,25 @@ func (s *Server) handleCreateShare(w http.ResponseWriter, r *http.Request) {
 	}
 	url := s.siteBaseURL(r) + "/s/" + token
 	writeJSON(w, http.StatusOK, map[string]any{"url": url, "expiresIn": exp})
+}
+
+// renderSharePassword shows a password prompt for protected shares.
+func (s *Server) renderSharePassword(w http.ResponseWriter, token string, failed bool) {
+	msg := ""
+	if failed {
+		msg = "<p style='color:#dc2626'>密码错误，请重试</p>"
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Write([]byte(`<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>需要密码 - ObjDock 分享</title></head>
+<body style="font-family:system-ui;background:#f1f5f9;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0">
+<div style="background:#fff;padding:32px;border-radius:16px;box-shadow:0 4px 20px rgba(0,0,0,.1);max-width:360px;width:90%">
+<h2 style="margin:0 0 8px">🔒 需要密码</h2>
+<p style="color:#64748b;font-size:14px">这个分享链接受密码保护</p>` + msg + `
+<form method="POST"><input type="password" name="password" placeholder="输入分享密码" autofocus
+style="width:100%;padding:12px;border:1px solid #e2e8f0;border-radius:10px;font-size:15px;box-sizing:border-box">
+<button type="submit" style="width:100%;margin-top:12px;padding:12px;background:#3b82f6;color:#fff;border:none;border-radius:10px;font-size:15px;cursor:pointer">打开</button></form>
+</div></body></html>`))
 }
 
 // GET /api/shares — list my shares (login required).
@@ -220,6 +254,9 @@ func (s *Server) handleListShares(w http.ResponseWriter, r *http.Request) {
 			"url":       base + "/s/" + sh.Token,
 			"createdAt": sh.CreatedAt, "expiresAt": sh.ExpiresAt,
 			"expired":   time.Now().Unix() > sh.ExpiresAt,
+			"hasPassword": sh.PasswordHash != "",
+			"maxViews":    sh.MaxViews,
+			"viewCount":   sh.ViewCount,
 		})
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"shares": out})
@@ -247,6 +284,32 @@ func (s *Server) handleShareRedirect(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
+	if sh.MaxViews > 0 && sh.ViewCount >= sh.MaxViews {
+		http.Error(w, "link expired (view limit reached)", http.StatusGone)
+		return
+	}
+	// Password protection
+	if sh.PasswordHash != "" {
+		cookie, _ := r.Cookie("share_auth_" + token)
+		if cookie == nil || cookie.Value != "1" {
+			// Show password form
+			if r.Method == "POST" {
+				r.ParseForm()
+				if auth.VerifyPassword(r.Form.Get("password"), sh.PasswordHash) {
+					http.SetCookie(w, &http.Cookie{
+						Name: "share_auth_" + token, Value: "1",
+						Path: "/s/" + token, MaxAge: 3600, HttpOnly: true, SameSite: http.SameSiteLaxMode,
+					})
+				} else {
+					s.renderSharePassword(w, token, true)
+					return
+				}
+			} else {
+				s.renderSharePassword(w, token, false)
+				return
+			}
+		}
+	}
 	a, err := s.DB.AccountByID(sh.AccountID, sh.UserID)
 	if err != nil {
 		http.NotFound(w, r)
@@ -257,6 +320,7 @@ func (s *Server) handleShareRedirect(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "unavailable", http.StatusBadGateway)
 		return
 	}
+	s.DB.IncrementShareView(token)
 	ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
 	defer cancel()
 	url, err := client.PresignDownload(ctx, sh.Bucket, sh.Key, 300*time.Second, false)

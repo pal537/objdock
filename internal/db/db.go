@@ -105,6 +105,21 @@ func (d *DB) migrate() error {
 			return fmt.Errorf("db migrate shares.name: %w", err)
 		}
 	}
+	if !d.hasColumn("shares", "password_hash") {
+		if _, err := d.Exec(`ALTER TABLE shares ADD COLUMN password_hash TEXT NOT NULL DEFAULT ''`); err != nil {
+			return fmt.Errorf("db migrate shares.password_hash: %w", err)
+		}
+	}
+	if !d.hasColumn("shares", "max_views") {
+		if _, err := d.Exec(`ALTER TABLE shares ADD COLUMN max_views INTEGER NOT NULL DEFAULT 0`); err != nil {
+			return fmt.Errorf("db migrate shares.max_views: %w", err)
+		}
+	}
+	if !d.hasColumn("shares", "view_count") {
+		if _, err := d.Exec(`ALTER TABLE shares ADD COLUMN view_count INTEGER NOT NULL DEFAULT 0`); err != nil {
+			return fmt.Errorf("db migrate shares.view_count: %w", err)
+		}
+	}
 	if !d.hasColumn("shares", "created_at") {
 		if _, err := d.Exec(`ALTER TABLE shares ADD COLUMN created_at INTEGER NOT NULL DEFAULT 0`); err != nil {
 			return fmt.Errorf("db migrate shares.created_at: %w", err)
@@ -368,19 +383,22 @@ type Share struct {
 	Name      string
 	CreatedAt int64
 	ExpiresAt int64
+	PasswordHash string
+	MaxViews  int64
+	ViewCount int64
 }
 
 func (d *DB) CreateShare(sh *Share) error {
-	_, err := d.Exec(`INSERT INTO shares(token, user_id, account_id, bucket, key, name, created_at, expires_at)
-		VALUES(?, ?, ?, ?, ?, ?, ?, ?)`, sh.Token, sh.UserID, sh.AccountID, sh.Bucket, sh.Key, sh.Name, sh.CreatedAt, sh.ExpiresAt)
+	_, err := d.Exec(`INSERT INTO shares(token, user_id, account_id, bucket, key, name, created_at, expires_at, password_hash, max_views, view_count)
+		VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, sh.Token, sh.UserID, sh.AccountID, sh.Bucket, sh.Key, sh.Name, sh.CreatedAt, sh.ExpiresAt, sh.PasswordHash, sh.MaxViews, sh.ViewCount)
 	return err
 }
 
 func (d *DB) ShareByToken(token string) (*Share, error) {
 	sh := &Share{}
-	err := d.QueryRow(`SELECT token, user_id, account_id, bucket, key, name, created_at, expires_at
+	err := d.QueryRow(`SELECT token, user_id, account_id, bucket, key, name, created_at, expires_at, password_hash, max_views, view_count
 		FROM shares WHERE token=?`, token).Scan(
-		&sh.Token, &sh.UserID, &sh.AccountID, &sh.Bucket, &sh.Key, &sh.Name, &sh.CreatedAt, &sh.ExpiresAt)
+		&sh.Token, &sh.UserID, &sh.AccountID, &sh.Bucket, &sh.Key, &sh.Name, &sh.CreatedAt, &sh.ExpiresAt, &sh.PasswordHash, &sh.MaxViews, &sh.ViewCount)
 	if err != nil {
 		return nil, err
 	}
@@ -388,7 +406,7 @@ func (d *DB) ShareByToken(token string) (*Share, error) {
 }
 
 func (d *DB) SharesByUser(userID int64) ([]*Share, error) {
-	rows, err := d.Query(`SELECT token, user_id, account_id, bucket, key, name, created_at, expires_at
+	rows, err := d.Query(`SELECT token, user_id, account_id, bucket, key, name, created_at, expires_at, password_hash, max_views, view_count
 		FROM shares WHERE user_id=? ORDER BY created_at DESC`, userID)
 	if err != nil {
 		return nil, err
@@ -398,12 +416,17 @@ func (d *DB) SharesByUser(userID int64) ([]*Share, error) {
 	for rows.Next() {
 		sh := &Share{}
 		if err := rows.Scan(&sh.Token, &sh.UserID, &sh.AccountID, &sh.Bucket, &sh.Key,
-			&sh.Name, &sh.CreatedAt, &sh.ExpiresAt); err != nil {
+			&sh.Name, &sh.CreatedAt, &sh.ExpiresAt, &sh.PasswordHash, &sh.MaxViews, &sh.ViewCount); err != nil {
 			return nil, err
 		}
 		out = append(out, sh)
 	}
 	return out, rows.Err()
+}
+
+func (d *DB) IncrementShareView(token string) error {
+	_, err := d.Exec(`UPDATE shares SET view_count = view_count + 1 WHERE token=?`, token)
+	return err
 }
 
 func (d *DB) DeleteShare(token string, userID int64) error {

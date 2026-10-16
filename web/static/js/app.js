@@ -889,11 +889,15 @@ $('#sharePublicCopy').onclick = () => { $('#sharePublicUrl').select(); document.
 $('#shareCancel').onclick = () => $('#shareModal').hidden = true;
 $('#shareGen').onclick = async () => {
   const exp = parseInt($('#shareExpiry').value, 10);
+  const pwd = $('#sharePwd').value;
+  const maxViews = parseInt($('#shareMaxViews').value, 10);
+  if (pwd && pwd.length < 4) { toast('分享密码至少 4 位'); return; }
   try {
     const p = await apiPost(`/api/accounts/${state.accountId}/share`,
-      { bucket: state.bucket, key: shareKey, expires: exp });
+      { bucket: state.bucket, key: shareKey, expires: exp, password: pwd, maxViews });
     $('#shareUrl').value = p.url;
     $('#shareResult').hidden = false;
+    $('#sharePwd').value = '';
   } catch (e) { toast('生成失败：' + e.message); }
 };
 $('#shareCopy').onclick = () => { $('#shareUrl').select(); document.execCommand('copy'); toast('已复制'); };
@@ -1080,10 +1084,14 @@ async function loadShareList() {
     if (!arr.length) { box.innerHTML = '<div class="muted">暂无分享</div>'; return; }
     box.innerHTML = arr.map(sh => {
       const exp = new Date(sh.expiresAt * 1000).toLocaleString('zh-CN', { hour12: false });
-      const st = sh.expired ? '<span style="color:#dc2626">已过期</span>' : `<span style="color:#16a34a">有效期至 ${esc(exp)}</span>`;
+      let st = sh.expired ? '<span style="color:#dc2626">已过期</span>' : `<span style="color:#16a34a">有效期至 ${esc(exp)}</span>`;
+      const tags = [];
+      if (sh.hasPassword) tags.push('🔒密码');
+      if (sh.maxViews > 0) tags.push(`${sh.viewCount}/${sh.maxViews}次`);
+      const tagHtml = tags.length ? ` <span style="font-size:11px;background:#f1f5f9;padding:2px 8px;border-radius:10px">${tags.join(' ')}</span>` : '';
       return `<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #f1f5f9">
         <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(sh.key)}">${esc(sh.name)}</span>
-        <span style="font-size:12px;color:#64748b">${st}</span>
+        <span style="font-size:12px;color:#64748b">${st}${tagHtml}</span>
         <button class="btn btn-sm" data-copy-share="${esc(sh.url)}">复制</button>
         <button class="btn btn-sm" data-del-share="${esc(sh.token)}" style="color:#dc2626">撤销</button>
       </div>`;

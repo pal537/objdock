@@ -82,6 +82,20 @@
         <option value="2592000">30 天</option>
       </select>
     </label>
+    <div style="display:flex;gap:10px">
+      <label class="fld" style="flex:1"><span>访问密码（可选）</span>
+        <input class="input" id="sharePwd" type="password" placeholder="留空则无密码">
+      </label>
+      <label class="fld" style="flex:1"><span>最多访问次数</span>
+        <select id="shareMaxViews" class="input">
+          <option value="0">不限制</option>
+          <option value="1">1 次（阅后即焚）</option>
+          <option value="5">5 次</option>
+          <option value="10">10 次</option>
+          <option value="50">50 次</option>
+        </select>
+      </label>
+    </div>
     <div id="shareResult" hidden>
       <input class="input" id="shareUrl" readonly style="width:100%;box-sizing:border-box" onclick="this.select()">
       <button class="btn btn-primary" id="shareCopy" style="margin-top:8px">复制链接</button>
