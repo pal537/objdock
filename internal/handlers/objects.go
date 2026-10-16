@@ -640,7 +640,7 @@ async function doUpload() {
     } catch (e) { st.innerHTML = '<span class="err">❌ ' + e.message + '</span>'; fail++; }
   }
   btn.textContent = '开始上传';
-  document.getElementById('doneMsg').innerHTML = `<div class="done-msg">🎉 上传完成！成功 ${ok} 个${fail ? '，失败 ' + fail + ' 个' : ''}</div>`;
+  document.getElementById('doneMsg').innerHTML = '<div class="done-msg">🎉 上传完成！成功 ' + ok + ' 个' + (fail ? '，失败 ' + fail + ' 个' : '') + '</div>';
   files = [];
 }
 </script></body></html>`))
