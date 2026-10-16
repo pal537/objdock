@@ -39,7 +39,7 @@
 [data-theme="dark"] .nav-item.active { background: #1e3a5f; color: #fff; }
 [data-theme="dark"] .sname { color: #f1f5f9; }
 [data-theme="dark"] .ssub { color: #94a3b8; }
-[data-theme="dark"] #ctxMenu { background: #1e293b; border-color: #334155; }
+[data-theme="dark"] #ctxMenu { background: #1e293b !important; border-color: #334155 !important; }
 [data-theme="dark"] .ctx-it { color: #f1f5f9; }
 [data-theme="dark"] .ctx-it:hover { background: #334155 !important; }
 [data-theme="dark"] .fitem, [data-theme="dark"] .frow { background: #1e293b; border-color: #334155; }
