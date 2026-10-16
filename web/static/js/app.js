@@ -1812,7 +1812,8 @@ function renderWizard() {
     if (wiz.provider === 'b2')
       body += `<label class="fld"><span>S3 Endpoint</span>
       <input class="input" id="wEndpoint" value="${esc(ex.endpoint || '')}" placeholder="s3.us-west-004.backblazeb2.com">
-      <div class="hint">在 B2 控制台点进桶，复制 Endpoint 那一串填进来</div></label>`;
+      <div class="hint">在 B2 控制台点进桶，复制 Endpoint 那一串填进来</div></label>
+      <button class="btn btn-sm" id="b2HelpBtn" style="margin-bottom:12px">📖 配置说明（CORS 必看）</button>`;
     if (wiz.provider === 'minio' || wiz.provider === 'custom')
       body += `<label class="fld"><span>网关地址</span>
       <input class="input" id="wEndpoint" value="${esc(ex.endpoint || '')}" placeholder="https://minio.example.com"></label>`;
@@ -1877,6 +1878,27 @@ function bindWizard() {
     $$('.prov-card').forEach(x => x.classList.toggle('sel', x === c));
   });
   const back = $('#wizBack'); if (back) back.onclick = () => { wiz.step = 1; renderWizard(); };
+  const b2help = $('#b2HelpBtn');
+  if (b2help) b2help.onclick = () => {
+    showModal(`<h3>Backblaze B2 配置说明</h3>
+    <div style="font-size:14px;line-height:1.7">
+    <p><b>1. 创建 Application Key</b><br>
+    B2 控制台 → Application Keys → Add a New Application Key<br>
+    名字随便起，桶选你的桶，权限选 Read and Write。<br>
+    创建后复制 <b>keyID</b>（填 Access Key）和 <b>applicationKey</b>（填 Secret Key）。<br>
+    <span style="color:#ef4444">注意：applicationKey 只显示一次，关掉就看不到了！</span></p>
+    <p><b>2. 复制 Endpoint</b><br>
+    B2 控制台点进你的桶，复制 <b>Endpoint</b> 那一串（如 s3.us-west-004.backblazeb2.com），填到上面的 S3 Endpoint 输入框。</p>
+    <p><b>3. 配置 CORS（否则上传会失败）</b><br>
+    B2 网页版的 CORS 设置对 S3 接口不全，需要用命令行：<br>
+    <code style="background:#f1f5f9;padding:2px 6px;border-radius:4px">pip install b2</code><br>
+    <code style="background:#f1f5f9;padding:2px 6px;border-radius:4px">b2 account authorize</code>（输入 keyID 和 applicationKey）<br>
+    然后执行：<br>
+    <code style="background:#f1f5f9;padding:2px 6px;border-radius:4px;display:block;margin:6px 0;white-space:pre-wrap">b2 bucket update 你的桶名 allPrivate --cors-rules '[{"corsRuleName":"objdock","allowedOrigins":["https://你的ObjDock域名"],"allowedOperations":["s3_get","s3_put","s3_head","s3_post","s3_delete"],"allowedHeaders":["*"],"maxAgeSeconds":3600}]'</code>
+    把 <b>你的桶名</b> 和 <b>你的ObjDock域名</b> 换成实际的。执行完等几分钟再生效。</p>
+    <p><b>4. 回到这里点"测试连接"</b>，通了再点添加。</p>
+    </div>`);
+  };
   const test = $('#wizTest');
   if (test) test.onclick = () => wizardSave(true);
   const save = $('#wizSave');

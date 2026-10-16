@@ -51,9 +51,9 @@ func providerEndpoint(provider, accountID, region string) string {
 		return "https://s3.amazonaws.com"
 	case "oss":
 		if region != "" {
-			return "https://" + region + ".aliyuncs.com"
+			return "https://s3.oss-" + region + ".aliyuncs.com"
 		}
-		return "https://oss-cn-hangzhou.aliyuncs.com"
+		return "https://s3.oss-cn-hangzhou.aliyuncs.com"
 	case "cos":
 		if region != "" {
 			return "https://cos." + region + ".myqcloud.com"
