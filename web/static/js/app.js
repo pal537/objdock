@@ -1798,7 +1798,7 @@ function regionOptions(provider, sel) {
     oss: [['oss-cn-hangzhou', '华东1（杭州）'], ['oss-cn-shanghai', '华东2（上海）'], ['oss-cn-beijing', '华北2（北京）'], ['oss-cn-shenzhen', '华南1（深圳）'], ['oss-cn-hongkong', '香港']],
     cos: [['ap-guangzhou', '广州'], ['ap-shanghai', '上海'], ['ap-beijing', '北京'], ['ap-hongkong', '香港'], ['ap-singapore', '新加坡']],
     qiniu: [['cn-east-1', '华东'], ['cn-north-1', '华北'], ['cn-south-1', '华南']],
-    b2: [['us-west-002', '美国西部 (Phoenix)'], ['us-west-004', '美国西部2 (Phoenix)'], ['eu-central-003', '欧洲 (阿姆斯特丹)']],
+    b2: [['us-west-000', '美西 (凤凰城)'], ['us-west-001', '美西1 (凤凰城)'], ['us-west-002', '美西2 (凤凰城)'], ['us-west-004', '美西4 (凤凰城)'], ['us-east-005', '美东 (雷斯顿)'], ['eu-central-003', '欧洲 (阿姆斯特丹)'], ['ca-east-006', '加拿大 (多伦多)']],
   }[provider] || [];
   return regions.map(([v, n]) => `<option value="${v}" ${v === sel ? 'selected' : ''}>${n}</option>`).join('');
 }
