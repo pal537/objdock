@@ -1588,8 +1588,10 @@ async function openUlLinkView(i) {
     window._ulView = { ul, keys };
     grid.innerHTML = keys.map((k, idx) => {
       const name = k.split('/').pop();
+      const ext = name.split('.').pop().toLowerCase();
+      const isImg = ['jpg','jpeg','png','gif','webp','svg','bmp'].includes(ext);
       return `<div class="fitem">
-        <div class="fic">${ic('file', 32)}</div>
+        <div class="fic" data-ulthumb="${esc(k)}" data-isimg="${isImg ? '1' : '0'}">${ic('file', 32)}</div>
         <div class="fsub"><div class="fn" title="${esc(name)}">${esc(name)}</div><div class="fs">${esc(ul.bucket)}</div></div>
         <div style="display:flex;gap:6px;padding:0 12px 12px">
           <button class="btn btn-sm" onclick="ulFileDownload(${idx})">下载</button>
@@ -1597,6 +1599,19 @@ async function openUlLinkView(i) {
         </div>
       </div>`;
     }).join('');
+    // 加载缩略图（图片才加载）
+    const imgEls = [...grid.querySelectorAll('[data-ulthumb]')].filter(el => el.dataset.isimg === '1');
+    if (imgEls.length) {
+      const keys = imgEls.map(el => el.dataset.ulthumb);
+      apiPost(`/api/accounts/${ul.accountId}/presign-batch`, { bucket: ul.bucket, keys, op: 'preview', expires: 600 })
+        .then(r => {
+          imgEls.forEach(el => {
+            const url = (r.urls || {})[el.dataset.ulthumb];
+            if (url) el.innerHTML = `<img src="${esc(url)}" loading="lazy" style="width:100%;height:100%;object-fit:cover;border-radius:8px">`;
+          });
+        })
+        .catch(() => {});
+    }
   } catch (e) {
     $('#ulFileGrid').innerHTML = `<div class="card" style="grid-column:1/-1;text-align:center;color:#dc2626;padding:30px">加载失败：${esc(e.message)}</div>`;
   }
