@@ -79,6 +79,13 @@ func (d *DB) migrate() error {
 			key TEXT NOT NULL,
 			expires_at INTEGER NOT NULL
 		)`,
+		`CREATE TABLE IF NOT EXISTS share_items (
+			token TEXT NOT NULL,
+			key TEXT NOT NULL,
+			name TEXT NOT NULL,
+			size INTEGER NOT NULL DEFAULT 0,
+			PRIMARY KEY (token, key)
+		)`,
 		`CREATE TABLE IF NOT EXISTS upload_links (
 			token TEXT PRIMARY KEY,
 			user_id INTEGER NOT NULL,
@@ -505,6 +512,30 @@ func (d *DB) DeleteUploadLink(token string, userID int64) error {
 func (d *DB) IncrementUploadUse(token string) error {
 	_, err := d.Exec(`UPDATE upload_links SET use_count = use_count + 1 WHERE token=?`, token)
 	return err
+}
+
+func (d *DB) AddShareItem(token, key, name string, size int64) error {
+	_, err := d.Exec(`INSERT OR REPLACE INTO share_items(token, key, name, size) VALUES(?, ?, ?, ?)`,
+		token, key, name, size)
+	return err
+}
+
+func (d *DB) ShareItems(token string) ([]map[string]any, error) {
+	rows, err := d.Query(`SELECT key, name, size FROM share_items WHERE token=? ORDER BY name`, token)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []map[string]any
+	for rows.Next() {
+		var key, name string
+		var size int64
+		if err := rows.Scan(&key, &name, &size); err != nil {
+			return nil, err
+		}
+		out = append(out, map[string]any{"key": key, "name": name, "size": size})
+	}
+	return out, rows.Err()
 }
 
 func (d *DB) PruneExpiredShares() {

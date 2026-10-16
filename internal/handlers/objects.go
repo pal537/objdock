@@ -166,19 +166,30 @@ func (s *Server) handleCreateShare(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var in struct {
-		Bucket   string `json:"bucket"`
-		Key      string `json:"key"`
-		Expires  int    `json:"expires"`
-		Password string `json:"password"`
-		MaxViews int64  `json:"maxViews"`
+		Bucket   string   `json:"bucket"`
+		Key      string   `json:"key"`
+		Keys     []string `json:"keys"`
+		Expires  int      `json:"expires"`
+		Password string   `json:"password"`
+		MaxViews int64    `json:"maxViews"`
 	}
-	if err := decodeJSON(r, &in); err != nil || in.Bucket == "" || in.Key == "" {
-		writeErr(w, http.StatusBadRequest, "bucket and key are required")
+	if err := decodeJSON(r, &in); err != nil || in.Bucket == "" {
+		writeErr(w, http.StatusBadRequest, "bucket is required")
 		return
 	}
-	if strings.Contains(in.Key, "..") {
-		writeErr(w, http.StatusBadRequest, "invalid key")
+	keys := in.Keys
+	if len(keys) == 0 && in.Key != "" {
+		keys = []string{in.Key}
+	}
+	if len(keys) == 0 {
+		writeErr(w, http.StatusBadRequest, "key is required")
 		return
+	}
+	for _, k := range keys {
+		if strings.Contains(k, "..") {
+			writeErr(w, http.StatusBadRequest, "invalid key")
+			return
+		}
 	}
 	exp := in.Expires
 	if exp <= 0 || exp > 30*24*3600 {
@@ -200,13 +211,18 @@ func (s *Server) handleCreateShare(w http.ResponseWriter, r *http.Request) {
 		}
 		pwHash = h
 	}
+	firstKey := keys[0]
+	shareName := firstKey[strings.LastIndex(firstKey, "/")+1:]
+	if len(keys) > 1 {
+		shareName = fmt.Sprintf("%s 等 %d 个文件", shareName, len(keys))
+	}
 	sh := &db.Share{
 		Token:        token,
 		UserID:       u.ID,
 		AccountID:    a.ID,
 		Bucket:       in.Bucket,
-		Key:          in.Key,
-		Name:         in.Key[strings.LastIndex(in.Key, "/")+1:],
+		Key:          firstKey,
+		Name:         shareName,
 		CreatedAt:    now,
 		ExpiresAt:    now + int64(exp),
 		PasswordHash: pwHash,
@@ -215,6 +231,10 @@ func (s *Server) handleCreateShare(w http.ResponseWriter, r *http.Request) {
 	if err := s.DB.CreateShare(sh); err != nil {
 		writeErr(w, http.StatusInternalServerError, "cannot create share")
 		return
+	}
+	for _, k := range keys {
+		name := k[strings.LastIndex(k, "/")+1:]
+		s.DB.AddShareItem(token, k, name, 0)
 	}
 	url := s.siteBaseURL(r) + "/s/" + token
 	writeJSON(w, http.StatusOK, map[string]any{"url": url, "expiresIn": exp})
@@ -425,6 +445,39 @@ func (s *Server) handleCreateUploadLink(w http.ResponseWriter, r *http.Request) 
 	writeJSON(w, http.StatusOK, map[string]any{"url": s.siteBaseURL(r) + "/u/" + token})
 }
 
+// GET /api/upload-links — list my upload links.
+func (s *Server) handleListUploadLinks(w http.ResponseWriter, r *http.Request) {
+	u := s.currentUser(r)
+	links, err := s.DB.UploadLinksByUser(u.ID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "query failed")
+		return
+	}
+	base := s.siteBaseURL(r)
+	out := make([]map[string]any, 0, len(links))
+	for _, ul := range links {
+		out = append(out, map[string]any{
+			"token": ul.Token, "bucket": ul.Bucket, "prefix": ul.Prefix,
+			"url":       base + "/u/" + ul.Token,
+			"createdAt": ul.CreatedAt, "expiresAt": ul.ExpiresAt,
+			"expired":   time.Now().Unix() > ul.ExpiresAt,
+			"hasPassword": ul.PasswordHash != "",
+			"maxUses":   ul.MaxUses, "useCount": ul.UseCount,
+		})
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"links": out})
+}
+
+// DELETE /api/upload-links/{token} — revoke.
+func (s *Server) handleDeleteUploadLink(w http.ResponseWriter, r *http.Request) {
+	u := s.currentUser(r)
+	if err := s.DB.DeleteUploadLink(r.PathValue("token"), u.ID); err != nil {
+		writeErr(w, http.StatusInternalServerError, "delete failed")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+}
+
 // GET /u/{token} — public upload page.
 func (s *Server) handleUploadPage(w http.ResponseWriter, r *http.Request) {
 	token := r.PathValue("token")
@@ -466,40 +519,93 @@ func (s *Server) handleUploadPage(w http.ResponseWriter, r *http.Request) {
 func (s *Server) renderUploadPage(w http.ResponseWriter, token string, pwFailed bool) {
 	ul, _ := s.DB.UploadLinkByToken(token)
 	needPw := ul != nil && ul.PasswordHash != ""
-	authed := false
-	if needPw {
-		// checked by caller via cookie; here just render form state
-	} else {
-		authed = true
-	}
-	_ = authed
 	msg := ""
 	if pwFailed {
-		msg = "<p style='color:#dc2626'>密码错误</p>"
+		msg = "<p style='color:#dc2626;font-size:14px'>密码错误，请重试</p>"
 	}
-	pwForm := ""
+	pwSection := ""
+	upSection := ""
 	if needPw {
-		// Simple: always show password form if needed; JS checks auth via presign call
-		pwForm = `<div id="pwWrap"><p style="color:#64748b">此上传链接受密码保护</p>` + msg + `
-		<input type="password" id="upPw" placeholder="输入密码" style="width:100%;padding:12px;border:1px solid #e2e8f0;border-radius:10px;box-sizing:border-box">
-		<button onclick="unlockUpload()" style="width:100%;margin-top:10px;padding:12px;background:#3b82f6;color:#fff;border:none;border-radius:10px;cursor:pointer">解锁</button></div>
-		<div id="upWrap" hidden>`
+		pwSection = `<div id="pwWrap" style="text-align:center">
+			<div style="font-size:48px;margin-bottom:16px">🔒</div>
+			<h2 style="margin:0 0 8px;font-size:20px">需要密码</h2>
+			<p style="color:#64748b;font-size:14px;margin:0 0 20px">此上传链接受密码保护</p>` + msg + `
+			<input type="password" id="upPw" placeholder="输入密码" autofocus
+				style="width:100%;padding:14px;border:2px solid #e2e8f0;border-radius:12px;font-size:15px;box-sizing:border-box;outline:none">
+			<button onclick="unlockUpload()" style="width:100%;margin-top:12px;padding:14px;background:#3b82f6;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer">解锁</button>
+		</div><div id="upWrap" hidden>`
+		upSection = `</div>`
 	} else {
-		pwForm = `<div id="upWrap">`
+		pwSection = `<div id="upWrap">`
+		upSection = `</div>`
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Write([]byte(`<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>上传文件 - ObjDock</title></head>
-<body style="font-family:system-ui;background:#f1f5f9;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0">
-<div style="background:#fff;padding:32px;border-radius:16px;box-shadow:0 4px 20px rgba(0,0,0,.1);max-width:480px;width:92%;box-sizing:border-box">
-<h2 style="margin:0 0 8px">📤 上传文件</h2>
-<p class="muted" style="color:#64748b;font-size:14px">选择文件上传，无需登录</p>` + pwForm + `
-<input type="file" id="upFiles" multiple style="margin:12px 0">
-<div id="upList" style="margin:12px 0"></div>
-<button onclick="doUpload()" style="width:100%;padding:12px;background:#3b82f6;color:#fff;border:none;border-radius:10px;font-size:15px;cursor:pointer">开始上传</button>
+<title>上传文件 - ObjDock</title>
+<style>
+* { box-sizing: border-box; }
+body { font-family: -apple-system, system-ui, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 20px; }
+.card { background: #fff; padding: 40px; border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,.3); max-width: 520px; width: 100%; }
+.logo { font-size: 56px; text-align: center; margin-bottom: 8px; }
+h2 { text-align: center; margin: 0 0 8px; font-size: 22px; }
+.sub { text-align: center; color: #64748b; font-size: 14px; margin-bottom: 24px; }
+.drop { border: 2px dashed #cbd5e1; border-radius: 14px; padding: 32px 20px; text-align: center; cursor: pointer; transition: all .2s; margin-bottom: 16px; }
+.drop:hover, .drop.over { border-color: #3b82f6; background: #eff6ff; }
+.drop input { display: none; }
+.file-list { max-height: 240px; overflow-y: auto; margin-bottom: 16px; }
+.file-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: #f8fafc; border-radius: 10px; margin-bottom: 8px; font-size: 14px; }
+.file-item .fn { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.file-item .st { font-size: 12px; color: #64748b; }
+.file-item .ok { color: #16a34a; }
+.file-item .err { color: #dc2626; }
+.file-item .rm { cursor: pointer; color: #94a3b8; font-size: 18px; }
+.file-item .rm:hover { color: #dc2626; }
+.btn-up { width: 100%; padding: 16px; background: linear-gradient(135deg, #3b82f6, #2563eb); color: #fff; border: none; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer; }
+.btn-up:disabled { opacity: .5; cursor: not-allowed; }
+.progress { height: 6px; background: #e2e8f0; border-radius: 3px; overflow: hidden; margin-top: 6px; }
+.progress > div { height: 100%; background: #3b82f6; width: 0; transition: width .2s; }
+.done-msg { text-align: center; padding: 20px; color: #16a34a; font-size: 16px; font-weight: 600; }
+</style></head><body>
+<div class="card">` + pwSection + `
+	<div class="logo">📤</div>
+	<h2>上传文件</h2>
+	<p class="sub">无需登录，直接上传到对方的存储空间</p>
+	<div class="drop" id="dropZone" onclick="document.getElementById('fileInput').click()">
+		<div style="font-size:40px;margin-bottom:8px">📁</div>
+		<div style="font-weight:600;margin-bottom:4px">点击选择或拖拽文件到这里</div>
+		<div style="font-size:13px;color:#94a3b8">可多次选择，支持多文件</div>
+		<input type="file" id="fileInput" multiple>
+	</div>
+	<div class="file-list" id="fileList"></div>
+	<button class="btn-up" id="upBtn" onclick="doUpload()" disabled>开始上传</button>
+	<div id="doneMsg"></div>` + upSection + `
 </div>
 <script>
 const token = "` + token + `";
+let files = [];
+const dz = document.getElementById('dropZone');
+const fi = document.getElementById('fileInput');
+dz.addEventListener('dragover', (e) => { e.preventDefault(); dz.classList.add('over'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('over'));
+dz.addEventListener('drop', (e) => { e.preventDefault(); dz.classList.remove('over'); addFiles(e.dataTransfer.files); });
+fi.addEventListener('change', () => { addFiles(fi.files); fi.value = ''; });
+function addFiles(newFiles) {
+  for (const f of newFiles) {
+    if (!files.find(x => x.name === f.name && x.size === f.size)) files.push(f);
+  }
+  renderList();
+}
+function removeFile(i) { files.splice(i, 1); renderList(); }
+function renderList() {
+  const list = document.getElementById('fileList');
+  document.getElementById('upBtn').disabled = !files.length;
+  list.innerHTML = files.map((f, i) => `
+    <div class="file-item" id="fi-${i}">
+      <span class="fn" title="${f.name}">${f.name}</span>
+      <span class="st">${(f.size/1024).toFixed(1)} KB</span>
+      <span class="rm" onclick="removeFile(${i})">×</span>
+    </div>`).join('');
+}
 async function unlockUpload() {
   const pw = document.getElementById('upPw').value;
   const r = await fetch('/u/' + token, {method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'}, body: 'password=' + encodeURIComponent(pw)});
@@ -507,27 +613,40 @@ async function unlockUpload() {
   else location.reload();
 }
 async function doUpload() {
-  const files = document.getElementById('upFiles').files;
-  if (!files.length) return alert('请选择文件');
-  const list = document.getElementById('upList');
-  list.innerHTML = '';
-  for (const f of files) {
-    const div = document.createElement('div');
-    div.textContent = f.name + ' 上传中…';
-    list.appendChild(div);
+  if (!files.length) return;
+  const btn = document.getElementById('upBtn');
+  btn.disabled = true; btn.textContent = '上传中…';
+  let ok = 0, fail = 0;
+  for (let i = 0; i < files.length; i++) {
+    const f = files[i];
+    const el = document.getElementById('fi-' + i);
+    const st = el.querySelector('.st');
+    st.innerHTML = '<div class="progress"><div></div></div>';
+    const bar = st.querySelector('.progress > div');
     try {
       const r = await fetch('/api/upload-token/' + token + '/presign?key=' + encodeURIComponent(f.name));
       if (!r.ok) throw new Error('获取上传地址失败');
       const {url} = await r.json();
-      const up = await fetch(url, {method: 'PUT', body: f});
-      if (!up.ok) throw new Error('HTTP ' + up.status);
-      div.textContent = '✅ ' + f.name;
-    } catch (e) { div.textContent = '❌ ' + f.name + ': ' + e.message; }
+      await new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('PUT', url);
+        xhr.upload.onprogress = (e) => { if (e.lengthComputable) bar.style.width = (e.loaded/e.total*100) + '%'; };
+        xhr.onload = () => xhr.status < 300 ? resolve() : reject(new Error('HTTP ' + xhr.status));
+        xhr.onerror = () => reject(new Error('网络错误'));
+        xhr.send(f);
+      });
+      st.innerHTML = '<span class="ok">✅ 完成</span>'; ok++;
+      el.querySelector('.rm').style.display = 'none';
+    } catch (e) { st.innerHTML = '<span class="err">❌ ' + e.message + '</span>'; fail++; }
   }
+  btn.textContent = '开始上传';
+  document.getElementById('doneMsg').innerHTML = `<div class="done-msg">🎉 上传完成！成功 ${ok} 个${fail ? '，失败 ' + fail + ' 个' : ''}</div>`;
+  files = [];
 }
 </script></body></html>`))
 }
 
+// GET /api/upload-token/{token}/presign?key= — public presigned upload URL.
 // GET /api/upload-token/{token}/presign?key= — public presigned upload URL.
 func (s *Server) handleUploadTokenPresign(w http.ResponseWriter, r *http.Request) {
 	token := r.PathValue("token")
@@ -767,14 +886,73 @@ func (s *Server) handleShareRedirect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.DB.IncrementShareView(token)
+	// 获取分享的文件列表
+	items, _ := s.DB.ShareItems(token)
+	if len(items) == 0 {
+		items = []map[string]any{{"key": sh.Key, "name": sh.Name, "size": int64(0)}}
+	}
+	// 为每个文件生成预签名 URL（5分钟有效）
 	ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
 	defer cancel()
-	url, err := client.PresignDownload(ctx, sh.Bucket, sh.Key, 300*time.Second, false)
-	if err != nil {
-		http.Error(w, "unavailable", http.StatusBadGateway)
-		return
+	var files []map[string]any
+	for _, it := range items {
+		key := it["key"].(string)
+		name := it["name"].(string)
+		url, err := client.PresignDownload(ctx, sh.Bucket, key, 300*time.Second, false)
+		if err != nil {
+			continue
+		}
+		lower := strings.ToLower(name)
+		isImg := strings.HasSuffix(lower, ".jpg") || strings.HasSuffix(lower, ".jpeg") ||
+			strings.HasSuffix(lower, ".png") || strings.HasSuffix(lower, ".gif") ||
+			strings.HasSuffix(lower, ".webp") || strings.HasSuffix(lower, ".svg")
+		files = append(files, map[string]any{"name": name, "url": url, "isImage": isImg})
 	}
-	http.Redirect(w, r, url, http.StatusFound)
+	s.renderSharePage(w, sh, files)
+}
+
+// renderSharePage 渲染分享页面
+func (s *Server) renderSharePage(w http.ResponseWriter, sh *db.Share, files []map[string]any) {
+	// 简化：直接用 map
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	var fileHtml string
+	for _, f := range files {
+		name := f["name"].(string)
+		url := f["url"].(string)
+		isImage := f["isImage"].(bool)
+		preview := ""
+		if isImage {
+			preview = fmt.Sprintf(`<img src="%s" style="max-width:100%%;max-height:300px;border-radius:12px;margin-bottom:12px">`, url)
+		}
+		// HTML 转义
+		nameEsc := strings.ReplaceAll(strings.ReplaceAll(name, "&", "&amp;"), "<", "&lt;")
+		fileHtml += fmt.Sprintf(`
+		<div style="background:#f8fafc;border-radius:12px;padding:16px;margin-bottom:12px">
+			%s
+			<div style="font-weight:600;margin-bottom:8px">%s</div>
+			<a href="%s" download style="display:inline-block;padding:10px 20px;background:#3b82f6;color:#fff;text-decoration:none;border-radius:8px;font-size:14px">⬇ 下载</a>
+		</div>`, preview, nameEsc, url)
+	}
+	if len(files) == 0 {
+		fileHtml = `<p style="color:#94a3b8;text-align:center">暂无文件</p>`
+	}
+	title := sh.Name
+	if title == "" {
+		title = "分享文件"
+	}
+	w.Write([]byte(`<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>` + title + ` - ObjDock 分享</title>
+<style>
+* { box-sizing: border-box; }
+body { font-family: -apple-system, system-ui, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); margin: 0; padding: 20px; min-height: 100vh; }
+.card { background: #fff; border-radius: 20px; padding: 32px; max-width: 640px; margin: 0 auto; box-shadow: 0 20px 60px rgba(0,0,0,.3); }
+h1 { margin: 0 0 8px; font-size: 22px; }
+.sub { color: #64748b; font-size: 14px; margin-bottom: 24px; }
+</style></head><body>
+<div class="card">
+<h1>📁 ` + title + `</h1>
+<p class="sub">通过 ObjDock 分享</p>` + fileHtml + `
+</div></body></html>`))
 }
 
 // POST /api/accounts/{id}/presign-batch — signs many keys in one round trip.

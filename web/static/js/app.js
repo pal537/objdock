@@ -215,7 +215,8 @@ function renderShell() {
         <div class="nav-item" data-nav="settings">${ic('settings')}<span>设置</span></div>
         <div class="acct-card" id="acctCard">
           <div class="avatar">${esc(u.username[0].toUpperCase())}</div>
-          <div><div class="sname">${esc(u.username)}</div></div>
+          <div style="flex:1"><div class="sname">${esc(u.username)}</div></div>
+          <button id="themeBtn" title="切换深色/浅色" style="background:none;border:none;cursor:pointer;font-size:18px;padding:4px">🌙</button>
         </div>
       </div>
     </aside>
@@ -224,6 +225,15 @@ function renderShell() {
   <div class="dropdown" id="dropdown" hidden></div>`;
   $$('.nav-item[data-nav]').forEach(el => el.onclick = () => nav(el.dataset.nav));
   $('#switcher').onclick = (e) => { e.stopPropagation(); toggleSwitcher(); };
+  const tb = $('#themeBtn');
+  if (tb) {
+    tb.textContent = document.documentElement.dataset.theme === 'dark' ? '☀️' : '🌙';
+    tb.onclick = (e) => {
+      e.stopPropagation();
+      toggleTheme();
+      tb.textContent = document.documentElement.dataset.theme === 'dark' ? '☀️' : '🌙';
+    };
+  }
   $('#acctCard').onclick = (e) => { e.stopPropagation(); toggleAcctMenu(); };
   document.addEventListener('click', () => { $('#dropdown').hidden = true; });
   updateSwitcherLabel();
@@ -503,6 +513,7 @@ async function renderFiles() {
       <span id="selCount"></span>
       <button class="btn btn-sm" id="btnSelAll">全选</button>
       <button class="btn btn-sm" id="btnDlSel">${ic('download', 15)}下载所选</button>
+      <button class="btn btn-sm" id="btnShareSel">${ic('share', 15)}分享所选</button>
       <button class="btn btn-sm" id="btnDelSel">${ic('trash', 15)}删除所选</button>
       <button class="btn btn-sm" id="btnClearSel">退出选择</button>
     </div>
@@ -533,6 +544,11 @@ async function renderFiles() {
   $('#searchInput').addEventListener('keydown', (e) => {
     if (e.key === 'Escape') { e.target.value = ''; loadFiles(); }
   });
+  $('#btnShareSel').onclick = () => {
+    const keys = [...selKeys].filter(k => !k.endsWith('/'));
+    if (!keys.length) { toast('请选择要分享的文件'); return; }
+    openShareMulti(keys);
+  };
   $('#btnDlSel').onclick = async () => {
     const keys = [...selKeys].filter(k => !k.endsWith('/'));
     if (!keys.length) { toast('所选没有可下载的文件'); return; }
@@ -1007,7 +1023,18 @@ $('#previewDownload').onclick = () => downloadFile(previewKey, previewName);
 
 /* ---------- share ---------- */
 let shareKey = '', shareName = '';
+let shareKeys = [];
+function openShareMulti(keys) {
+  shareKeys = keys;
+  shareKey = keys[0];
+  shareName = keys.length > 1 ? `${keys[0].split('/').pop()} 等 ${keys.length} 个文件` : keys[0].split('/').pop();
+  $('#shareResult').hidden = true;
+  const acct = state.accounts.find(a => a.id === state.accountId);
+  $('#sharePublicWrap').hidden = true; // 多文件不支持公开直链
+  $('#shareModal').hidden = false;
+}
 function openShare(key, name) {
+  shareKeys = [key];
   shareKey = key; shareName = name;
   $('#shareResult').hidden = true;
   const acct = state.accounts.find(a => a.id === state.accountId);
@@ -1029,7 +1056,7 @@ $('#shareGen').onclick = async () => {
   if (pwd && pwd.length < 4) { toast('分享密码至少 4 位'); return; }
   try {
     const p = await apiPost(`/api/accounts/${state.accountId}/share`,
-      { bucket: state.bucket, key: shareKey, expires: exp, password: pwd, maxViews });
+      { bucket: state.bucket, keys: shareKeys, expires: exp, password: pwd, maxViews });
     $('#shareUrl').value = p.url;
     $('#shareResult').hidden = false;
     $('#sharePwd').value = '';
@@ -1170,63 +1197,84 @@ const PROVIDERS = [
   { id: 'qiniu', name: '七牛云', icon: ic('zap'), hint: 'S3 兼容接口' },
   { id: 'minio', name: 'MinIO / 自建', icon: ic('monitor'), hint: '填写你的网关地址' },
 ];
-function renderSettings() {
+function renderSettings(tab) {
+  tab = tab || 'account';
   const main = $('#main');
+  const tabs = [
+    { id: 'account', label: '存储账户' },
+    { id: 'share', label: '分享管理' },
+    { id: 'upload', label: '上传链接' },
+    { id: 'site', label: '站点设置' },
+    { id: 'user', label: '用户管理' },
+    { id: 'appearance', label: '外观' },
+  ];
+  // 非管理员隐藏部分
+  const visibleTabs = tabs.filter(t => {
+    if (!state.user.admin && ['site', 'user'].includes(t.id)) return false;
+    return true;
+  });
   main.innerHTML = `
     <div class="topbar"><h2>${ic('settings')}设置</h2></div>
-    <div class="card"><h3>${ic('bucket')}存储账户</h3><p class="desc">绑定多个对象存储账户，左下角一键切换</p>
+    <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+      ${visibleTabs.map(t => `<button class="btn btn-sm ${t.id === tab ? 'btn-primary' : ''}" data-stab="${t.id}">${t.label}</button>`).join('')}
+    </div>
+    <div id="setTabContent"></div>`;
+  main.querySelectorAll('[data-stab]').forEach(b => b.onclick = () => renderSettings(b.dataset.stab));
+  renderSettingsTab(tab);
+}
+function renderSettingsTab(tab) {
+  const c = $('#setTabContent');
+  if (tab === 'account') {
+    c.innerHTML = `<div class="card"><h3>${ic('bucket')}存储账户</h3><p class="desc">绑定多个对象存储账户，左下角一键切换</p>
       <div id="acctList"></div>
-      <button class="btn btn-primary" id="btnAddAcct" style="margin-top:12px">＋ 添加账户</button>
-    </div>
-    <div class="card"><h3>${ic('share')}分享管理</h3><p class="desc">经本站转发的私密分享链接，可撤销</p>
-      <div id="shareList"><div class="muted">加载中…</div></div>
-    </div>
-    <div class="card" id="regCard" hidden><h3>${ic('lock')}注册设置</h3><p class="desc">关闭后将无法注册新用户（仅管理员可见）</p>
-      <label style="display:flex;gap:8px;align-items:center;cursor:pointer">
-        <input type="checkbox" id="regToggle" style="width:18px;height:18px"> 允许新用户注册
-      </label>
-    </div>
-    <div class="card" id="userCard" hidden><h3>${ic('users')}用户管理</h3><p class="desc">共 <b id="userTotal">0</b> 个用户（仅管理员可见，不显示密码）</p>
-      <div id="userList"><div class="muted">加载中…</div></div>
-    </div>
-    <div class="card"><h3>${ic('settings')}外观</h3>
-      <label style="display:flex;gap:8px;align-items:center;cursor:pointer">
-        <input type="checkbox" id="themeToggle" style="width:18px;height:18px"> 深色模式
-      </label>
-    </div>
-    <div class="card" id="siteCard" hidden><h3>${ic('settings')}站点设置</h3><p class="desc">分享链接用的公开地址（仅管理员可见）</p>
+      <button class="btn btn-primary" id="btnAddAcct" style="margin-top:12px">＋ 添加账户</button></div>`;
+    $('#btnAddAcct').onclick = () => openWizard();
+    loadAcctList();
+  } else if (tab === 'share') {
+    c.innerHTML = `<div class="card"><h3>${ic('share')}分享管理</h3><p class="desc">经本站转发的私密分享链接，可撤销</p><div id="shareList"><div class="muted">加载中…</div></div></div>`;
+    loadShareList();
+  } else if (tab === 'upload') {
+    c.innerHTML = `<div class="card"><h3>📤 上传链接管理</h3><p class="desc">别人可通过链接上传文件到你的桶，可撤销</p><div id="uploadLinkList"><div class="muted">加载中…</div></div></div>`;
+    loadUploadLinkList();
+  } else if (tab === 'site' && state.user.admin) {
+    c.innerHTML = `<div class="card"><h3>${ic('settings')}站点设置</h3><p class="desc">分享链接用的公开地址（仅管理员可见）</p>
       <label class="fld"><span>站点地址</span>
         <div style="display:flex;gap:8px">
           <input class="input" id="siteUrl" placeholder="如 https://oss.example.com" style="flex:1">
           <button class="btn btn-primary" id="siteSave" style="flex:none">保存</button>
-        </div>
-        <div class="hint">留空则自动识别，用于生成私密分享短链</div></label>
-    </div>`;
-  $('#btnAddAcct').onclick = () => openWizard();
-  loadAcctList();
-  loadShareList();
-  $('#themeToggle').checked = document.documentElement.dataset.theme === 'dark';
-  $('#themeToggle').onchange = (e) => {
-    document.documentElement.dataset.theme = e.target.checked ? 'dark' : 'light';
-    localStorage.setItem('objdock-theme', e.target.checked ? 'dark' : 'light');
-  };
-  if (state.user.admin) {
-    $('#regCard').hidden = false;
-    $('#siteCard').hidden = false;
-    $('#userCard').hidden = false;
-    loadUserList();
-    apiGet('/api/settings').then(d => { $('#siteUrl').value = d.siteUrl || ''; }).catch(() => {});
+        </div><div class="hint">留空则自动识别，用于生成私密分享短链</div></label></div>
+      <div class="card"><h3>${ic('lock')}注册设置</h3><p class="desc">关闭后将无法注册新用户（仅管理员可见）</p>
+      <label style="display:flex;gap:8px;align-items:center;cursor:pointer">
+        <input type="checkbox" id="regToggle" style="width:18px;height:18px"> 允许新用户注册
+      </label></div>`;
+    apiGet('/api/settings').then(d => {
+      $('#siteUrl').value = d.siteUrl || '';
+      $('#regToggle').checked = !!d.registrationEnabled;
+    }).catch(() => {});
     $('#siteSave').onclick = async () => {
       try { await apiPut('/api/settings', { siteUrl: $('#siteUrl').value.trim() }); toast('已保存'); }
       catch (e) { toast('保存失败：' + e.message); }
     };
-    apiGet('/api/settings').then(d => { $('#regToggle').checked = !!d.registrationEnabled; }).catch(() => {});
     $('#regToggle').onchange = async (e) => {
       try { await apiPut('/api/settings', { registrationEnabled: e.target.checked }); toast('已保存'); }
       catch (err) { toast('保存失败：' + err.message); e.target.checked = !e.target.checked; }
     };
+  } else if (tab === 'user' && state.user.admin) {
+    c.innerHTML = `<div class="card"><h3>${ic('users')}用户管理</h3><p class="desc">共 <b id="userTotal">0</b> 个用户（仅管理员可见，不显示密码）</p><div id="userList"><div class="muted">加载中…</div></div></div>`;
+    loadUserList();
+  } else if (tab === 'appearance') {
+    c.innerHTML = `<div class="card"><h3>${ic('settings')}外观</h3>
+      <label style="display:flex;gap:8px;align-items:center;cursor:pointer">
+        <input type="checkbox" id="themeToggle" style="width:18px;height:18px"> 深色模式
+      </label></div>`;
+    $('#themeToggle').checked = document.documentElement.dataset.theme === 'dark';
+    $('#themeToggle').onchange = (e) => {
+      document.documentElement.dataset.theme = e.target.checked ? 'dark' : 'light';
+      localStorage.setItem('objdock-theme', e.target.checked ? 'dark' : 'light');
+    };
   }
 }
+// 旧 renderSettings 保留兼容
 async function loadShareList() {
   const box = $('#shareList');
   try {
@@ -1351,17 +1399,91 @@ async function doSearch(q) {
   }
 }
 function openUploadLinkModal() {
-  askPrompt('创建上传链接', `文件将上传到当前目录：${state.prefix || '根目录'}\n有效期`, '7', async (v) => {
-    const days = parseInt(v, 10) || 7;
+  const modal = $('#uploadModal'), list = $('#uploadList');
+  list.innerHTML = '';
+  modal.querySelector('h3').textContent = '创建上传链接';
+  list.innerHTML = `
+    <label class="fld"><span>上传到路径</span>
+      <input class="input" id="ulPrefix" value="${esc(state.prefix || '')}" placeholder="留空为根目录">
+      <div class="hint">别人上传的文件会存到这个目录下</div></label>
+    <label class="fld"><span>有效期</span>
+      <select class="input" id="ulExpiry">
+        <option value="86400">1 天</option>
+        <option value="604800" selected>7 天</option>
+        <option value="2592000">30 天</option>
+      </select></label>
+    <div style="display:flex;gap:10px">
+      <label class="fld" style="flex:1"><span>访问密码（可选）</span>
+        <input class="input" id="ulPwd" type="password" placeholder="留空则无密码"></label>
+      <label class="fld" style="flex:1"><span>最多使用次数</span>
+        <select class="input" id="ulMaxUses">
+          <option value="0">不限制</option>
+          <option value="10">10 次</option>
+          <option value="50">50 次</option>
+          <option value="100">100 次</option>
+        </select></label>
+    </div>
+    <div id="ulResult" hidden>
+      <label class="fld"><span>上传链接（点击复制）</span>
+        <input class="input" id="ulUrl" readonly onclick="this.select()" style="cursor:pointer"></label>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
+      <button class="btn" id="ulCancel">取消</button>
+      <button class="btn btn-primary" id="ulCreate">创建链接</button>
+    </div>`;
+  $('#uploadModal').hidden = false;
+  const close = () => { $('#uploadModal').hidden = true; modal.querySelector('h3').textContent = '上传文件'; };
+  $('#ulCancel').onclick = close;
+  $('#ulUrl').onclick = (e) => { e.target.select(); document.execCommand('copy'); toast('已复制'); };
+  $('#ulCreate').onclick = async () => {
+    const pwd = $('#ulPwd').value;
+    if (pwd && pwd.length < 4) { toast('密码至少 4 位'); return; }
     try {
       const p = await apiPost(`/api/accounts/${state.accountId}/upload-link`, {
-        bucket: state.bucket, prefix: state.prefix, expires: days * 86400,
+        bucket: state.bucket,
+        prefix: $('#ulPrefix').value.trim(),
+        expires: parseInt($('#ulExpiry').value, 10),
+        password: pwd,
+        maxUses: parseInt($('#ulMaxUses').value, 10),
       });
-      await navigator.clipboard.writeText(p.url);
-      toast('上传链接已复制：' + p.url);
-      prompt('上传链接（已复制）', p.url);
+      $('#ulUrl').value = p.url;
+      $('#ulResult').hidden = false;
+      $('#ulCreate').textContent = '重新生成';
+      loadUploadLinkList();
     } catch (e) { toast('创建失败：' + e.message); }
-  });
+  };
+}
+async function loadUploadLinkList() {
+  const box = $('#uploadLinkList');
+  if (!box) return;
+  try {
+    const d = await apiGet('/api/upload-links');
+    const arr = d.links || [];
+    if (!arr.length) { box.innerHTML = '<div class="muted">暂无上传链接</div>'; return; }
+    box.innerHTML = arr.map(ul => {
+      const exp = new Date(ul.expiresAt * 1000).toLocaleString('zh-CN', { hour12: false });
+      const st = ul.expired ? '<span style="color:#dc2626">已过期</span>' : `<span style="color:#16a34a">有效期至 ${esc(exp)}</span>`;
+      const tags = [];
+      if (ul.hasPassword) tags.push('🔒密码');
+      if (ul.maxUses > 0) tags.push(`${ul.useCount}/${ul.maxUses}次`);
+      const tagHtml = tags.length ? ` <span style="font-size:11px;background:#f1f5f9;padding:2px 8px;border-radius:10px">${tags.join(' ')}</span>` : '';
+      return `<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #f1f5f9">
+        <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(ul.prefix || '根目录')}">📁 ${esc(ul.prefix || '根目录')} <span style="color:#94a3b8;font-size:12px">${esc(ul.bucket)}</span></span>
+        <span style="font-size:12px;color:#64748b">${st}${tagHtml}</span>
+        <button class="btn btn-sm" data-copy-ul="${esc(ul.url)}">复制</button>
+        <button class="btn btn-sm" data-del-ul="${esc(ul.token)}" style="color:#dc2626">撤销</button>
+      </div>`;
+    }).join('');
+    box.querySelectorAll('[data-copy-ul]').forEach(b => b.onclick = () => {
+      navigator.clipboard.writeText(b.dataset.copyUl).then(() => toast('已复制'));
+    });
+    box.querySelectorAll('[data-del-ul]').forEach(b => b.onclick = () => {
+      askConfirm('撤销上传链接', '确定撤销这个上传链接吗？', '撤销', async () => {
+        try { await apiDelete(`/api/upload-links/${b.dataset.delUl}`); toast('已撤销'); loadUploadLinkList(); }
+        catch (e) { toast('撤销失败：' + e.message); }
+      });
+    });
+  } catch (e) { box.innerHTML = '<div class="muted">加载失败</div>'; }
 }
 async function refreshAccounts() {
   try {
