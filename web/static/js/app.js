@@ -136,8 +136,8 @@ function askForm(title, fields, onOk) {
       <input class="input" id="af-${i}" type="${f.type || 'text'}" value="${esc(f.value || '')}" placeholder="${esc(f.placeholder || '')}">
     </label>`).join('') + `
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
-      <button class="btn" id="afCancel">取消</button>
-      <button class="btn btn-primary" id="afOk">确认</button>
+      <button class="btn" id="afCancel">${t('common.cancel')}</button>
+      <button class="btn btn-primary" id="afOk">${t('common.confirm')}</button>
     </div>`;
   $('#promptModal').hidden = false;
   $('#afCancel').onclick = () => { $('#promptModal').hidden = true; };
@@ -166,8 +166,8 @@ function renderAuth(mode) {
     <h1>ObjDock</h1>
     <div class="sub">${t('brand.tagline')}</div>
     <div class="auth-tabs">
-      <button id="tabLogin" class="${mode === 'login' ? 'active' : ''}">登录</button>
-      <button id="tabReg" class="${mode === 'register' ? 'active' : ''}">注册</button>
+      <button id="tabLogin" class="${mode === 'login' ? 'active' : ''}">${t('auth.login')}</button>
+      <button id="tabReg" class="${mode === 'register' ? 'active' : ''}">${t('auth.register')}</button>
     </div>
     <div id="authForm"></div>
   </div></div>`;
@@ -1012,7 +1012,7 @@ function copyObject(srcKey, name, isMove) {
       <label class="fld"><span>目标桶</span><select class="input" id="cpBucket">${bOpts}</select></label>
       <label class="fld"><span>目标路径（含文件名）</span><input class="input" id="cpPath" value="${esc(state.prefix + name)}"></label>
       <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
-        <button class="btn" id="cpCancel">取消</button>
+        <button class="btn" id="cpCancel">${t('common.cancel')}</button>
         <button class="btn btn-primary" id="cpGo">${isMove ? t('common.move') : t('common.copy')}</button>
       </div>`;
     $('#uploadModal').hidden = false;
@@ -1539,7 +1539,7 @@ function openUploadLinkModal() {
         <input class="input" id="ulUrl" readonly onclick="this.select()" style="cursor:pointer"></label>
     </div>
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
-      <button class="btn" id="ulCancel">取消</button>
+      <button class="btn" id="ulCancel">${t('common.cancel')}</button>
       <button class="btn btn-primary" id="ulCreate">创建链接</button>
     </div>`;
   $('#uploadModal').hidden = false;
@@ -1808,7 +1808,7 @@ function renderWizard() {
       PROVIDERS.map(p => `<div class="prov-card ${wiz.provider === p.id ? 'sel' : ''}" data-prov="${p.id}">
         <div class="pi">${p.icon}</div><div class="pn">${p.name}</div></div>`).join('') +
       `</div><div class="modal-actions">
-        <button class="btn" id="wizCancel">取消</button>
+        <button class="btn" id="wizCancel">${t('common.cancel')}</button>
         <button class="btn btn-primary" id="wizNext">下一步</button></div>`;
   } else if (wiz.step === 2) {
     const p = PROVIDERS.find(x => x.id === wiz.provider);
