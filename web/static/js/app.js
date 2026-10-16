@@ -1222,6 +1222,7 @@ const PROVIDERS = [
   { id: 'oss', name: '阿里云 OSS', icon: ic('bucket'), hint: '选择地域，地址自动生成' },
   { id: 'cos', name: '腾讯云 COS', icon: ic('layers'), hint: '选择地域，地址自动生成' },
   { id: 'qiniu', name: '七牛云', icon: ic('zap'), hint: 'S3 兼容接口' },
+  { id: 'b2', name: 'Backblaze B2', icon: ic('cloud'), hint: 'S3 兼容接口，选择地域' },
   { id: 'minio', name: 'MinIO / 自建', icon: ic('monitor'), hint: '填写你的网关地址' },
 ];
 function renderSettings(tab) {
@@ -1752,7 +1753,7 @@ function renderWizard() {
       <input class="input" id="wName" value="${esc(ex.name || '')}" placeholder="我的 R2"></label>`;
     if (wiz.provider === 'r2') body += `<label class="fld"><span>Account ID（账户ID）</span>
       <input class="input" id="wAccountId" value="${esc(acctId)}" placeholder="Cloudflare 面板右下角的 Account ID"></label>`;
-    if (wiz.provider === 'oss' || wiz.provider === 'cos' || wiz.provider === 'qiniu')
+    if (wiz.provider === 'oss' || wiz.provider === 'cos' || wiz.provider === 'qiniu' || wiz.provider === 'b2')
       body += `<label class="fld"><span>地域</span><select class="input" id="wRegion">${regionOptions(wiz.provider, ex.region)}</select></label>`;
     if (wiz.provider === 'minio' || wiz.provider === 'custom')
       body += `<label class="fld"><span>网关地址</span>
@@ -1797,6 +1798,7 @@ function regionOptions(provider, sel) {
     oss: [['oss-cn-hangzhou', '华东1（杭州）'], ['oss-cn-shanghai', '华东2（上海）'], ['oss-cn-beijing', '华北2（北京）'], ['oss-cn-shenzhen', '华南1（深圳）'], ['oss-cn-hongkong', '香港']],
     cos: [['ap-guangzhou', '广州'], ['ap-shanghai', '上海'], ['ap-beijing', '北京'], ['ap-hongkong', '香港'], ['ap-singapore', '新加坡']],
     qiniu: [['cn-east-1', '华东'], ['cn-north-1', '华北'], ['cn-south-1', '华南']],
+    b2: [['us-west-002', '美国西部 (Phoenix)'], ['us-west-004', '美国西部2 (Phoenix)'], ['eu-central-003', '欧洲 (阿姆斯特丹)']],
   }[provider] || [];
   return regions.map(([v, n]) => `<option value="${v}" ${v === sel ? 'selected' : ''}>${n}</option>`).join('');
 }

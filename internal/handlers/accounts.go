@@ -64,6 +64,11 @@ func providerEndpoint(provider, accountID, region string) string {
 			return "https://s3-" + region + ".qiniucs.com"
 		}
 		return "https://s3-cn-east-1.qiniucs.com"
+	case "b2":
+		if region != "" {
+			return "https://s3." + region + ".backblazeb2.com"
+		}
+		return "https://s3.us-west-002.backblazeb2.com"
 	}
 	return ""
 }
