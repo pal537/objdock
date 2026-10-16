@@ -1517,8 +1517,9 @@ async function loadUploadLinkList() {
       if (ul.hasPassword) tags.push('🔒密码');
       if (ul.maxUses > 0) tags.push(`${ul.useCount}/${ul.maxUses}次`);
       const tagHtml = tags.length ? ` <span style="font-size:11px;background:#f1f5f9;padding:2px 8px;border-radius:10px">${tags.join(' ')}</span>` : '';
+      const nm = ul.name || '未命名';
       return `<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #f1f5f9">
-        <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(ul.prefix || '根目录')}">📁 ${esc(ul.prefix || '根目录')} <span style="color:#94a3b8;font-size:12px">${esc(ul.bucket)}</span></span>
+        <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(nm)}">${esc(nm)} <span style="color:#94a3b8;font-size:12px">${esc(ul.bucket)}${ul.prefix ? ' / ' + esc(ul.prefix) : ''}</span></span>
         <span style="font-size:12px;color:#64748b">${st}${tagHtml}</span>
         <button class="btn btn-sm" data-copy-ul="${esc(ul.url)}">复制</button>
         <button class="btn btn-sm" data-del-ul="${esc(ul.token)}" style="color:#dc2626">撤销</button>
@@ -1591,11 +1592,14 @@ async function openUlLinkView(i) {
       const ext = name.split('.').pop().toLowerCase();
       const isImg = ['jpg','jpeg','png','gif','webp','svg','bmp'].includes(ext);
       return `<div class="fitem">
-        <div class="fic" data-ulthumb="${esc(k)}" data-isimg="${isImg ? '1' : '0'}">${ic('file', 32)}</div>
-        <div class="fsub"><div class="fn" title="${esc(name)}">${esc(name)}</div><div class="fs">${esc(ul.bucket)}</div></div>
-        <div style="display:flex;gap:6px;padding:0 12px 12px">
-          <button class="btn btn-sm" onclick="ulFileDownload(${idx})">下载</button>
-          <button class="btn btn-sm" style="color:#dc2626" onclick="ulFileDelete(${idx})">删除</button>
+        <div class="fic" data-ulthumb="${esc(k)}" data-isimg="${isImg ? '1' : '0'}" style="height:140px">${ic('file', 32)}</div>
+        <div class="fsub" style="padding:10px 12px">
+          <div class="fn" title="${esc(name)}" style="font-weight:600;font-size:14px;margin-bottom:4px">${esc(name)}</div>
+          <div class="fs" style="font-size:12px;color:var(--muted);margin-bottom:8px">${esc(k)}</div>
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-sm" onclick="ulFileDownload(${idx})">下载</button>
+            <button class="btn btn-sm" style="color:#dc2626" onclick="ulFileDelete(${idx})">删除</button>
+          </div>
         </div>
       </div>`;
     }).join('');
