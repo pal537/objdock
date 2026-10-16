@@ -1569,109 +1569,33 @@ async function loadSideUlLinks() {
     });
   } catch (e) { /* ignore */ }
 }
-let ulViewToken = null;
-let ulViewData = null;
 async function openUlLinkView(i) {
   const ul = ulLinks[i];
   if (!ul) return;
-  ulViewToken = ul.token;
-  ulViewData = ul;
-  try {
-    const d = await apiGet(`/api/upload-links/${ul.token}/files`);
-    state.nav = 'files';
-    renderUlFilesView(ul, d.keys || []);
-  } catch (e) { toast('加载失败：' + e.message); }
+  // 直接用主文件浏览器，切换到该链接的账户/桶/路径
+  if (ul.accountId) state.accountId = ul.accountId;
+  if (ul.bucket) state.bucket = ul.bucket;
+  state.prefix = ul.prefix || '';
+  updateSwitcherLabel();
+  await loadSideFolders();
+  nav('files');
+  toast(`查看「${ul.name || '未命名'}」的上传目录`);
 }
-function renderUlFilesView(ul, keys) {
-  const main = $('#main');
-  const exp = ul.expiresAt ? new Date(ul.expiresAt * 1000).toLocaleString('zh-CN', { hour12: false }) : '永久';
-  main.innerHTML = `
-    <div class="topbar">
-      <h2>${ic('link')} ${esc(ul.name || '未命名')}</h2>
-      <div style="font-size:12px;color:var(--muted)">上传链接 · 有效期至 ${exp} · 共 ${keys.length} 个文件</div>
-    </div>
-    <div style="margin-bottom:12px;display:flex;gap:8px">
-      <button class="btn btn-sm" onclick="copyUlUrl('${ul.token}')">复制链接</button>
-      <button class="btn btn-sm" onclick="openUlEdit(ulViewData)">编辑</button>
-      <button class="btn btn-sm" onclick="nav('files');ulViewToken=null;ulViewData=null">返回文件</button>
-    </div>
-    <div id="ulFilesGrid" class="fgrid"></div>`;
-  const grid = $('#ulFilesGrid');
-  if (!keys.length) {
-    grid.innerHTML = '<div class="card" style="text-align:center;color:var(--muted);padding:40px;grid-column:1/-1">暂无上传文件</div>';
-    return;
-  }
-  // 用和主视图一致的文件卡片
-  grid.innerHTML = keys.map((k, idx) => {
-    const name = k.split('/').pop();
-    const ext = name.split('.').pop().toLowerCase();
-    const isImg = ['jpg','jpeg','png','gif','webp','svg'].includes(ext);
-    return `
-    <div class="fitem" data-idx="${idx}">
-      <div class="fthumb">${isImg ? `<img loading="lazy" data-src="${esc(k)}" alt="">` : ic('file', 32)}</div>
-      <div class="fname" title="${esc(name)}">${esc(name)}</div>
-      <div class="fsub">${esc(ul.bucket)}</div>
-      <div style="display:flex;gap:6px;margin-top:8px">
-        <button class="btn btn-sm" onclick="previewUlFile(${idx})">预览</button>
-        <button class="btn btn-sm" onclick="downloadUlFile(${idx})">下载</button>
-        <button class="btn btn-sm" style="color:#dc2626" onclick="delUlFile('${ul.token}','${esc(k)}')">删除</button>
-      </div>
-    </div>`;
-  }).join('');
-  // 懒加载缩略图
-  grid.querySelectorAll('img[data-src]').forEach(img => {
-    const key = img.dataset.src;
-    apiGet(`/api/accounts/${ulViewData.accountId}/download?bucket=${encodeURIComponent(ulViewData.bucket)}&key=${encodeURIComponent(key)}&preview=1`)
-      .then(d => { img.src = d.url; img.removeAttribute('data-src'); })
-      .catch(() => {});
-  });
-  // 保存 keys 供预览/下载用
-  ulViewData._keys = keys;
-}
-function previewUlFile(idx) {
-  const k = ulViewData._keys[idx];
-  downloadUlFile(idx); // 简化：直接下载/预览
-}
-async function downloadUlFile(idx) {
-  const k = ulViewData._keys[idx];
-  const ul = ulViewData;
-  try {
-    const d = await apiGet(`/api/accounts/${ul.accountId}/download?bucket=${encodeURIComponent(ul.bucket)}&key=${encodeURIComponent(k)}`);
-    window.open(d.url, '_blank');
-  } catch (e) { toast('获取下载地址失败：' + e.message); }
-}
-function copyUlUrl(token) {
-  const ul = ulLinks.find(x => x.token === token);
-  if (ul) navigator.clipboard.writeText(ul.url).then(() => toast('已复制'));
-}
-async function delUlFile(token, key) {
-  // 删除 S3 上的文件
-  const ul = ulLinks.find(x => x.token === token);
-  if (!ul || !confirm(`确定删除 ${key.split('/').pop()} 吗？`)) return;
-  try {
-    await apiDelete(`/api/accounts/${ul.accountId}/objects?bucket=${encodeURIComponent(ul.bucket)}&key=${encodeURIComponent(key)}`);
-    toast('已删除');
-    openUlLinkView(ulLinks.indexOf(ul));
-  } catch (e) { toast('删除失败：' + e.message); }
-}
+
+
+async 
+
+
 function openUlEdit(ul) {
   if (!ul) return;
-  const exp = ul.expiresAt ? new Date(ul.expiresAt * 1000).toISOString().slice(0, 16) : '';
-  askForm('编辑上传链接', [
-    { key: 'name', label: '链接名称 *', value: ul.name || '', placeholder: '如：小王上传资料' },
-    { key: 'prefix', label: '上传路径', value: ul.prefix || '', placeholder: '留空为根目录' },
-    { key: 'expiresAt', label: '有效期至（留空为永久）', value: exp, type: 'datetime-local' },
-  ], async (vals) => {
-    if (!vals.name.trim()) { toast('名称不能为空'); return; }
-    let expTs = 0;
-    if (vals.expiresAt) expTs = Math.floor(new Date(vals.expiresAt).getTime() / 1000);
-    else expTs = Math.floor(Date.now() / 1000) + 100 * 365 * 86400; // 永久
+  askPrompt('编辑上传链接', '链接名称', ul.name || '', async (name) => {
+    name = name.trim();
+    if (!name) { toast('名称不能为空'); return; }
     try {
-      await apiPut(`/api/upload-links/${ul.token}`, { name: vals.name.trim(), prefix: vals.prefix.trim(), expiresAt: expTs });
+      await apiPut(`/api/upload-links/${ul.token}`, { name, prefix: ul.prefix || '', expiresAt: ul.expiresAt || 0 });
       toast('已保存');
-      loadSideUlLinks();
-      loadUploadLinkList();
-      if (ulViewToken === ul.token) openUlLinkView(ulLinks.findIndex(x => x.token === ul.token));
+      await loadSideUlLinks();
+      if (typeof loadUploadLinkList === 'function') loadUploadLinkList();
     } catch (e) { toast('保存失败：' + e.message); }
   });
 }
