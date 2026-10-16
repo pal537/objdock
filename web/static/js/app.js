@@ -411,7 +411,7 @@ async function renderDash() {
   main.innerHTML = `<div class="topbar"><h2>${ic('dash')}仪表盘</h2><div class="spacer"></div>
     <button class="btn btn-sm" id="dashRefresh">↻ 重新统计</button></div>
     ${bucketBar}
-    <div id="dashBody"><div class="empty">统计中…</div></div>`;
+    <div id="dashBody"><div class="empty">${t('dash.statistics')}</div></div>`;
   // 绑定切换
   $$('.bucket-chip', main).forEach(btn => btn.onclick = async () => {
     const aid = parseInt(btn.dataset.acct, 10);
@@ -514,18 +514,18 @@ async function loadDash(quota) {
   }
   $('#dashBody').innerHTML = quotaHtml + `
     <div class="stat-grid">
-      <div class="stat"><div class="ic" style="background:#dbeafe;color:#2563eb">${ic('drive')}</div><div><div class="v">${fmtSize(d.totalSize)}</div><div class="l">总存储量</div><div class="s">${d.truncated ? '约 ' : ''}${d.fileCount} 个文件${d.truncated ? '（仅扫描前 ' + d.scanned + ' 个）' : ''}</div></div></div>
-      <div class="stat"><div class="ic" style="background:#ede9fe;color:#7c3aed">${ic('file')}</div><div><div class="v">${d.fileCount}</div><div class="l">文件</div><div class="s">文件夹 ${d.byFolder.length} 个</div></div></div>
-      <div class="stat"><div class="ic" style="background:#fef3c7;color:#d97706">${ic('layers')}</div><div><div class="v">${fmtSize(d.avgSize)}</div><div class="l">平均文件大小</div><div class="s">最大 ${fmtSize(d.largest.size)}</div></div></div>
-      <div class="stat"><div class="ic" style="background:#dcfce7;color:#059669">${ic('clock')}</div><div><div class="v">${d.weekCount}</div><div class="l">最近 7 天修改</div><div class="s">最活跃 ${Object.keys(act).sort().pop() || '-'}</div></div></div>
+      <div class="stat"><div class="ic" style="background:#dbeafe;color:#2563eb">${ic('drive')}</div><div><div class="v">${fmtSize(d.totalSize)}</div><div class="l">${t('dash.totalStorage')}</div><div class="s">${d.truncated ? '约 ' : ''}${d.fileCount} 个文件${d.truncated ? '（仅扫描前 ' + d.scanned + ' 个）' : ''}</div></div></div>
+      <div class="stat"><div class="ic" style="background:#ede9fe;color:#7c3aed">${ic('file')}</div><div><div class="v">${d.fileCount}</div><div class="l">${t('dash.files')}</div><div class="s">文件夹 ${d.byFolder.length} 个</div></div></div>
+      <div class="stat"><div class="ic" style="background:#fef3c7;color:#d97706">${ic('layers')}</div><div><div class="v">${fmtSize(d.avgSize)}</div><div class="l">${t('dash.avgSize')}</div><div class="s">最大 ${fmtSize(d.largest.size)}</div></div></div>
+      <div class="stat"><div class="ic" style="background:#dcfce7;color:#059669">${ic('clock')}</div><div><div class="v">${d.weekCount}</div><div class="l">${t('dash.recent7')}</div><div class="s">最活跃 ${Object.keys(act).sort().pop() || '-'}</div></div></div>
     </div>
     <div class="panels">
-      <div class="panel"><h4>按文件夹统计存储</h4>
+      <div class="panel"><h4>${t('dash.byFolder')}</h4>
         ${d.byFolder.map(f => `<div class="bar-row"><span class="bn" title="${esc(f.name)}">${esc(f.name)}</span>
           <span class="bt"><span class="bf" style="display:block;width:${(f.value / maxF * 100).toFixed(1)}%"></span></span>
           <span class="bv">${fmtSize(f.value)}</span></div>`).join('') || '<div class="muted">无数据</div>'}
       </div>
-      <div class="panel"><h4>按类型统计存储</h4><div class="donut-wrap">
+      <div class="panel"><h4>${t('dash.byType')}</h4><div class="donut-wrap">
         <svg width="140" height="140" viewBox="0 0 140 140"><circle cx="70" cy="70" r="54" fill="#f1f5f9"/>${segs}
           <text x="70" y="66" text-anchor="middle" font-size="13" font-weight="700">${fmtSize(d.totalSize)}</text>
           <text x="70" y="84" text-anchor="middle" font-size="11" fill="#8a94a6">总计</text></svg>
@@ -1291,12 +1291,12 @@ function renderSettings(tab) {
   tab = tab || 'account';
   const main = $('#main');
   const tabs = [
-    { id: 'account', label: '存储账户' },
-    { id: 'share', label: '分享管理' },
+    { id: 'account', label: t('settings.accounts') },
+    { id: 'share', label: t('settings.share') },
     { id: 'upload', label: '上传链接' },
-    { id: 'site', label: '站点设置' },
-    { id: 'user', label: '用户管理' },
-    { id: 'appearance', label: '外观' },
+    { id: 'site', label: t('settings.site') },
+    { id: 'user', label: t('settings.users') },
+    { id: 'appearance', label: t('settings.appearance') },
   ];
   // 非管理员隐藏部分
   const visibleTabs = tabs.filter(t => {
@@ -1315,19 +1315,19 @@ function renderSettings(tab) {
 function renderSettingsTab(tab) {
   const c = $('#setTabContent');
   if (tab === 'account') {
-    c.innerHTML = `<div class="card"><h3>${ic('bucket')}存储账户</h3><p class="desc">绑定多个对象存储账户，左下角一键切换</p>
+    c.innerHTML = `<div class="card"><h3>${ic('bucket')}${t('settings.accounts')}</h3><p class="desc">绑定多个对象存储账户，左下角一键切换</p>
       <div id="acctList"></div>
       <button class="btn btn-primary" id="btnAddAcct" style="margin-top:12px">＋ 添加账户</button></div>`;
     $('#btnAddAcct').onclick = () => openWizard();
     loadAcctList();
   } else if (tab === 'share') {
-    c.innerHTML = `<div class="card"><h3>${ic('share')}分享管理</h3><p class="desc">经本站转发的私密分享链接，可撤销</p><div id="shareList"><div class="muted">${t('common.loading')}</div></div></div>`;
+    c.innerHTML = `<div class="card"><h3>${ic('share')}${t('settings.share')}</h3><p class="desc">经本站转发的私密分享链接，可撤销</p><div id="shareList"><div class="muted">${t('common.loading')}</div></div></div>`;
     loadShareList();
   } else if (tab === 'upload') {
-    c.innerHTML = `<div class="card"><h3>上传链接管理</h3><p class="desc">别人可通过链接上传文件到你的桶，可撤销</p><div id="uploadLinkList"><div class="muted">${t('common.loading')}</div></div></div>`;
+    c.innerHTML = `<div class="card"><h3>${t('settings.uploadLinks')}</h3><p class="desc">别人可通过链接上传文件到你的桶，可撤销</p><div id="uploadLinkList"><div class="muted">${t('common.loading')}</div></div></div>`;
     loadUploadLinkList();
   } else if (tab === 'site' && state.user.admin) {
-    c.innerHTML = `<div class="card"><h3>${ic('settings')}站点设置</h3><p class="desc">分享链接用的公开地址（仅管理员可见）</p>
+    c.innerHTML = `<div class="card"><h3>${ic('settings')}${t('settings.site')}</h3><p class="desc">分享链接用的公开地址（仅管理员可见）</p>
       <label class="fld"><span>站点地址</span>
         <div style="display:flex;gap:8px">
           <input class="input" id="siteUrl" placeholder="如 https://oss.example.com" style="flex:1">
@@ -1350,12 +1350,12 @@ function renderSettingsTab(tab) {
       catch (err) { toast('保存失败：' + err.message); e.target.checked = !e.target.checked; }
     };
   } else if (tab === 'user' && state.user.admin) {
-    c.innerHTML = `<div class="card"><h3>${ic('users')}用户管理</h3><p class="desc">共 <b id="userTotal">0</b> 个用户（仅管理员可见，不显示密码）</p><div id="userList"><div class="muted">${t('common.loading')}</div></div></div>`;
+    c.innerHTML = `<div class="card"><h3>${ic('users')}${t('settings.users')}</h3><p class="desc">共 <b id="userTotal">0</b> 个用户（仅管理员可见，不显示密码）</p><div id="userList"><div class="muted">${t('common.loading')}</div></div></div>`;
     loadUserList();
   } else if (tab === 'appearance') {
     const langOpts = Object.keys(LANGS).map(k =>
       `<option value="${k}" ${getLang() === k ? 'selected' : ''}>${LANGS[k]}</option>`).join('');
-    c.innerHTML = `<div class="card"><h3>${ic('settings')}外观</h3>
+    c.innerHTML = `<div class="card"><h3>${ic('settings')}${t('settings.appearance')}</h3>
       <label style="display:flex;gap:8px;align-items:center;cursor:pointer;margin-bottom:12px">
         <input type="checkbox" id="themeToggle" style="width:18px;height:18px"> 深色模式
       </label>
@@ -1804,7 +1804,7 @@ function renderWizard() {
   let body = isEdit ? '' : `<div class="wiz-steps">${['选择服务商', '填写密钥', '完成'].map((s, i) =>
     `<div class="ws ${wiz.step === i + 1 ? 'active' : ''}">${s}</div>`).join('')}</div>`;
   if (wiz.step === 1) {
-    body += `<h3 style="margin-top:0">选择服务商</h3><div class="prov-grid">` +
+    body += `<h3 style="margin-top:0">${t('wizard.selectProvider')}</h3><div class="prov-grid">` +
       PROVIDERS.map(p => `<div class="prov-card ${wiz.provider === p.id ? 'sel' : ''}" data-prov="${p.id}">
         <div class="pi">${p.icon}</div><div class="pn">${p.name}</div></div>`).join('') +
       `</div><div class="modal-actions">
