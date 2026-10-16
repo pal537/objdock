@@ -1583,7 +1583,6 @@ async function openUlLinkView(i) {
 }
 
 
-async 
 
 
 function openUlEdit(ul) {
