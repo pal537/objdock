@@ -599,12 +599,12 @@ function removeFile(i) { files.splice(i, 1); renderList(); }
 function renderList() {
   const list = document.getElementById('fileList');
   document.getElementById('upBtn').disabled = !files.length;
-  list.innerHTML = files.map((f, i) => `
-    <div class="file-item" id="fi-${i}">
-      <span class="fn" title="${f.name}">${f.name}</span>
-      <span class="st">${(f.size/1024).toFixed(1)} KB</span>
-      <span class="rm" onclick="removeFile(${i})">×</span>
-    </div>`).join('');
+  list.innerHTML = files.map((f, i) =>
+    '<div class="file-item" id="fi-' + i + '">' +
+      '<span class="fn" title="' + f.name + '">' + f.name + '</span>' +
+      '<span class="st">' + (f.size/1024).toFixed(1) + ' KB</span>' +
+      '<span class="rm" onclick="removeFile(' + i + ')">×</span>' +
+    '</div>').join('');
 }
 async function unlockUpload() {
   const pw = document.getElementById('upPw').value;
