@@ -45,6 +45,10 @@ func New(database *db.DB, encKey []byte, secure bool, static http.FileSystem, se
 
 // ServeHTTP implements http.Handler.
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// Baseline security headers for every response.
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.Header().Set("X-Frame-Options", "DENY")
+	w.Header().Set("Referrer-Policy", "same-origin")
 	s.mux.ServeHTTP(w, r)
 }
 
