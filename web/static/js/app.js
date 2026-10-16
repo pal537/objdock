@@ -500,21 +500,51 @@ async function renderFiles() {
   $('#btnDlSel').onclick = async () => {
     const keys = [...selKeys].filter(k => !k.endsWith('/'));
     if (!keys.length) { toast('所选没有可下载的文件'); return; }
-    toast(`正在准备 ${keys.length} 个文件的下载链接…`);
+    if (keys.length === 1) { await downloadFile(keys[0], keys[0].split('/').pop()); return; }
+    // 多文件：浏览器端打包 zip
+    const modal = $('#uploadModal'), list = $('#uploadList');
+    list.innerHTML = '';
+    modal.querySelector('h3').textContent = '打包下载';
+    $('#uploadModal').hidden = false;
+    const row = document.createElement('div');
+    row.style.cssText = 'padding:12px 0';
+    row.innerHTML = `<div style="margin-bottom:8px">正在打包 ${keys.length} 个文件…</div>
+      <div style="height:8px;background:#e2e8f0;border-radius:4px;overflow:hidden">
+        <div class="ufill" style="height:100%;width:0;background:#3b82f6;transition:width .2s"></div></div>
+      <div class="ust" style="font-size:12px;color:#64748b;margin-top:6px"></div>`;
+    list.appendChild(row);
+    const fill = row.querySelector('.ufill'), st = row.querySelector('.ust');
     try {
       const p = await apiPost(`/api/accounts/${state.accountId}/presign-batch`,
         { bucket: state.bucket, keys, op: 'download', expires: 600 });
       const urls = p.urls || {};
+      const zip = new JSZip();
       let n = 0;
       for (const key of keys) {
         const url = urls[key];
         if (!url) continue;
-        window.open(url, '_blank');
+        const name = key.split('/').pop();
+        st.textContent = `下载中：${name} (${n + 1}/${keys.length})`;
+        const resp = await fetch(url);
+        if (!resp.ok) throw new Error(`下载 ${name} 失败：HTTP ${resp.status}`);
+        zip.file(name, await resp.blob());
         n++;
-        await new Promise(r => setTimeout(r, 500));
+        fill.style.width = Math.round(n / keys.length * 100) + '%';
       }
-      if (!n) toast('下载链接生成失败');
-    } catch (e) { toast('下载失败：' + e.message); }
+      st.textContent = '正在生成 zip…';
+      const blob = await zip.generateAsync({ type: 'blob' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `objdock-${new Date().toISOString().slice(0, 10)}.zip`;
+      document.body.appendChild(a); a.click();
+      setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 5000);
+      $('#uploadModal').hidden = true;
+      modal.querySelector('h3').textContent = '上传文件';
+      toast(`已打包下载 ${n} 个文件`);
+    } catch (e) {
+      st.textContent = '失败：' + e.message;
+      st.style.color = '#dc2626';
+    }
   };
   $('#btnDelSel').onclick = deleteSelected;
   $('#btnClearSel').onclick = () => {
