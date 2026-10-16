@@ -355,7 +355,7 @@ func (s *Server) handleSearch(w http.ResponseWriter, r *http.Request) {
 			if strings.Contains(strings.ToLower(o.Key), q) {
 				matches = append(matches, map[string]any{
 					"key": o.Key, "name": o.Key[strings.LastIndex(o.Key, "/")+1:],
-					"size": o.Size, "lastModified": o.LastModified.Unix(),
+					"size": o.Size, "lastModified": o.LastModified,
 				})
 				if len(matches) >= 100 {
 					break
