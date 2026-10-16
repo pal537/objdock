@@ -1502,40 +1502,40 @@ async function doSearch(q) {
 function openUploadLinkModal() {
   const modal = $('#uploadModal'), list = $('#uploadList');
   list.innerHTML = '';
-  modal.querySelector('h3').textContent = '创建上传链接';
+  modal.querySelector('h3').textContent = t('upload.createLink');
   list.innerHTML = `
-    <label class="fld"><span>链接名称 *</span>
-      <input class="input" id="ulName" placeholder="如：小王上传资料" maxlength="50">
-      <div class="hint">显示在左侧菜单，方便区分</div></label>
-    <label class="fld"><span>上传到路径</span>
+    <label class="fld"><span>${t('upload.linkName')}</span>
+      <input class="input" id="ulName" placeholder="${t('upload.namePh')}" maxlength="50">
+      <div class="hint">${t('upload.nameHint')}</div></label>
+    <label class="fld"><span>${t('upload.toPath')}</span>
       <input class="input" id="ulPrefix" value="${esc(state.prefix || '')}" placeholder="默认为当前目录：${esc(state.prefix || '根目录')}">
-      <div class="hint">别人上传的文件会存到这个目录下</div></label>
-    <label class="fld"><span>有效期</span>
+      <div class="hint">${t('upload.pathHint')}</div></label>
+    <label class="fld"><span>${t('upload.expiry')}</span>
       <select class="input" id="ulExpiry">
-        <option value="3600">1 小时</option>
-        <option value="18000">5 小时</option>
-        <option value="43200">12 小时</option>
-        <option value="86400">1 天</option>
-        <option value="259200">3 天</option>
-        <option value="604800" selected>7 天</option>
-        <option value="1296000">15 天</option>
-        <option value="2592000">30 天</option>
-        <option value="7776000">90 天</option>
-        <option value="0">永久</option>
+        <option value="3600">${t('upload.hour1')}</option>
+        <option value="18000">${t('upload.hour5')}</option>
+        <option value="43200">${t('upload.hour12')}</option>
+        <option value="86400">${t('upload.day1')}</option>
+        <option value="259200">${t('upload.day3')}</option>
+        <option value="604800" selected>${t('upload.day7')}</option>
+        <option value="1296000">${t('upload.day15')}</option>
+        <option value="2592000">${t('upload.day30')}</option>
+        <option value="7776000">${t('upload.day90')}</option>
+        <option value="0">${t('upload.forever')}</option>
       </select></label>
     <div style="display:flex;gap:10px">
-      <label class="fld" style="flex:1"><span>访问密码（可选）</span>
-        <input class="input" id="ulPwd" type="password" placeholder="留空则无密码"></label>
-      <label class="fld" style="flex:1"><span>最多使用次数</span>
+      <label class="fld" style="flex:1"><span>${t('upload.pwd')}</span>
+        <input class="input" id="ulPwd" type="password" placeholder="${t('upload.noPwd')}"></label>
+      <label class="fld" style="flex:1"><span>${t('upload.maxUses')}</span>
         <select class="input" id="ulMaxUses">
-          <option value="0">不限制</option>
-          <option value="10">10 次</option>
-          <option value="50">50 次</option>
-          <option value="100">100 次</option>
+          <option value="0">${t('upload.unlimited')}</option>
+          <option value="10">${t('upload.times10')}</option>
+          <option value="50">${t('upload.times50')}</option>
+          <option value="100">${t('upload.times100')}</option>
         </select></label>
     </div>
     <div id="ulResult" hidden>
-      <label class="fld"><span>上传链接（点击复制）</span>
+      <label class="fld"><span>${t('upload.result')}</span>
         <input class="input" id="ulUrl" readonly onclick="this.select()" style="cursor:pointer"></label>
     </div>
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
@@ -1566,12 +1566,12 @@ function openUploadLinkModal() {
       list.innerHTML = `
         <div style="text-align:center;padding:20px 0">
           <div style="font-size:16px;font-weight:600;margin-bottom:16px;color:var(--text)">上传链接已创建</div>
-          <label class="fld"><span>上传链接（点击复制）</span>
+          <label class="fld"><span>${t('upload.result')}</span>
             <input class="input" id="ulUrl2" readonly value="${esc(p.url)}" onclick="this.select();document.execCommand('copy');toast(t('msg.copied'))" style="cursor:pointer;text-align:center">
           </label>
           <div style="display:flex;gap:8px;justify-content:center;margin-top:16px">
             <button class="btn" onclick="$('#uploadModal').hidden=true">关闭</button>
-            <button class="btn btn-primary" onclick="openUploadLinkModal()">再创建一个</button>
+            <button class="btn btn-primary" onclick="openUploadLinkModal()">${t('upload.createAgain')}</button>
           </div>
         </div>`;
       try { await navigator.clipboard.writeText(p.url); } catch (e) {}
