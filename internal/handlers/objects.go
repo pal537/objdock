@@ -1022,7 +1022,7 @@ func (s *Server) renderSharePage(w http.ResponseWriter, r *http.Request, sh *db.
 	if len(files) == 0 {
 		fileHtml = `<p style="color:#94a3b8;text-align:center">` + ptr(lang, "share.noFiles") + `</p>`
 	}
-	title := sh.Name
+	title := shareDisplayName(lang, sh.Name, len(files))
 	if title == "" {
 		title = ptr(lang, "share.title")
 	}

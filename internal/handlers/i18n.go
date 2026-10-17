@@ -2,6 +2,8 @@ package handlers
 
 import (
 	"net/http"
+	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -42,6 +44,7 @@ var pageText = map[string]map[string]string{
 		"share.title": "分享文件", "share.pageTitle": "ObjDock 分享",
 		"share.brandSub": "对象存储分享", "share.download": "⬇ 下载",
 		"share.noFiles": "暂无文件", "share.fromUser": "来源于 %s 的分享",
+		"share.andNFiles": "{name} 等 {n} 个文件",
 		"upload.title": "上传文件", "upload.pageTitle": "上传文件 - ObjDock",
 		"upload.invite": "%s 邀请你上传文件", "upload.noLogin": "无需登录，直接上传到对方的存储空间",
 		"upload.dropTitle": "点击选择或拖拽文件到这里", "upload.dropSub": "可多次选择，支持多文件",
@@ -55,6 +58,7 @@ var pageText = map[string]map[string]string{
 		"share.title": "Shared Files", "share.pageTitle": "ObjDock Share",
 		"share.brandSub": "Object storage sharing", "share.download": "⬇ Download",
 		"share.noFiles": "No files", "share.fromUser": "Shared by %s",
+		"share.andNFiles": "{name} and {n} files",
 		"upload.title": "Upload Files", "upload.pageTitle": "Upload Files - ObjDock",
 		"upload.invite": "%s invites you to upload files", "upload.noLogin": "No login needed, upload directly to their storage",
 		"upload.dropTitle": "Click to select or drag files here", "upload.dropSub": "Multiple selections supported",
@@ -68,6 +72,7 @@ var pageText = map[string]map[string]string{
 		"share.title": "共有ファイル", "share.pageTitle": "ObjDock 共有",
 		"share.brandSub": "オブジェクトストレージ共有", "share.download": "⬇ ダウンロード",
 		"share.noFiles": "ファイルなし", "share.fromUser": "%s からの共有",
+		"share.andNFiles": "{name} 他 {n} ファイル",
 		"upload.title": "ファイルアップロード", "upload.pageTitle": "アップロード - ObjDock",
 		"upload.invite": "%s がアップロードに招待しています", "upload.noLogin": "ログイン不要、直接ストレージにアップロード",
 		"upload.dropTitle": "クリックで選択またはドラッグ", "upload.dropSub": "複数選択・複数ファイル対応",
@@ -81,6 +86,7 @@ var pageText = map[string]map[string]string{
 		"share.title": "공유 파일", "share.pageTitle": "ObjDock 공유",
 		"share.brandSub": "오브젝트 스토리지 공유", "share.download": "⬇ 다운로드",
 		"share.noFiles": "파일 없음", "share.fromUser": "%s님의 공유",
+		"share.andNFiles": "{name} 외 {n}개 파일",
 		"upload.title": "파일 업로드", "upload.pageTitle": "업로드 - ObjDock",
 		"upload.invite": "%s님이 업로드를 초대했습니다", "upload.noLogin": "로그인 없이 직접 스토리지에 업로드",
 		"upload.dropTitle": "클릭하여 선택하거나 드래그", "upload.dropSub": "여러 번 선택, 다중 파일 지원",
@@ -94,6 +100,7 @@ var pageText = map[string]map[string]string{
 		"share.title": "Archivos compartidos", "share.pageTitle": "Compartido ObjDock",
 		"share.brandSub": "Compartir almacenamiento", "share.download": "⬇ Descargar",
 		"share.noFiles": "Sin archivos", "share.fromUser": "Compartido por %s",
+		"share.andNFiles": "{name} y {n} archivos",
 		"upload.title": "Subir archivos", "upload.pageTitle": "Subir - ObjDock",
 		"upload.invite": "%s te invita a subir archivos", "upload.noLogin": "Sin iniciar sesión, sube directo a su almacenamiento",
 		"upload.dropTitle": "Clic para seleccionar o arrastra aquí", "upload.dropSub": "Selección múltiple admitida",
@@ -103,6 +110,24 @@ var pageText = map[string]map[string]string{
 		"upload.pwWrong": "Contraseña incorrecta", "upload.pwPh": "Ingrese contraseña", "upload.unlock": "Desbloquear",
 		"upload.doneOk": "🎉 ¡Completado! %d correctos", "upload.doneFail": ", %d fallidos",
 	},
+}
+
+// legacyShareName 匹配老数据 "X 等 N 个文件"
+var legacyShareName = regexp.MustCompile(`^(.+) 等 (\d+) 个文件$`)
+
+// shareDisplayName 本地化分享显示名（兼容老数据与 fileCount>1 的新数据）
+func shareDisplayName(lang, name string, fileCount int) string {
+	if m := legacyShareName.FindStringSubmatch(name); m != nil {
+		if n, err := strconv.Atoi(m[2]); err == nil {
+			s := strings.ReplaceAll(ptr(lang, "share.andNFiles"), "{name}", m[1])
+			return strings.ReplaceAll(s, "{n}", strconv.Itoa(n))
+		}
+	}
+	if fileCount > 1 {
+		s := strings.ReplaceAll(ptr(lang, "share.andNFiles"), "{name}", name)
+		return strings.ReplaceAll(s, "{n}", strconv.Itoa(fileCount))
+	}
+	return name
 }
 
 // ptr 返回指定语言的文案（缺失回退中文）
