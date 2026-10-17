@@ -4,6 +4,27 @@
 const $ = (s, el) => (el || document).querySelector(s);
 const $$ = (s, el) => Array.from((el || document).querySelectorAll(s));
 
+// 全局缩略图签名 URL 缓存：key -> {url, exp}
+// 预签名 URL 每次重新签名都会变（签名+过期时间），导致浏览器缓存全 miss。
+// 这里跨列表刷新复用有效期内的 URL，未改动的文件不再重新下载。
+// 缓存 key 带 accountId+bucket，不同账户/桶之间不串。
+const thumbUrlCache = new Map();
+function thumbCacheKey(objKey, aid, bkt) {
+  return (aid === undefined ? state.accountId : aid) + '|' + (bkt === undefined ? state.bucket : bkt) + '|' + objKey;
+}
+function thumbUrlCached(objKey) {
+  const e = thumbUrlCache.get(thumbCacheKey(objKey));
+  if (e && e.exp > Date.now() + 120000) return e.url; // 留 120 秒余量
+  return null;
+}
+// aid/bkt 传请求发起时的快照，防止切换账户/桶时响应回来 key 串掉
+function thumbCacheStore(urls, expiresSec, aid, bkt) {
+  const exp = Date.now() + Math.max(expiresSec - 120, 60) * 1000;
+  for (const [k, url] of Object.entries(urls || {})) thumbUrlCache.set(thumbCacheKey(k, aid, bkt), { url, exp });
+  if (thumbUrlCache.size > 2000) thumbUrlCache.clear(); // 防无界增长
+}
+const THUMB_EXPIRES = 3600; // 缩略图签名有效期 1 小时，URL 稳定更久
+
 const state = {
   user: null,
   accounts: [],
@@ -814,19 +835,24 @@ function renderFileList(d) {
     // 图片缩略图：懒加载 + 批量签名，一次请求搞定可见区域
     const thumbEls = $$('[data-thumb]', body).filter(el => el.dataset.thumb.split('|')[1] === 'image');
     if (thumbEls.length) {
-      const urlCache = new Map(); // key -> url, 避免重复签名
       const loadThumbs = async (els) => {
-        const need = els.filter(el => !urlCache.has(el.dataset.thumb.split('|')[0]) && !el.dataset.done);
+        // 先填缓存命中的（URL 不变 → 浏览器直接读缓存，不走网络）
+        els.forEach(el => {
+          const u = thumbUrlCached(el.dataset.thumb.split('|')[0]);
+          if (u) { el.innerHTML = `<img src="${esc(u)}" loading="lazy" decoding="async">`; el.dataset.done = '1'; }
+        });
+        const need = els.filter(el => !el.dataset.done);
         if (!need.length) return;
         need.forEach(el => el.dataset.done = '1');
-        const keys = need.map(el => el.dataset.thumb.split('|')[0]);
+        const keys = [...new Set(need.map(el => el.dataset.thumb.split('|')[0]))];
+        const snapA = state.accountId, snapB = state.bucket; // 请求前快照
         try {
-          const r = await apiPost(`/api/accounts/${state.accountId}/presign-batch`,
-            { bucket: state.bucket, keys, op: 'preview', expires: 600 });
-          for (const [k, url] of Object.entries(r.urls || {})) urlCache.set(k, url);
+          const r = await apiPost(`/api/accounts/${snapA}/presign-batch`,
+            { bucket: snapB, keys, op: 'preview', expires: THUMB_EXPIRES });
+          thumbCacheStore(r.urls, THUMB_EXPIRES, snapA, snapB);
         } catch (e) { /* keep icons */ }
         need.forEach(el => {
-          const url = urlCache.get(el.dataset.thumb.split('|')[0]);
+          const url = thumbUrlCached(el.dataset.thumb.split('|')[0]);
           if (url) el.innerHTML = `<img src="${esc(url)}" loading="lazy" decoding="async">`;
         });
       };
@@ -866,12 +892,19 @@ function renderFileList(d) {
     // 列表视图小缩略图：批量签名懒加载
     const lthumbs = $$('[data-lthumb]', body).filter(el => el.dataset.lthumb.split('|')[1] === 'image');
     if (lthumbs.length) {
-      const keys = [...new Set(lthumbs.map(el => el.dataset.lthumb.split('|')[0]))];
-      apiPost(`/api/accounts/${state.accountId}/presign-batch`, { bucket: state.bucket, keys, op: 'preview', expires: 600 })
+      lthumbs.forEach(el => {
+        const u = thumbUrlCached(el.dataset.lthumb.split('|')[0]);
+        if (u) { el.innerHTML = `<img src="${esc(u)}" loading="lazy" alt="">`; el.dataset.ldone = '1'; }
+      });
+      const miss = lthumbs.filter(el => !el.dataset.ldone);
+      if (!miss.length) return;
+      const keys = [...new Set(miss.map(el => el.dataset.lthumb.split('|')[0]))];
+      const snapA = state.accountId, snapB = state.bucket; // 请求前快照
+      apiPost(`/api/accounts/${snapA}/presign-batch`, { bucket: snapB, keys, op: 'preview', expires: THUMB_EXPIRES })
         .then(r => {
-          const urls = r.urls || {};
-          lthumbs.forEach(el => {
-            const u = urls[el.dataset.lthumb.split('|')[0]];
+          thumbCacheStore(r.urls, THUMB_EXPIRES, snapA, snapB);
+          miss.forEach(el => {
+            const u = thumbUrlCached(el.dataset.lthumb.split('|')[0]);
             if (u) el.innerHTML = `<img src="${esc(u)}" loading="lazy" alt="">`;
           });
         }).catch(() => {});
