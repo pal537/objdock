@@ -10,6 +10,19 @@
 
 > 关键词：对象存储管理, OSS 管理工具, S3 浏览器, R2 管理, self-hosted S3 client, S3 web UI, 图床管理
 
+## 📸 界面截图
+
+<table>
+  <tr>
+    <td><a href="https://raw.githubusercontent.com/pal537/objdock/main/docs/screenshots/1-add-account.png"><img src="https://raw.githubusercontent.com/pal537/objdock/main/docs/screenshots/1-add-account.png" width="420" alt="添加存储账户向导"></a></td>
+    <td><a href="https://raw.githubusercontent.com/pal537/objdock/main/docs/screenshots/2-files-grid.jpg"><img src="https://raw.githubusercontent.com/pal537/objdock/main/docs/screenshots/2-files-grid.jpg" width="420" alt="文件管理缩略图视图"></a></td>
+  </tr>
+  <tr>
+    <td><a href="https://raw.githubusercontent.com/pal537/objdock/main/docs/screenshots/3-dashboard-dark.png"><img src="https://raw.githubusercontent.com/pal537/objdock/main/docs/screenshots/3-dashboard-dark.png" width="420" alt="仪表盘深色模式"></a></td>
+    <td><a href="https://raw.githubusercontent.com/pal537/objdock/main/docs/screenshots/4-dashboard-light.png"><img src="https://raw.githubusercontent.com/pal537/objdock/main/docs/screenshots/4-dashboard-light.png" width="420" alt="仪表盘浅色模式"></a></td>
+  </tr>
+</table>
+
 ---
 
 ## ✨ 功能

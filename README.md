@@ -10,6 +10,19 @@ Supports **Cloudflare R2**, **Amazon S3**, **Alibaba Cloud OSS**, **Tencent Clou
 
 > Keywords / 关键词：对象存储管理, OSS 管理工具, S3 浏览器, R2 管理, self-hosted S3 client, S3 web UI, 图床管理
 
+## 📸 Screenshots
+
+<table>
+  <tr>
+    <td><a href="https://raw.githubusercontent.com/pal537/objdock/main/docs/screenshots/1-add-account.png"><img src="https://raw.githubusercontent.com/pal537/objdock/main/docs/screenshots/1-add-account.png" width="420" alt="Add storage account wizard"></a></td>
+    <td><a href="https://raw.githubusercontent.com/pal537/objdock/main/docs/screenshots/2-files-grid.jpg"><img src="https://raw.githubusercontent.com/pal537/objdock/main/docs/screenshots/2-files-grid.jpg" width="420" alt="File manager grid view"></a></td>
+  </tr>
+  <tr>
+    <td><a href="https://raw.githubusercontent.com/pal537/objdock/main/docs/screenshots/3-dashboard-dark.png"><img src="https://raw.githubusercontent.com/pal537/objdock/main/docs/screenshots/3-dashboard-dark.png" width="420" alt="Dashboard dark mode"></a></td>
+    <td><a href="https://raw.githubusercontent.com/pal537/objdock/main/docs/screenshots/4-dashboard-light.png"><img src="https://raw.githubusercontent.com/pal537/objdock/main/docs/screenshots/4-dashboard-light.png" width="420" alt="Dashboard light mode"></a></td>
+  </tr>
+</table>
+
 ---
 
 ## ✨ Features
