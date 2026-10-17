@@ -41,3 +41,12 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
             APP_VERSION=${{ github.sha }}
+
+      - name: Update Docker Hub description
+        uses: peter-evans/dockerhub-description@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          repository: pal537/objdock
+          short-description: "ObjDock — Self-hosted S3 web manager (R2/S3/OSS/COS/Kodo/B2/MinIO)，对象存储网页管理，五语言/深色模式"
+          readme-filepath: ./README.md
