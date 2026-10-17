@@ -4,7 +4,10 @@ services:
       context: .
       args:
         APP_VERSION: ${APP_VERSION:-dev}
-    image: objdock:latest
+    # Prebuilt image from Docker Hub (multi-arch: amd64/arm64).
+    # `docker compose up -d` pulls it automatically — no build needed.
+    # Add --build to build from source instead.
+    image: pal537/objdock:latest
     container_name: objdock
     restart: unless-stopped
     ports:

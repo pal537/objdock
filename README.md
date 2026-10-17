@@ -48,6 +48,8 @@ git clone https://github.com/pal537/objdock.git && cd objdock && docker compose 
 
 Open **http://your-server-ip:8080** → register the first account (it becomes admin) → add your storage.
 
+> The one-liner pulls the prebuilt multi-arch image from Docker Hub ([pal537/objdock](https://hub.docker.com/r/pal537/objdock), amd64/arm64) — no compilation needed, up in under a minute. Prefer building from source? `docker compose up -d --build`.
+>
 > No manual key setup needed: on first start ObjDock generates its credential-encryption key automatically and saves it inside the data volume. (Prefer your own key? Set `OBJDOCK_ENCRYPTION_KEY` in `.env` — see [Configuration](#️-configuration).)
 
 > ⚠️ **Before exposing to the internet:** put a reverse proxy with HTTPS in front (see [Production deployment](#-production-deployment) below), and turn off open registration in Settings once your own account exists.

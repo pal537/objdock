@@ -22,7 +22,8 @@ if docker ps -a --format '{{.Names}}' 2>/dev/null | grep -qx 'objdock'; then
   echo "   如需重装：请先备份好 .env（里面有加密密钥），再到原部署目录执行 docker compose down，然后重新运行本脚本。"
   exit 0
 fi
-docker compose up -d --build
+# 直接拉取预构建镜像（Docker Hub pal537/objdock，多架构），无需本地编译
+docker compose up -d
 
 IP=$(hostname -I 2>/dev/null | awk '{print $1}')
 IP=${IP:-your-server-ip}

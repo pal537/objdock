@@ -48,6 +48,8 @@ git clone https://github.com/pal537/objdock.git && cd objdock && docker compose 
 
 打开 **http://your-server-ip:8080** → 注册第一个账号（自动成为管理员）→ 添加你的存储。
 
+> 一键脚本拉取 Docker Hub 上的预构建多架构镜像（[pal537/objdock](https://hub.docker.com/r/pal537/objdock)，amd64/arm64），无需编译，1 分钟内跑起来。想自己编译？`docker compose up -d --build`。
+>
 > 不用手动配密钥：首次启动时 ObjDock 会自动生成凭据加密密钥，保存在数据卷里。（想用自己的密钥？在 `.env` 里设 `OBJDOCK_ENCRYPTION_KEY` —— 见[配置](#️-配置)。）
 
 > ⚠️ **上线前必做：** 前面加反向代理开 HTTPS（见[生产部署](#-生产部署)），建好自己的账号后去设置里关掉开放注册。
