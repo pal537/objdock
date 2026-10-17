@@ -1,12 +1,14 @@
-# ⚓ ObjDock
+# ⚓ ObjDock · 对象存储网页管理
 
-**Your object storage, docked.** — A self-hosted web client for S3-compatible object storage.
+**Your object storage, docked.** — A self-hosted web manager for S3-compatible object storage.
 
 [English](README.md) | [中文](README.zh-CN.md)
 
 Browse buckets like local folders: upload, download, preview, share, and monitor usage from a dashboard — without handing your cloud credentials to any third-party app. Your keys stay AES-256-GCM encrypted on your own server.
 
-Supports **Cloudflare R2**, **Amazon S3**, **Alibaba Cloud OSS**, **Tencent Cloud COS**, **Qiniu Kodo**, **MinIO**, and any S3-compatible endpoint.
+Supports **Cloudflare R2**, **Amazon S3**, **Alibaba Cloud OSS**, **Tencent Cloud COS**, **Qiniu Kodo**, **Backblaze B2**, **MinIO**, and any S3-compatible endpoint.
+
+> Keywords / 关键词：对象存储管理, OSS 管理工具, S3 浏览器, R2 管理, self-hosted S3 client, S3 web UI, 图床管理
 
 ---
 
@@ -14,14 +16,17 @@ Supports **Cloudflare R2**, **Amazon S3**, **Alibaba Cloud OSS**, **Tencent Clou
 
 | Area | Details |
 |---|---|
-| 📊 **Dashboard** | Total usage, file/folder counts, per-folder storage bars, per-type donut chart, daily growth trend, 30-day activity chart, manual quota card with progress bar |
-| 📁 **File manager** | Grid / list views, breadcrumbs, three thumbnail sizes, sorting (name/size/date), click-to-enter folders, inline preview (images, video, audio, PDF, text) |
-| ⬆️ **Upload** | Browser-direct upload via presigned URLs (files never pass through the server), progress display |
-| 🔗 **Share links** | Time-limited presigned URLs — recipients need no login |
-| 🪣 **Multi-account** | Bind many storage accounts across providers; one-click switching between accounts and buckets |
-| 🧙 **Guided setup** | Provider cards auto-fill endpoints; multi-bucket wizard (one account per bucket); connection test before saving |
-| 🔐 **Security** | Argon2id password hashing, login rate limiting, registration on/off switch, AES-256-GCM encrypted credentials at rest |
-| 🎨 **UI** | Clean modern design, SVG icon set, responsive layout |
+| 📊 **Dashboard** | Total usage, file/folder counts, per-folder storage bars, per-type donut chart, daily growth trend, 30-day activity heatmap, bucket quick-switch bar, manual quota card with progress bar |
+| 📁 **File manager** | Grid / list views, 3 thumbnail sizes, breadcrumbs, sorting (name/size/date), click-to-enter folders, right-click context menu, inline preview (images, video, audio, PDF, text), multi-select with batch zip download, rename, move, copy, delete |
+| ⬆️ **Upload** | Browser-direct upload via presigned URLs (files never pass through your server), drag & drop, per-file progress |
+| 📤 **Upload links** | Public upload links — anyone can upload to a folder without logging in; expiry, password, and max-use limits; revocable |
+| 🔗 **Share links** | Private share links with expiry, password, and view limits; revocable; public landing page follows the visitor's browser language |
+| 🪣 **Multi-account** | Bind many storage accounts across providers; one-click switching between accounts and buckets from the sidebar |
+| 🧙 **Guided setup** | Provider cards auto-fill endpoints; multi-bucket wizard; connection test before saving; per-bucket quota display; custom domains for public links |
+| 👥 **Users** | Registration with first-user-becomes-admin; admin user management; per-user language preference |
+| 🌍 **Languages** | 简体中文 · English · 日本語 · 한국어 · Español — full UI translation, zero mixed-language leakage |
+| 🌙 **Dark mode** | One-click toggle, full dark theme |
+| 🔐 **Security** | Argon2id password hashing, login rate limiting, registration on/off switch, AES-256-GCM encrypted credentials at rest, HTTPS-ready |
 
 ---
 
@@ -29,25 +34,38 @@ Supports **Cloudflare R2**, **Amazon S3**, **Alibaba Cloud OSS**, **Tencent Clou
 
 Prerequisites: Docker 20.10+ and Docker Compose v2 on any Linux host.
 
+**One line, that's it:**
+
 ```bash
-# 1. Clone
-git clone https://github.com/pal537/objdock.git && cd objdock
-
-# 2. Generate the encryption key (do this ONCE — it encrypts stored cloud credentials)
-docker compose build
-docker run --rm objdock:latest /objdock genkey
-# → prints a base64 key, e.g. 4fJ9...==
-
-# 3. Save it to .env (keep this file private!)
-echo 'OBJDOCK_ENCRYPTION_KEY=<paste-key-here>' > .env
-
-# 4. Start
-docker compose up -d
+curl -fsSL https://raw.githubusercontent.com/pal537/objdock/main/install.sh | bash
 ```
 
-Open **http://your-server-ip:8080** → register the first account → add your storage.
+Or manually:
 
-> ⚠️ **Do this before exposing to the internet:** put a reverse proxy with HTTPS in front (see [Production deployment](#-production-deployment) below), and turn off open registration in Settings once your own account exists.
+```bash
+git clone https://github.com/pal537/objdock.git && cd objdock && docker compose up -d
+```
+
+Open **http://your-server-ip:8080** → register the first account (it becomes admin) → add your storage.
+
+> No manual key setup needed: on first start ObjDock generates its credential-encryption key automatically and saves it inside the data volume. (Prefer your own key? Set `OBJDOCK_ENCRYPTION_KEY` in `.env` — see [Configuration](#️-configuration).)
+
+> ⚠️ **Before exposing to the internet:** put a reverse proxy with HTTPS in front (see [Production deployment](#-production-deployment) below), and turn off open registration in Settings once your own account exists.
+
+---
+
+## ⚙️ Configuration
+
+All via environment variables (or a `.env` file next to `docker-compose.yml`):
+
+| Variable | Default | Description |
+|---|---|---|
+| `OBJDOCK_ENCRYPTION_KEY` | *(auto-generated)* | base64 32-byte key for credential encryption. If unset, generated on first run and saved to `<dataDir>/.encryption_key`. ⚠️ Never change it afterwards — stored credentials would become unreadable. |
+| `OBJDOCK_DATA_DIR` | `./data` (`/data` in Docker) | Where `objdock.db` lives |
+| `OBJDOCK_ADDR` | `127.0.0.1:8080` (`0.0.0.0:8080` in Docker) | Listen address |
+| `OBJDOCK_SECURE_COOKIES` | `0` (`1` in Docker) | Set `1` when serving over HTTPS |
+
+Generate a key manually with: `docker run --rm objdock:latest /objdock genkey`
 
 ---
 
@@ -81,17 +99,7 @@ sudo usermod -aG docker $USER   # re-login afterwards
 
 ```bash
 sudo mkdir -p /opt/objdock && cd /opt/objdock
-sudo git clone https://github.com/pal537/objdock.git .
-
-# Generate key (once!) and write .env
-docker compose build
-docker run --rm objdock:latest /objdock genkey
-# copy the printed key:
-nano .env
-# --- .env contents ---
-# OBJDOCK_ENCRYPTION_KEY=<paste-key-here>
-
-docker compose up -d
+curl -fsSL https://raw.githubusercontent.com/pal537/objdock/main/install.sh | sudo bash
 docker logs objdock   # should show "listening on 0.0.0.0:8080"
 ```
 
@@ -117,100 +125,25 @@ EOF
 
 sudo nginx -t && sudo systemctl reload nginx
 
-# Get a free Let's Encrypt certificate
+# Free Let's Encrypt certificate:
 sudo certbot --nginx -d oss.example.com
 ```
 
-### Step 5 — Harden
+### Step 5 — Lock it down
 
-1. Open `https://oss.example.com`, register your admin account.
-2. Go to **Settings** → turn **open registration OFF** (so strangers can't sign up).
-3. In `.env`, the compose file already sets `OBJDOCK_SECURE_COOKIES=1` — keep it `1` whenever you serve over HTTPS.
+1. Open `https://oss.example.com`, register your account (first = admin).
+2. Go to **Settings → Site** and turn **off** open registration.
 
-### Step 6 — Add your first storage account
+### Backing up
 
-1. Click **＋ Add account** (or Settings → Add).
-2. Pick your provider card (R2 / S3 / OSS / COS / MinIO…).
-3. Fill in the credentials. For **Cloudflare R2** you need an **object read/write scoped API token** (it has no `ListBuckets` permission — the wizard verifies each bucket with `HeadBucket` instead).
-4. Separate multiple buckets with commas — the wizard creates one account per bucket.
-5. Optionally set a **quota** (e.g. `10 GB`) — S3 has no quota API, so the dashboard shows usage against the number you enter.
-
----
-
-## ⚙️ Configuration
-
-All settings are environment variables (via `.env` / compose `environment`):
-
-| Variable | Required | Default | Description |
-|---|---|---|---|
-| `OBJDOCK_ENCRYPTION_KEY` | ✅ | — | Base64 32-byte key from `/objdock genkey`. Encrypts cloud credentials in the DB. **Losing it = losing access to stored credentials.** |
-| `OBJDOCK_SECURE_COOKIES` | — | `0` | Set `1` when serving over HTTPS (adds `Secure` to session cookies). |
-| `OBJDOCK_DATA_DIR` | — | `/data` | Directory for `objdock.db` (SQLite). |
-| `OBJDOCK_ADDR` | — | `0.0.0.0:8080` | Listen address inside the container. |
-
----
-
-## 💾 Backup & Restore
-
-Everything lives in **one SQLite file** inside the `objdock-data` Docker volume.
-
-**Backup** (run on the host):
-```bash
-docker run --rm -v objdock-data:/data -v $(pwd):/backup alpine \
-  cp /data/objdock.db /backup/objdock-$(date +%F).db
-```
-
-**Restore**: stop the container, copy your backup back to the volume as `objdock.db`, start again.
-
-> Tip: keep the 3 most recent backups; a daily cron + rotation is enough for most setups.
-
----
-
-## 🔄 Updating
+The SQLite database and the auto-generated encryption key both live in the Docker volume `objdock-data`. Back it up regularly:
 
 ```bash
-cd /opt/objdock
-git pull
-docker compose up -d --build
+docker run --rm -v objdock-data:/data -v /root/backups:/backup alpine \
+  tar czf /backup/objdock-data-$(date +%F).tar.gz -C / data
 ```
 
-The SQLite schema migrates automatically on startup — no manual steps.
-
----
-
-## 🔐 Security Notes
-
-- Cloud credentials are encrypted with **AES-256-GCM** before touching disk; the key lives only in your `.env`.
-- Passwords use **Argon2id**; logins are **rate-limited**.
-- File transfers use **presigned URLs** — bytes go browser ↔ storage directly, never through your server.
-- Share links are presigned too: set an expiry, no account needed for the recipient.
-- The container binds to localhost only; never expose port 8080 directly — always use the HTTPS reverse proxy.
-
----
-
-## ❓ FAQ
-
-**Q: Why does the R2 connection test say "AccessDenied" on ListBuckets?**
-A: R2 scoped tokens intentionally lack `ListBuckets`. ObjDock falls back to `HeadBucket` per bucket — if your bucket name is right, the test passes.
-
-**Q: The dashboard shows usage but no total — why?**
-A: The S3 protocol has no quota API. Enter a manual quota when adding/editing the account and the dashboard will show used/total/remaining.
-
-**Q: I lost my `OBJDOCK_ENCRYPTION_KEY`.**
-A: Stored cloud credentials can't be decrypted anymore. Restore from a backup that was encrypted with the same key, or re-add the accounts.
-
-**Q: Can I run without Docker?**
-A: Yes — it's a single Go binary with the frontend embedded: `go build -o objdock .` then `./objdock`. Set `OBJDOCK_ENCRYPTION_KEY` and `OBJDOCK_DATA_DIR` env vars.
-
----
-
-## 🛠 Development
-
-```bash
-go run .                    # dev server on :8080
-# Frontend lives in web/static and is embedded via go:embed —
-# edit files, rebuild, no separate build step.
-```
+Lose the volume (or change the encryption key) and stored cloud credentials can't be decrypted — you'd re-add the accounts.
 
 ---
 
