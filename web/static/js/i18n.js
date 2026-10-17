@@ -47,6 +47,7 @@ function setLang(lang) {
   currentLang = lang;
   try { localStorage.setItem('objdock-lang', lang); } catch (e) {}
   document.documentElement.lang = lang;
+  try { document.title = t('brand.pageTitle'); } catch (e) {}
   // 保存到后端用户配置（如果已登录）
   try {
     if (typeof state !== 'undefined' && state.user) {

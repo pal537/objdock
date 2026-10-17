@@ -81,7 +81,7 @@ function fmtSize(b) {
 function fmtDate(s) {
   if (!s) return '';
   const d = new Date(s);
-  return d.toLocaleString('zh-CN', { hour12: false });
+  return d.toLocaleString(({'zh-CN':'zh-CN','en':'en-US','ja':'ja-JP','ko':'ko-KR','es':'es-ES'})[currentLang] || 'zh-CN', { hour12: false });
 }
 function esc(s) {
   return String(s == null ? '' : s).replace(/[&<>"']/g, c =>
@@ -99,7 +99,7 @@ async function api(method, url, body) {
   if (body !== undefined) { opt.headers['Content-Type'] = 'application/json'; opt.body = JSON.stringify(body); }
   const r = await fetch(url, opt);
   const d = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(d.error || ('请求失败(' + r.status + ')'));
+  if (!r.ok) throw new Error(d.error || t('err.requestFailed', {status: r.status}));
   return d;
 }
 const apiGet = (u) => api('GET', u);
@@ -179,10 +179,10 @@ function renderAuthForm(mode) {
   const isLogin = mode === 'login';
   $('#authForm').innerHTML = `
     ${isLogin ? '' : '<div id="firstAdminHint" hidden style="background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8;border-radius:10px;padding:10px 14px;font-size:13px;margin-bottom:12px">' + t('auth.firstAdmin') + '</div>'}
-    <label class="fld"><span>用户名</span><input class="input" id="aUser" autocomplete="username"></label>
-    <label class="fld"><span>密码${isLogin ? '' : '（至少 8 位，字母+数字）'}</span><input class="input" id="aPass" type="password" autocomplete="${isLogin ? 'current-password' : 'new-password'}"></label>
-    ${isLogin ? '' : '<label class="fld"><span>确认密码</span><input class="input" id="aPass2" type="password" autocomplete="new-password"></label>'}
-    ${isLogin ? '' : `<label class="fld"><span>语言 / Language</span><select class="input" id="aLang">
+    <label class="fld"><span>${t('auth.username')}</span><input class="input" id="aUser" autocomplete="username"></label>
+    <label class="fld"><span>${t('auth.password')}${isLogin ? '' : t('auth.pwdHint')}</span><input class="input" id="aPass" type="password" autocomplete="${isLogin ? 'current-password' : 'new-password'}"></label>
+    ${isLogin ? '' : `<label class="fld"><span>${t('auth.confirmPwd')}</span><input class="input" id="aPass2" type="password" autocomplete="new-password"></label>`}
+    ${isLogin ? '' : `<label class="fld"><span>${t('settings.language')}</span><select class="input" id="aLang">
       <option value="en" selected>English</option>
       <option value="zh-CN">简体中文</option>
       <option value="ja">日本語</option>
@@ -244,7 +244,7 @@ function renderShell() {
       <div class="side-foot">
         <div class="storage-switch" id="switcher">
           <div class="avatar" id="swAvatar">${ic('bucket')}</div>
-          <div><div class="sname" id="swName">选择账户</div><div class="ssub" id="swSub">点击切换</div></div>
+          <div><div class="sname" id="swName">${t('account.select')}</div><div class="ssub" id="swSub">${t('account.clickSwitch')}</div></div>
         </div>
         <div class="nav-item" data-nav="settings">${ic('settings')}<span>${t('nav.settings')}</span></div>
         <div class="acct-card" id="acctCard">
@@ -296,8 +296,8 @@ function nav(which) {
 /* ---------- account/bucket switcher ---------- */
 function updateSwitcherLabel() {
   const a = state.accounts.find(x => x.id === state.accountId);
-  $('#swName').textContent = a ? a.name : '选择账户';
-  $('#swSub').textContent = a ? (state.bucket || '选择存储桶') : '点击切换';
+  $('#swName').textContent = a ? a.name : t('account.select');
+  $('#swSub').textContent = a ? (state.bucket || t('account.selectBucket')) : t('account.clickSwitch');
   const av = $('#swAvatar');
   if (av) av.innerHTML = a ? providerLogo(a.provider, 20) : ic('bucket');
 }
@@ -308,7 +308,7 @@ function toggleSwitcher() {
   dd.style.left = r.left + 'px';
   dd.style.top = ''; dd.style.bottom = '';
   dd.style.visibility = 'hidden'; dd.hidden = false;
-  let html = '<div class="dsec">账户</div>';
+  let html = '<div class="dsec">' + t('settings.accounts') + '</div>';
   if (!state.accounts.length) html += '<div class="di" onclick="nav(\'settings\')">' + t('account.goAdd') + '</div>';
   state.accounts.forEach(a => {
     html += `<div class="di ${a.id === state.accountId ? 'sel' : ''}" data-acct="${a.id}">${providerLogo(a.provider, 16)} ${esc(a.name)}</div>`;
@@ -352,7 +352,7 @@ async function toggleSwitcherRefreshBuckets() {
       const active = $('.nav-item.active');
       nav(active ? active.dataset.nav : 'dash');
     });
-  } catch (e) { box.innerHTML = `<div class="di muted">加载失败：${esc(e.message)}</div>`; }
+  } catch (e) { box.innerHTML = `<div class="di muted">${t('common.loadFailed', {msg: esc(e.message)})}</div>`; }
 }
 async function selectAccount(id) {
   state.accountId = id; state.bucket = ''; state.prefix = '';
@@ -374,7 +374,7 @@ function toggleAcctMenu() {
   dd.style.left = r.left + 'px'; dd.style.top = (r.top - 130) + 'px';
   dd.innerHTML = `
     <div class="di" id="mProfile">${ic('user')}${t('account.editProfile')}</div>
-    <div class="di" id="mLogout">${ic('logout')}退出登录</div>`;
+    <div class="di" id="mLogout">${ic('logout')}${t('account.logout')}</div>`;
   dd.hidden = false;
   $('#mProfile').onclick = (e) => { e.stopPropagation(); dd.hidden = true; renderProfile(); };
   $('#mLogout').onclick = async (e) => { e.stopPropagation(); await apiPost('/api/logout'); location.reload(); };
@@ -402,7 +402,7 @@ async function renderDash() {
         const active = (a.id === state.accountId && b === state.bucket) ? ' active' : '';
         const logo = providerLogo(a.provider, 16);
         chips.push(`<button class="bucket-chip${active}" data-acct="${a.id}" data-bucket="${esc(b)}">
-          <span class="bc-acct">${logo}<span style="margin-left:5px">${esc(a.name)}</span></span><span class="bc-bucket">${esc(b || '默认桶')}</span>
+          <span class="bc-acct">${logo}<span style="margin-left:5px">${esc(a.name)}</span></span><span class="bc-bucket">${esc(b || t('account.defaultBucket'))}</span>
         </button>`);
       });
     });
@@ -431,7 +431,7 @@ async function renderDash() {
   const quota = acct.quotaBytes || 0;
   if (quota > 0) {
     const qb = `<div class="card" id="quotaCard"><h3>${ic('drive')}${t('dash.quota')}</h3>
-      <p class="desc">配额 ${fmtSize(quota)} · 正在统计使用量…</p></div>`;
+      <p class="desc">${t('dash.quotaCalc', {q: fmtSize(quota)})}</p></div>`;
     $('#dashBody').innerHTML = qb;
   }
   await loadDash(quota);
@@ -448,9 +448,9 @@ async function loadDash(quota) {
       const q = acct.quotaBytes || quota;
       if (q > 0) {
         $('#dashBody').innerHTML = `<div class="card"><h3>${ic('drive')}${t('dash.quota')}</h3>
-          <p class="desc">配额 ${fmtSize(q)} · 使用量统计失败（${esc(e.message)}）</p></div>`;
+          <p class="desc">${t('dash.quotaFail', {q: fmtSize(q), e: esc(e.message)})}</p></div>`;
       } else {
-        $('#dashBody').innerHTML = `<div class="empty">统计失败：${esc(e.message)}</div>`;
+        $('#dashBody').innerHTML = `<div class="empty">${t('dash.statsFailed', {msg: esc(e.message)})}</div>`;
       }
       return;
     }
@@ -485,11 +485,11 @@ async function loadDash(quota) {
   bars = days.map(x => {
     const h = Math.max(4, (x.c / maxAct * 100));
     const bg = x.c === 0 ? '#eef2f7' : x.c === maxAct && maxAct > 1 ? '#2563eb' : '#93c5fd';
-    return `<div class="ab" style="height:${h.toFixed(0)}%;background:${bg}"><span class="tip">${x.k} · ${x.c} 个文件变动</span></div>`;
+    return `<div class="ab" style="height:${h.toFixed(0)}%;background:${bg}"><span class="tip">${t('dash.activityTip', {k: x.k, c: x.c})}</span></div>`;
   }).join('');
   // trend line
   const trend = d.trend || [];
-  let trendSvg = '<div class="muted">暂无历史数据（每天访问仪表盘一次，攒够 2 天数据后生成趋势）</div>';
+  let trendSvg = '<div class="muted">' + t('dash.noHistory') + '</div>';
   const validTrend = trend.filter(p => p.day && typeof p.totalSize === 'number');
   if (validTrend.length >= 2) {
     const max = Math.max(...validTrend.map(p => p.totalSize), 1);
@@ -507,28 +507,28 @@ async function loadDash(quota) {
     const left = Math.max(0, quota - d.totalSize);
     const barColor = pct >= 90 ? '#ef4444' : pct >= 70 ? '#f59e0b' : '#3b82f6';
     quotaHtml = `<div class="card"><h3>${ic('drive')}${t('dash.quota')}</h3>
-      <p class="desc">已用 ${fmtSize(d.totalSize)} / 总计 ${fmtSize(quota)}（${pct.toFixed(1)}%），剩余 ${fmtSize(left)}</p>
+      <p class="desc">${t('dash.quotaDetail', {used: fmtSize(d.totalSize), quota: fmtSize(quota), pct: pct.toFixed(1), left: fmtSize(left)})}</p>
       <div style="height:12px;background:#f1f5f9;border-radius:6px;overflow:hidden">
         <div style="height:100%;width:${pct.toFixed(1)}%;background:${barColor};border-radius:6px;transition:width .5s ease"></div>
       </div></div>`;
   }
   $('#dashBody').innerHTML = quotaHtml + `
     <div class="stat-grid">
-      <div class="stat"><div class="ic" style="background:#dbeafe;color:#2563eb">${ic('drive')}</div><div><div class="v">${fmtSize(d.totalSize)}</div><div class="l">${t('dash.totalStorage')}</div><div class="s">${d.truncated ? '约 ' : ''}${d.fileCount} 个文件${d.truncated ? '（仅扫描前 ' + d.scanned + ' 个）' : ''}</div></div></div>
-      <div class="stat"><div class="ic" style="background:#ede9fe;color:#7c3aed">${ic('file')}</div><div><div class="v">${d.fileCount}</div><div class="l">${t('dash.files')}</div><div class="s">文件夹 ${d.byFolder.length} 个</div></div></div>
-      <div class="stat"><div class="ic" style="background:#fef3c7;color:#d97706">${ic('layers')}</div><div><div class="v">${fmtSize(d.avgSize)}</div><div class="l">${t('dash.avgSize')}</div><div class="s">最大 ${fmtSize(d.largest.size)}</div></div></div>
-      <div class="stat"><div class="ic" style="background:#dcfce7;color:#059669">${ic('clock')}</div><div><div class="v">${d.weekCount}</div><div class="l">${t('dash.recent7')}</div><div class="s">最活跃 ${Object.keys(act).sort().pop() || '-'}</div></div></div>
+      <div class="stat"><div class="ic" style="background:#dbeafe;color:#2563eb">${ic('drive')}</div><div><div class="v">${fmtSize(d.totalSize)}</div><div class="l">${t('dash.totalStorage')}</div><div class="s">${t('dash.fileCount', {approx: d.truncated ? t('dash.approx') : '', count: d.fileCount, scanned: d.truncated ? t('dash.scannedNote', {n: d.scanned}) : ''})}</div></div></div>
+      <div class="stat"><div class="ic" style="background:#ede9fe;color:#7c3aed">${ic('file')}</div><div><div class="v">${d.fileCount}</div><div class="l">${t('dash.files')}</div><div class="s">${t('dash.folderCount', {n: d.byFolder.length})}</div></div></div>
+      <div class="stat"><div class="ic" style="background:#fef3c7;color:#d97706">${ic('layers')}</div><div><div class="v">${fmtSize(d.avgSize)}</div><div class="l">${t('dash.avgSize')}</div><div class="s">${t('dash.largestFile', {size: fmtSize(d.largest.size)})}</div></div></div>
+      <div class="stat"><div class="ic" style="background:#dcfce7;color:#059669">${ic('clock')}</div><div><div class="v">${d.weekCount}</div><div class="l">${t('dash.recent7')}</div><div class="s">${t('dash.mostActive', {d: Object.keys(act).sort().pop() || '-'})}</div></div></div>
     </div>
     <div class="panels">
       <div class="panel"><h4>${t('dash.byFolder')}</h4>
         ${d.byFolder.map(f => `<div class="bar-row"><span class="bn" title="${esc(f.name)}">${esc(f.name)}</span>
           <span class="bt"><span class="bf" style="display:block;width:${(f.value / maxF * 100).toFixed(1)}%"></span></span>
-          <span class="bv">${fmtSize(f.value)}</span></div>`).join('') || '<div class="muted">无数据</div>'}
+          <span class="bv">${fmtSize(f.value)}</span></div>`).join('') || '<div class="muted">' + t('dash.noData') + '</div>'}
       </div>
       <div class="panel"><h4>${t('dash.byType')}</h4><div class="donut-wrap">
         <svg width="140" height="140" viewBox="0 0 140 140"><circle cx="70" cy="70" r="54" fill="#f1f5f9"/>${segs}
           <text x="70" y="66" text-anchor="middle" font-size="13" font-weight="700">${fmtSize(d.totalSize)}</text>
-          <text x="70" y="84" text-anchor="middle" font-size="11" fill="#8a94a6">总计</text></svg>
+          <text x="70" y="84" text-anchor="middle" font-size="11" fill="#8a94a6">${t('dash.totalLabel')}</text></svg>
         <div class="legend">${d.byType.map((t, i) =>
           `<div class="lr"><span class="dot" style="background:${DONUT_COLORS[i % 8]}"></span>${esc(t.name)}
            <span class="muted">${fmtSize(t.value)} ${(t.value / typeTotal * 100).toFixed(0)}%</span></div>`).join('')}
@@ -537,12 +537,11 @@ async function loadDash(quota) {
     </div>
     <div class="card"><h3>${ic('trend')}${t('dash.trend')}</h3><p class="desc">${t('dash.trendDesc')}</p>${trendSvg}</div>
     <div class="card"><h3>${ic('calendar')}${t('dash.activity')}</h3>
-      <p class="desc">每天有文件新增或修改的天数统计，共 ${totalAct} 次变动</p>
+      <p class="desc">${t('dash.activityDesc', {n: totalAct})}</p>
       <div class="activity-chart">${bars}</div>
       <div class="activity-legend"><span>${days[0].label}</span><span>${days[29].label}</span></div></div>
-    ${quota > 0 ? '' : `<div class="card"><h3>${ic('drive')}存储空间说明</h3>
-      <p class="desc" style="margin-bottom:0">S3 兼容协议（R2 / OSS / COS / MinIO）不提供查询总配额的接口，因此无法自动显示「总空间 / 剩余空间」。
-      可在设置 → 编辑账户中手动填写空间配额，仪表盘即会显示使用率。</p></div>`}`;
+    ${quota > 0 ? '' : `<div class="card"><h3>${ic('drive')}${t('dash.noQuotaTitle')}</h3>
+      <p class="desc" style="margin-bottom:0">${t('dash.noQuotaDesc')}</p></div>`}`;
 }
 
 /* ---------- file browser ---------- */
@@ -550,7 +549,7 @@ let selKeys = new Set();
 async function renderFiles() {
   const main = $('#main');
   if (!state.accountId || !state.bucket) {
-    main.innerHTML = `<div class="card"><h3>${ic('folder')}全部文件</h3>
+    main.innerHTML = `<div class="card"><h3>${ic('folder')}${t('nav.files')}</h3>
       <div class="empty"><div class="big">${ic('bucket', 56)}</div>${t('empty.noAccount')}</div></div>`;
     return;
   }
@@ -558,7 +557,7 @@ async function renderFiles() {
   main.innerHTML = `
     <div class="topbar"><h2>${ic('folder')}${t('nav.files')}</h2><div class="spacer"></div>
       <input class="input input-sm" id="searchInput" placeholder="' + t('file.search') + '" style="width:180px">
-      <select class="input input-sm" id="sortSel" title="排序">
+      <select class="input input-sm" id="sortSel" title="${t('common.sort')}">
         <option value="time-desc">${t('sort.timeDesc')}</option>
         <option value="time-asc">${t('sort.timeAsc')}</option>
         <option value="size-desc">${t('sort.sizeDesc')}</option>
@@ -577,7 +576,7 @@ async function renderFiles() {
       </div>
       <button class="btn btn-sm" id="btnSelect">${ic('check', 15)}${t('common.select')}</button>
       <button class="btn btn-sm" id="btnUpload">${ic('upload', 15)}${t('common.upload')}</button>
-      <button class="btn btn-sm" id="btnUpLink" title="生成公开上传链接，别人无需登录可上传文件到此目录">${t('nav.uploadLinks')}</button>
+      <button class="btn btn-sm" id="btnUpLink" title="${t('upload.tip')}">${t('nav.uploadLinks')}</button>
       <button class="btn btn-sm" id="btnMkdir">${ic('folderPlus', 15)}${t('file.newFolderBtn')}</button>
       <button class="btn btn-sm" id="btnRefresh">↻</button>
     </div>
@@ -595,14 +594,14 @@ async function renderFiles() {
   $('#vList').onclick = () => setView('list');
   $('#btnUpload').onclick = () => $('#filePicker').click();
   $('#btnMkdir').onclick = () => {
-    $('#promptInput').placeholder = '例如：我的照片';
-    askPrompt(t('file.newFolder'), '在当前目录下创建一个新文件夹', '', async (v) => {
+    $('#promptInput').placeholder = t('file.newFolderPh');
+    askPrompt(t('file.newFolder'), t('file.newFolderDesc'), '', async (v) => {
     v = v.trim().replace(/\//g, '');
     if (!v) return;
     try {
       await apiPost(`/api/accounts/${state.accountId}/mkdir`, { bucket: state.bucket, path: state.prefix + v });
-      toast('已创建'); loadFiles();
-    } catch (e) { toast('创建失败：' + e.message); }
+      toast(t('msg.created')); loadFiles();
+    } catch (e) { toast(t('file.createFailed', {msg: e.message})); }
     });
   };
   $('#btnRefresh').onclick = () => loadFiles();
@@ -619,12 +618,12 @@ async function renderFiles() {
   });
   $('#btnShareSel').onclick = () => {
     const keys = [...selKeys].filter(k => !k.endsWith('/'));
-    if (!keys.length) { toast('请选择要分享的文件'); return; }
+    if (!keys.length) { toast(t('file.selectShare')); return; }
     openShareMulti(keys);
   };
   $('#btnDlSel').onclick = async () => {
     const keys = [...selKeys].filter(k => !k.endsWith('/'));
-    if (!keys.length) { toast('所选没有可下载的文件'); return; }
+    if (!keys.length) { toast(t('file.noDownloadable')); return; }
     if (keys.length === 1) { await downloadFile(keys[0], keys[0].split('/').pop()); return; }
     // 多文件：浏览器端打包 zip
     const modal = $('#uploadModal'), list = $('#uploadList');
@@ -633,7 +632,7 @@ async function renderFiles() {
     $('#uploadModal').hidden = false;
     const row = document.createElement('div');
     row.style.cssText = 'padding:12px 0';
-    row.innerHTML = `<div style="margin-bottom:8px">正在打包 ${keys.length} 个文件…</div>
+    row.innerHTML = `<div style="margin-bottom:8px">${t('file.zippingHtml', {n: keys.length})}</div>
       <div style="height:8px;background:#e2e8f0;border-radius:4px;overflow:hidden">
         <div class="ufill" style="height:100%;width:0;background:#3b82f6;transition:width .2s"></div></div>
       <div class="ust" style="font-size:12px;color:#64748b;margin-top:6px"></div>`;
@@ -649,14 +648,14 @@ async function renderFiles() {
         const url = urls[key];
         if (!url) continue;
         const name = key.split('/').pop();
-        st.textContent = `下载中：${name} (${n + 1}/${keys.length})`;
+        st.textContent = t('file.downloading', {name: name, i: n + 1, total: keys.length});
         const resp = await fetch(url);
-        if (!resp.ok) throw new Error(`下载 ${name} 失败：HTTP ${resp.status}`);
+        if (!resp.ok) throw new Error(t('file.downloadFailedHttp', {name: name, status: resp.status}));
         zip.file(name, await resp.blob());
         n++;
         fill.style.width = Math.round(n / keys.length * 100) + '%';
       }
-      st.textContent = '正在生成 zip…';
+      st.textContent = t('file.generatingZip');
       const blob = await zip.generateAsync({ type: 'blob' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
@@ -664,10 +663,10 @@ async function renderFiles() {
       document.body.appendChild(a); a.click();
       setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 5000);
       $('#uploadModal').hidden = true;
-      modal.querySelector('h3').textContent = '上传文件';
-      toast(`已打包下载 ${n} 个文件`);
+      modal.querySelector('h3').textContent = t('file.uploadTitle');
+      toast(t('file.zipDone', {n: n}));
     } catch (e) {
-      st.textContent = '失败：' + e.message;
+      st.textContent = t('common.failedMsg', {msg: e.message});
       st.style.color = '#dc2626';
     }
   };
@@ -694,7 +693,7 @@ async function renderFiles() {
       cb.checked = !every;
       const card = cb.closest('.fitem'); if (card) card.classList.toggle('sel', !every);
     });
-    $('#btnSelAll').textContent = every ? t('file.selectAll') : '全不选';
+    $('#btnSelAll').textContent = every ? t('file.selectAll') : t('file.deselectAll');
     updateSelBar();
   };
   $('#sortSel').value = state.sort;
@@ -748,7 +747,7 @@ async function loadFiles() {
     const d = await apiGet(`/api/accounts/${state.accountId}/objects?bucket=${encodeURIComponent(state.bucket)}&prefix=${encodeURIComponent(state.prefix)}`);
     renderFileList(d);
     loadSideFolders(); // 侧边栏固定显示根目录，不跟随当前路径
-  } catch (e) { body.innerHTML = `<div class="empty">加载失败：${esc(e.message)}</div>`; }
+  } catch (e) { body.innerHTML = `<div class="empty">${t('common.loadFailed', {msg: esc(e.message)})}</div>`; }
 }
 function sortFiles(files) {
   const arr = files.slice();
@@ -767,7 +766,7 @@ function renderFileList(d) {
   const body = $('#fileBody');
   updateSelBar();
   if (!d.folders.length && !d.files.length) {
-    body.innerHTML = `<div class="empty"><div class="big">${ic('folderOpen', 56)}</div>空文件夹，把文件拖进来上传吧</div>`;
+    body.innerHTML = `<div class="empty"><div class="big">${ic('folderOpen', 56)}</div>${t('file.emptyHint')}</div>`;
     return;
   }
   if (state.view === 'grid') {
@@ -843,7 +842,7 @@ function renderFileList(d) {
     }
   } else {
     const checkCol = state.selectMode ? '<th class="check-cell"></th>' : '';
-    let h = `<div class="ftable-wrap"><table class="ftable"><thead><tr>${checkCol}<th>${t('file.colName')}</th><th style="width:110px">大小</th><th style="width:170px">${t('file.modTime')}</th><th style="width:170px;text-align:right">操作</th></tr></thead><tbody>`;
+    let h = `<div class="ftable-wrap"><table class="ftable"><thead><tr>${checkCol}<th>${t('file.colName')}</th><th style="width:110px">${t('file.colSize')}</th><th style="width:170px">${t('file.modTime')}</th><th style="width:170px;text-align:right">${t('file.colOp')}</th></tr></thead><tbody>`;
     d.folders.slice().sort((a, b) => a.name.localeCompare(b.name, 'zh-CN')).forEach(f => {
       h += `<tr>${state.selectMode ? '<td class="check-cell"></td>' : ''}
         <td><div class="fname clickable" data-folder="${esc(f.prefix)}"><div class="fic-sm folder">${ic('folder')}</div>
@@ -856,7 +855,7 @@ function renderFileList(d) {
           <span class="nm clickable" data-key="${esc(f.key)}" data-kind="${f.kind}" data-name="${esc(f.name)}">${esc(f.name)}</span></div></td>
         <td class="fsize">${fmtSize(f.size)}</td><td class="ftime">${fmtDate(f.lastModified)}</td>
         <td><div class="row-actions">
-          <button class="icon-btn" data-act="preview" title="预览">${ic('eye')}</button>
+          <button class="icon-btn" data-act="preview" title="${t('common.preview')}">${ic('eye')}</button>
           <button class="icon-btn" data-act="download" title="${t('act.download')}">${ic('download')}</button>
           <button class="icon-btn" data-act="share" title="${t('act.share')}">${ic('link')}</button>
           <button class="icon-btn" data-act="rename" title="${t('act.rename')}">${ic('pencil')}</button>
@@ -898,26 +897,26 @@ function updateSelBar() {
   const total = state.view === 'grid'
     ? $$('.fitem[data-key]', $('#fileBody')).length
     : $$('#fileBody [data-check]').length;
-  $('#selCount').textContent = `已选 ${selKeys.size} / ${total} 个`;
+  $('#selCount').textContent = t('file.selectedCount', {sel: selKeys.size, total: total});
 }
 function deleteSelected() {
   if (!selKeys.size) return;
-  askConfirm('删除文件', `确定删除选中的 ${selKeys.size} 个文件吗？此操作不可恢复。`, t('common.delete'), async () => {
+  askConfirm(t('file.deleteFile'), t('file.confirmDelete', {n: selKeys.size}), t('common.delete'), async () => {
     try {
       await apiPost(`/api/accounts/${state.accountId}/delete`, { bucket: state.bucket, keys: [...selKeys] });
-      toast(`已删除 ${selKeys.size} 个`); selKeys.clear(); loadFiles();
-    } catch (e) { toast('删除失败：' + e.message); }
+      toast(t('file.deletedCount', {n: selKeys.size})); selKeys.clear(); loadFiles();
+    } catch (e) { toast(t('file.deleteFailed', {msg: e.message})); }
   });
 }
 function renameObject(key, name) {
-  askPrompt(t('common.rename'), '新文件名', name, async (v) => {
+  askPrompt(t('common.rename'), t('file.newName'), name, async (v) => {
     v = v.trim();
     if (!v || v === name) return;
     const dst = state.prefix + v;
     try {
       await apiPost(`/api/accounts/${state.accountId}/rename`, { bucket: state.bucket, src: key, dst });
-      toast('重命名成功'); loadFiles();
-    } catch (e) { toast('重命名失败：' + e.message); }
+      toast(t('file.renameOk')); loadFiles();
+    } catch (e) { toast(t('file.renameFailed', {msg: e.message})); }
   });
 }
 function enterFolder(key) {
@@ -926,11 +925,11 @@ function enterFolder(key) {
 }
 async function downloadFolder(prefix, name) {
   try {
-    toast(`正在列出「${name}」下的文件…`);
+    toast(t('file.listing', {name: name}));
     const d = await apiGet(`/api/accounts/${state.accountId}/list-all?bucket=${encodeURIComponent(state.bucket)}&prefix=${encodeURIComponent(prefix)}`);
     const keys = d.keys || [];
     if (!keys.length) { toast(t('file.folderEmpty')); return; }
-    if (keys.length > 5000) { toast(`文件太多（${keys.length} 个），最多打包 5000 个`); return; }
+    if (keys.length > 5000) { toast(t('file.tooMany', {n: keys.length})); return; }
     // 复用打包逻辑
     const modal = $('#uploadModal'), list = $('#uploadList');
     list.innerHTML = '';
@@ -938,7 +937,7 @@ async function downloadFolder(prefix, name) {
     $('#uploadModal').hidden = false;
     const row = document.createElement('div');
     row.style.cssText = 'padding:12px 0';
-    row.innerHTML = `<div style="margin-bottom:8px">正在打包 ${keys.length} 个文件…</div>
+    row.innerHTML = `<div style="margin-bottom:8px">${t('file.zippingHtml', {n: keys.length})}</div>
       <div style="height:8px;background:#e2e8f0;border-radius:4px;overflow:hidden">
         <div class="ufill" style="height:100%;width:0;background:#3b82f6;transition:width .2s"></div></div>
       <div class="ust" style="font-size:12px;color:#64748b;margin-top:6px"></div>`;
@@ -953,14 +952,14 @@ async function downloadFolder(prefix, name) {
       const url = urls[key];
       if (!url) continue;
       const rel = key.slice(prefix.length) || key.split('/').pop();
-      st.textContent = `下载中：${rel} (${n + 1}/${keys.length})`;
+      st.textContent = t('file.downloading', {name: rel, i: n + 1, total: keys.length});
       const resp = await fetch(url);
-      if (!resp.ok) throw new Error(`下载 ${rel} 失败`);
+      if (!resp.ok) throw new Error(t('file.downloadFailed', {name: rel}));
       zip.file(rel, await resp.blob());
       n++;
       fill.style.width = Math.round(n / keys.length * 100) + '%';
     }
-    st.textContent = '正在生成 zip…';
+    st.textContent = t('file.generatingZip');
     const blob = await zip.generateAsync({ type: 'blob' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
@@ -968,17 +967,17 @@ async function downloadFolder(prefix, name) {
     document.body.appendChild(a); a.click();
     setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 5000);
     $('#uploadModal').hidden = true;
-    modal.querySelector('h3').textContent = '上传文件';
-    toast(`已打包下载 ${n} 个文件`);
-  } catch (e) { toast('打包失败：' + e.message); }
+    modal.querySelector('h3').textContent = t('file.uploadTitle');
+    toast(t('file.zipDone', {n: n}));
+  } catch (e) { toast(t('file.zipFailed', {msg: e.message})); }
 }
 async function editText(key, name) {
   try {
-    toast('正在加载…');
+    toast(t('file.loadingNow'));
     const d = await apiGet(`/api/accounts/${state.accountId}/text?bucket=${encodeURIComponent(state.bucket)}&key=${encodeURIComponent(key)}`);
     const modal = $('#uploadModal'), list = $('#uploadList');
     list.innerHTML = '';
-    modal.querySelector('h3').textContent = '编辑 ' + name;
+    modal.querySelector('h3').textContent = t('file.editTitle', {name: name});
     const ta = document.createElement('textarea');
     ta.value = d.content;
     ta.style.cssText = 'width:100%;height:400px;font-family:monospace;font-size:13px;padding:12px;border:1px solid #e2e8f0;border-radius:8px;box-sizing:border-box;resize:vertical';
@@ -988,17 +987,17 @@ async function editText(key, name) {
     btnRow.innerHTML = '<button class="btn" id="edCancel">' + t('common.cancel') + '</button><button class="btn btn-primary" id="edSave">' + t('common.save') + '</button>';
     list.appendChild(btnRow);
     $('#uploadModal').hidden = false;
-    $('#edCancel').onclick = () => { $('#uploadModal').hidden = true; modal.querySelector('h3').textContent = '上传文件'; };
+    $('#edCancel').onclick = () => { $('#uploadModal').hidden = true; modal.querySelector('h3').textContent = t('file.uploadTitle'); };
     $('#edSave').onclick = async () => {
       try {
         await apiPut(`/api/accounts/${state.accountId}/text`, { bucket: state.bucket, key, content: ta.value });
         toast(t('msg.saved'));
         $('#uploadModal').hidden = true;
-        modal.querySelector('h3').textContent = '上传文件';
+        modal.querySelector('h3').textContent = t('file.uploadTitle');
         loadFiles();
       } catch (e) { toast(t('msg.saveFail') + e.message); }
     };
-  } catch (e) { toast('加载失败：' + e.message); }
+  } catch (e) { toast(t('common.loadFailed', {msg: e.message})); }
 }
 function copyObject(srcKey, name, isMove) {
   // 先拿桶列表
@@ -1007,58 +1006,58 @@ function copyObject(srcKey, name, isMove) {
     const bOpts = buckets.map(b => `<option value="${esc(b)}" ${b === state.bucket ? 'selected' : ''}>${esc(b)}</option>`).join('');
     const modal = $('#uploadModal'), list = $('#uploadList');
     list.innerHTML = '';
-    modal.querySelector('h3').textContent = isMove ? '移动到' : '复制到';
+    modal.querySelector('h3').textContent = isMove ? t('file.moveTo') : t('file.copyTo');
     list.innerHTML = `
       <label class="fld"><span>${t('file.targetBucket')}</span><select class="input" id="cpBucket">${bOpts}</select></label>
-      <label class="fld"><span>目标路径（含文件名）</span><input class="input" id="cpPath" value="${esc(state.prefix + name)}"></label>
+      <label class="fld"><span>${t('file.destPath')}</span><input class="input" id="cpPath" value="${esc(state.prefix + name)}"></label>
       <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
         <button class="btn" id="cpCancel">${t('common.cancel')}</button>
         <button class="btn btn-primary" id="cpGo">${isMove ? t('common.move') : t('common.copy')}</button>
       </div>`;
     $('#uploadModal').hidden = false;
-    $('#cpCancel').onclick = () => { $('#uploadModal').hidden = true; modal.querySelector('h3').textContent = '上传文件'; };
+    $('#cpCancel').onclick = () => { $('#uploadModal').hidden = true; modal.querySelector('h3').textContent = t('file.uploadTitle'); };
     $('#cpGo').onclick = async () => {
       const dstBucket = $('#cpBucket').value;
       const dstKey = $('#cpPath').value.trim().replace(/^\/+/, '');
-      if (!dstKey) { toast('请输入目标路径'); return; }
+      if (!dstKey) { toast(t('file.inputTarget')); return; }
       try {
-        toast(`正在${isMove ? t('common.move') : t('common.copy')}…`);
-        $('#uploadModal').hidden = true; modal.querySelector('h3').textContent = '上传文件';
+        toast(t('file.working', {act: isMove ? t('common.move') : t('common.copy')}));
+        $('#uploadModal').hidden = true; modal.querySelector('h3').textContent = t('file.uploadTitle');
         await apiPost(`/api/accounts/${state.accountId}/copy`, {
           srcBucket: state.bucket, srcKey, dstBucket, dstKey, move: isMove,
         });
-        toast(isMove ? '移动成功' : '复制成功');
+        toast(isMove ? t('msg.moved') : t('msg.copySuccess'));
         loadFiles();
-      } catch (e) { toast('失败：' + e.message); }
+      } catch (e) { toast(t('common.failedMsg', {msg: e.message})); }
     };
-  }).catch(e => toast('获取桶列表失败：' + e.message));
+  }).catch(e => toast(t('file.bucketListFailed', {msg: e.message})));
 }
 function deleteSingle(key, name, isFolder) {
-  askConfirm(t('common.delete'), `确定删除「${name}」吗？${isFolder ? '文件夹内的文件也会被删除，' : ''}此操作不可恢复。`, t('common.delete'), async () => {
+  askConfirm(t('common.delete'), t('file.confirmDeleteOne', {name: name, folderNote: isFolder ? t('file.folderDeleteNote') : ''}), t('common.delete'), async () => {
     try {
       await apiPost(`/api/accounts/${state.accountId}/delete`, { bucket: state.bucket, keys: [key] });
       toast(t('msg.deleted')); loadFiles();
-    } catch (e) { toast('删除失败：' + e.message); }
+    } catch (e) { toast(t('file.deleteFailed', {msg: e.message})); }
   });
 }
 function fileAction(act, key, name, kind) {
   if (act === 'preview') openPreview(key, name, kind);
   else if (act === 'download') downloadFile(key, name);
   else if (act === 'share') openShare(key, name);
-  else if (act === 'rename') askPrompt(t('common.rename'), '新文件名', name, async (v) => {
+  else if (act === 'rename') askPrompt(t('common.rename'), t('file.newName'), name, async (v) => {
     v = v.trim();
     if (!v || v === name) return;
     const dst = state.prefix + v;
     try {
       await apiPost(`/api/accounts/${state.accountId}/rename`, { bucket: state.bucket, src: key, dst });
-      toast('已重命名'); loadFiles();
-    } catch (e) { toast('重命名失败：' + e.message); }
+      toast(t('msg.renamed')); loadFiles();
+    } catch (e) { toast(t('file.renameFailed', {msg: e.message})); }
   });
-  else if (act === 'delete') askConfirm('删除文件', `确定删除 ${name} 吗？此操作不可恢复。`, t('common.delete'), async () => {
+  else if (act === 'delete') askConfirm(t('file.deleteFile'), t('file.confirmDeleteName', {name: name}), t('common.delete'), async () => {
     try {
       await apiPost(`/api/accounts/${state.accountId}/delete`, { bucket: state.bucket, keys: [key] });
       toast(t('msg.deleted')); loadFiles();
-    } catch (e) { toast('删除失败：' + e.message); }
+    } catch (e) { toast(t('file.deleteFailed', {msg: e.message})); }
   });
 }
 async function downloadFile(key, name) {
@@ -1067,7 +1066,7 @@ async function downloadFile(key, name) {
     const a = document.createElement('a');
     a.href = p.url; a.download = name; a.target = '_blank';
     document.body.appendChild(a); a.click(); a.remove();
-  } catch (e) { toast('下载失败：' + e.message); }
+  } catch (e) { toast(t('file.downloadFailedMsg', {msg: e.message})); }
 }
 
 /* ---------- preview ---------- */
@@ -1080,7 +1079,7 @@ async function openPreview(key, name, kind) {
   try {
     const p = await apiGet(`/api/accounts/${state.accountId}/presign?bucket=${encodeURIComponent(state.bucket)}&key=${encodeURIComponent(key)}&op=preview&expires=3600`);
     const url = p.url, body = $('#previewBody');
-    if (kind === 'image') body.innerHTML = `<img src="${esc(url)}" style="max-width:100%;max-height:70vh;object-fit:contain;cursor:zoom-in" onclick="window.open('${esc(url)}','_blank')" title="点击查看大图">`;
+    if (kind === 'image') body.innerHTML = `<img src="${esc(url)}" style="max-width:100%;max-height:70vh;object-fit:contain;cursor:zoom-in" onclick="window.open('${esc(url)}','_blank')" title="${t('file.clickZoom')}">`;
     else if (kind === 'video') body.innerHTML = `<video src="${esc(url)}" controls style="max-width:100%;max-height:70vh"></video>`;
     else if (kind === 'audio') body.innerHTML = `<audio src="${esc(url)}" controls style="width:90%"></audio>`;
     else if (kind === 'pdf') body.innerHTML = `<iframe src="${esc(url)}" style="width:100%;height:60vh;border:none"></iframe>`;
@@ -1089,7 +1088,7 @@ async function openPreview(key, name, kind) {
       body.innerHTML = `<pre>${esc(t.slice(0, 200000))}</pre>`;
     }
     else body.innerHTML = `<div class="empty"><div class="big">${iconFor(kind)}</div>${t('file.noPreview')}</div>`;
-  } catch (e) { $('#previewBody').innerHTML = `<div class="empty">预览失败：${esc(e.message)}</div>`; }
+  } catch (e) { $('#previewBody').innerHTML = `<div class="empty">${t('file.previewFailed', {msg: esc(e.message)})}</div>`; }
 }
 $('#previewClose').onclick = () => { $('#previewModal').hidden = true; $('#previewBody').innerHTML = ''; };
 $('#previewDownload').onclick = () => downloadFile(previewKey, previewName);
@@ -1100,7 +1099,7 @@ let shareKeys = [];
 function openShareMulti(keys) {
   shareKeys = keys;
   shareKey = keys[0];
-  shareName = keys.length > 1 ? `${keys[0].split('/').pop()} 等 ${keys.length} 个文件` : keys[0].split('/').pop();
+  shareName = keys.length > 1 ? t('share.multiName', {first: keys[0].split('/').pop(), n: keys.length}) : keys[0].split('/').pop();
   $('#shareResult').hidden = true;
   const acct = state.accounts.find(a => a.id === state.accountId);
   $('#sharePublicWrap').hidden = true; // 多文件不支持公开直链
@@ -1126,14 +1125,14 @@ $('#shareGen').onclick = async () => {
   const exp = parseInt($('#shareExpiry').value, 10);
   const pwd = $('#sharePwd').value;
   const maxViews = parseInt($('#shareMaxViews').value, 10);
-  if (pwd && pwd.length < 4) { toast('分享密码至少 4 位'); return; }
+  if (pwd && pwd.length < 4) { toast(t('share.pwdMin4')); return; }
   try {
     const p = await apiPost(`/api/accounts/${state.accountId}/share`,
       { bucket: state.bucket, keys: shareKeys, expires: exp, password: pwd, maxViews });
     $('#shareUrl').value = p.url;
     $('#shareResult').hidden = false;
     $('#sharePwd').value = '';
-  } catch (e) { toast('生成失败：' + e.message); }
+  } catch (e) { toast(t('share.genFailed', {msg: e.message})); }
 };
 $('#shareCopy').onclick = () => { $('#shareUrl').select(); document.execCommand('copy'); toast(t('msg.copied')); };
 
@@ -1161,7 +1160,7 @@ $('#filePicker').addEventListener('change', async (e) => {
   for (const r of rows) {
     const key = state.prefix + r.f.name;
     try {
-      r.st.textContent = '获取地址…';
+      r.st.textContent = t('upload.gettingUrl');
       const p = await apiGet(`/api/accounts/${state.accountId}/presign?bucket=${encodeURIComponent(state.bucket)}&key=${encodeURIComponent(key)}&op=upload&expires=3600`);
       await new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest();
@@ -1180,15 +1179,15 @@ $('#filePicker').addEventListener('change', async (e) => {
       });
       r.fill.style.width = '100%';
       r.fill.style.background = '#22c55e';
-      r.st.textContent = '成功';
+      r.st.textContent = t('common.success');
       r.st.style.color = '#16a34a';
       done++;
     } catch (err) {
       r.fill.style.background = '#ef4444';
-      r.st.textContent = '失败';
+      r.st.textContent = t('common.failed');
       r.st.style.color = '#dc2626';
       if (err.message === 'CORS_FAIL') {
-        r.st.title = '浏览器直传被拦截：去存储桶设置里配置 CORS，允许来源为本网站域名，允许方法 GET/PUT/HEAD，允许标头 *';
+        r.st.title = t('upload.corsTip');
       } else {
         r.st.title = err.message;
       }
@@ -1197,7 +1196,7 @@ $('#filePicker').addEventListener('change', async (e) => {
   }
   const sum = document.createElement('div');
   sum.style.cssText = 'padding:12px 0 0;font-weight:600';
-  sum.textContent = failed ? `完成：${done} 成功，${failed} 失败（悬停"失败"看原因；如为 CORS 问题请去桶设置配 CORS）` : `全部上传成功（${done} 个文件）`;
+  sum.textContent = failed ? t('upload.summary', {done: done, failed: failed}) : t('upload.allDone', {n: done});
   list.appendChild(sum);
   delete state.statsCache[state.accountId + '/' + state.bucket];
   if ($('.nav-item.active')?.dataset.nav === 'files') loadFiles();
@@ -1230,16 +1229,16 @@ document.addEventListener('contextmenu', (e) => {
   const items = [];
   if (!isFolder) {
     items.push({ label: t('common.download'), icon: ic('download', 15), fn: () => downloadFile(key, name) });
-    items.push({ label: '分享链接', icon: ic('share', 15), fn: () => openShare(key, name) });
+    items.push({ label: t('file.shareLink'), icon: ic('share', 15), fn: () => openShare(key, name) });
     if (/\.(txt|md|json|js|css|html|xml|yml|yaml|ini|conf|cfg|log|sh|py|go|rs|ts|jsx|tsx)$/i.test(name)) {
-      items.push({ label: '编辑文本', icon: ic('edit', 15), fn: () => editText(key, name) });
+      items.push({ label: t('file.editText'), icon: ic('edit', 15), fn: () => editText(key, name) });
     }
-    items.push({ label: '复制到…', icon: ic('copy', 15), fn: () => copyObject(key, name, false) });
-    items.push({ label: '移动到…', icon: ic('move', 15), fn: () => copyObject(key, name, true) });
+    items.push({ label: t('file.copyToMore'), icon: ic('copy', 15), fn: () => copyObject(key, name, false) });
+    items.push({ label: t('file.moveToMore'), icon: ic('move', 15), fn: () => copyObject(key, name, true) });
     items.push({ label: t('common.rename'), icon: ic('edit', 15), fn: () => renameObject(key, name) });
   } else {
-    items.push({ label: '进入', icon: ic('folder', 15), fn: () => enterFolder(key) });
-    items.push({ label: '打包下载 (zip)', icon: ic('download', 15), fn: () => downloadFolder(key, name) });
+    items.push({ label: t('common.enter'), icon: ic('folder', 15), fn: () => enterFolder(key) });
+    items.push({ label: t('file.batchDownloadZip'), icon: ic('download', 15), fn: () => downloadFolder(key, name) });
   }
   items.push({ label: t('common.delete'), icon: ic('trash', 15), danger: true, fn: () => deleteSingle(key, name, isFolder) });
   showCtxMenu(e.clientX, e.clientY, items);
@@ -1279,13 +1278,13 @@ function providerLogo(id, size) {
 }
 
 const PROVIDERS = [
-  { id: 'r2', name: 'Cloudflare R2', icon: providerLogo('r2', 22), hint: '填写 Account ID，地址自动生成' },
-  { id: 's3', name: 'Amazon S3', icon: providerLogo('s3', 22), hint: '全球/区域 endpoint 自动处理' },
-  { id: 'oss', name: '阿里云 OSS', icon: providerLogo('oss', 22), hint: '选择地域，地址自动生成' },
-  { id: 'cos', name: '腾讯云 COS', icon: providerLogo('cos', 22), hint: '选择地域，地址自动生成' },
-  { id: 'qiniu', name: '七牛云', icon: providerLogo('qiniu', 22), hint: 'S3 兼容接口' },
-  { id: 'b2', name: 'Backblaze B2', icon: providerLogo('b2', 22), hint: 'S3 兼容接口' },
-  { id: 'minio', name: 'MinIO / 自建', icon: providerLogo('minio', 22), hint: '填写你的网关地址' },
+  { id: 'r2', name: 'Cloudflare R2', icon: providerLogo('r2', 22), hint: 'provider.r2Hint' },
+  { id: 's3', name: 'Amazon S3', icon: providerLogo('s3', 22), hint: 'provider.s3Hint' },
+  { id: 'oss', name: 'provider.ossName', icon: providerLogo('oss', 22), hint: 'provider.regionHint' },
+  { id: 'cos', name: 'provider.cosName', icon: providerLogo('cos', 22), hint: 'provider.regionHint' },
+  { id: 'qiniu', name: 'provider.qiniuName', icon: providerLogo('qiniu', 22), hint: 'provider.s3compatHint' },
+  { id: 'b2', name: 'Backblaze B2', icon: providerLogo('b2', 22), hint: 'provider.s3compatHint' },
+  { id: 'minio', name: 'provider.minioName', icon: providerLogo('minio', 22), hint: 'provider.minioHint' },
 ];
 function renderSettings(tab) {
   tab = tab || 'account';
@@ -1350,7 +1349,7 @@ function renderSettingsTab(tab) {
       catch (err) { toast(t('msg.saveFail') + err.message); e.target.checked = !e.target.checked; }
     };
   } else if (tab === 'user' && state.user.admin) {
-    c.innerHTML = `<div class="card"><h3>${ic('users')}${t('settings.users')}</h3><p class="desc">共 <b id="userTotal">0</b> 个用户（仅管理员可见，不显示密码）</p><div id="userList"><div class="muted">${t('common.loading')}</div></div></div>`;
+    c.innerHTML = `<div class="card"><h3>${ic('users')}${t('settings.users')}</h3><p class="desc">${t('settings.userDesc', {n: '<b id="userTotal">0</b>'})}</p><div id="userList"><div class="muted">${t('common.loading')}</div></div></div>`;
     loadUserList();
   } else if (tab === 'appearance') {
     const langOpts = Object.keys(LANGS).map(k =>
@@ -1359,7 +1358,7 @@ function renderSettingsTab(tab) {
       <label style="display:flex;gap:8px;align-items:center;cursor:pointer;margin-bottom:12px">
         <input type="checkbox" id="themeToggle" style="width:18px;height:18px">${t('settings.darkMode')}
       </label>
-      <label class="fld"><span>语言 / Language</span>
+      <label class="fld"><span>${t('settings.language')}</span>
         <select class="input" id="langSelect" style="max-width:240px">${langOpts}</select>
       </label></div>`;
     $('#themeToggle').checked = document.documentElement.dataset.theme === 'dark';
@@ -1386,8 +1385,8 @@ async function loadShareList() {
       const exp = new Date(sh.expiresAt * 1000).toLocaleString('zh-CN', { hour12: false });
       let st = sh.expired ? '<span style="color:#dc2626">' + t('common.expired') + '</span>' : `<span style="color:#16a34a">${t('share.validUntil')} ${esc(exp)}</span>`;
       const tags = [];
-      if (sh.hasPassword) tags.push('🔒密码');
-      if (sh.maxViews > 0) tags.push(`${sh.viewCount}/${sh.maxViews}次`);
+      if (sh.hasPassword) tags.push(t('share.pwdTag'));
+      if (sh.maxViews > 0) tags.push(t('share.viewCount', {used: sh.viewCount, max: sh.maxViews}));
       const tagHtml = tags.length ? ` <span style="font-size:11px;background:#f1f5f9;padding:2px 8px;border-radius:10px">${tags.join(' ')}</span>` : '';
       return `<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #f1f5f9">
         <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(sh.key)}">${esc(sh.name)}</span>
@@ -1400,12 +1399,12 @@ async function loadShareList() {
       navigator.clipboard.writeText(b.dataset.copyShare).then(() => toast(t('msg.copied')));
     });
     box.querySelectorAll('[data-del-share]').forEach(b => b.onclick = () => {
-      askConfirm('撤销分享', '确定撤销这个分享链接吗？', '撤销', async () => {
+      askConfirm(t('share.revoke'), t('share.confirmRevoke'), t('common.revoke'), async () => {
         try { await apiDelete(`/api/shares/${b.dataset.delShare}`); toast(t('msg.revoked')); loadShareList(); }
-        catch (e) { toast('撤销失败：' + e.message); }
+        catch (e) { toast(t('share.revokeFailed', {msg: e.message})); }
       });
     });
-  } catch (e) { box.innerHTML = '<div class="muted">加载失败</div>'; }
+  } catch (e) { box.innerHTML = `<div class="muted">${t('common.loadFailedText')}</div>`; }
 }
 async function loadUserList() {
   const box = $('#userList');
@@ -1416,30 +1415,30 @@ async function loadUserList() {
     if (!arr.length) { box.innerHTML = '<div class="muted">' + t('empty.noUser') + '</div>'; return; }
     box.innerHTML = arr.map(x => {
       const dt = new Date(x.createdAt).toLocaleDateString('zh-CN');
-      const tag = x.admin ? '<span style="background:#dbeafe;color:#1d4ed8;font-size:11px;padding:2px 8px;border-radius:10px">管理员</span>' : '';
+      const tag = x.admin ? '<span style="background:#dbeafe;color:#1d4ed8;font-size:11px;padding:2px 8px;border-radius:10px">' + t('user.isAdmin') + '</span>' : '';
       const isSelf = x.username === state.user.username;
       return `<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #f1f5f9">
         <span style="flex:1">${esc(x.username)} ${tag}</span>
-        <span style="font-size:12px;color:#64748b">${dt} 注册</span>
-        ${isSelf ? '<span style="font-size:12px;color:#94a3b8">自己</span>' : `
+        <span style="font-size:12px;color:#64748b">${t('user.regAt', {dt: dt})}</span>
+        ${isSelf ? '<span style="font-size:12px;color:#94a3b8">' + t('user.isSelf') + '</span>' : `
           <button class="btn btn-sm" data-reset-user="${x.id}" data-uname="${esc(x.username)}">${t('user.resetPwd')}</button>
           <button class="btn btn-sm" data-del-user="${x.id}" data-uname="${esc(x.username)}" style="color:#dc2626">${t('common.delete')}</button>`}
       </div>`;
     }).join('');
     box.querySelectorAll('[data-del-user]').forEach(b => b.onclick = () => {
-      askConfirm('删除用户', `确定删除用户「${b.dataset.uname}」吗？其所有账户、分享、文件记录都会被删除，不可恢复。`, t('common.delete'), async () => {
+      askConfirm(t('user.delete'), t('user.confirmDelete', {name: b.dataset.uname}), t('common.delete'), async () => {
         try { await apiDelete(`/api/admin/users/${b.dataset.delUser}`); toast(t('msg.deleted')); loadUserList(); }
-        catch (e) { toast('删除失败：' + e.message); }
+        catch (e) { toast(t('file.deleteFailed', {msg: e.message})); }
       });
     });
     box.querySelectorAll('[data-reset-user]').forEach(b => b.onclick = () => {
-      askPrompt('重置密码', `为「${b.dataset.uname}」设置${t('user.newPwd')}`, '', async (v) => {
+      askPrompt(t('user.resetPwd'), t('user.resetPwdMsg', {name: b.dataset.uname, newPwd: t('user.newPwd')}), '', async (v) => {
         if (!v || v.length < 8) { toast(t('auth.pwdMin')); return; }
-        try { await apiPost(`/api/admin/users/${b.dataset.resetUser}/reset-password`, { password: v }); toast('密码已重置'); }
-        catch (e) { toast('重置失败：' + e.message); }
+        try { await apiPost(`/api/admin/users/${b.dataset.resetUser}/reset-password`, { password: v }); toast(t('user.passReset')); }
+        catch (e) { toast(t('user.resetFailed', {msg: e.message})); }
       });
     });
-  } catch (e) { box.innerHTML = '<div class="muted">加载失败</div>'; }
+  } catch (e) { box.innerHTML = `<div class="muted">${t('common.loadFailedText')}</div>`; }
 }
 // 拖拽上传
 function initDragUpload() {
@@ -1479,11 +1478,11 @@ async function doSearch(q) {
     const d = await apiGet(`/api/accounts/${state.accountId}/search?bucket=${encodeURIComponent(state.bucket)}&q=${encodeURIComponent(q)}`);
     const results = d.results || [];
     if (!results.length) {
-      body.innerHTML = `<div class="empty">没有找到包含 “${esc(q)}” 的文件（扫描了 ${d.scanned} 个）</div>`;
+      body.innerHTML = `<div class="empty">${t('search.noResult', {q: esc(q), scanned: d.scanned})}</div>`;
       return;
     }
     // 用列表模式显示搜索结果
-    body.innerHTML = `<div class="muted" style="padding:8px 4px">找到 ${results.length} 个结果${d.truncated ? '（只显示前 100 个）' : ''}，扫描了 ${d.scanned} 个文件</div>` +
+    body.innerHTML = `<div class="muted" style="padding:8px 4px">${t('search.found', {n: results.length, trunc: d.truncated ? t('search.onlyFirst100') : '', scanned: d.scanned})}</div>` +
       results.map(r => `
       <div class="frow" data-key="${esc(r.key)}" data-name="${esc(r.name)}" data-kind="file">
         <span class="fname">${ic('file', 16)} ${esc(r.name)}</span>
@@ -1496,7 +1495,7 @@ async function doSearch(q) {
       el.onclick = () => openPreview(el.dataset.key, el.dataset.name, 'file');
     });
   } catch (e) {
-    body.innerHTML = `<div class="empty">搜索失败：${esc(e.message)}</div>`;
+    body.innerHTML = `<div class="empty">${t('search.failed', {msg: esc(e.message)})}</div>`;
   }
 }
 function openUploadLinkModal() {
@@ -1508,7 +1507,7 @@ function openUploadLinkModal() {
       <input class="input" id="ulName" placeholder="' + t('upload.namePh') + '" maxlength="50">
       <div class="hint">${t('upload.nameHint')}</div></label>
     <label class="fld"><span>${t('upload.toPath')}</span>
-      <input class="input" id="ulPrefix" value="${esc(state.prefix || '')}" placeholder="默认为当前目录：${esc(state.prefix || '根目录')}">
+      <input class="input" id="ulPrefix" value="${esc(state.prefix || '')}" placeholder="${t('upload.defaultDirPh', {dir: esc(state.prefix) || t('file.rootDir')})}">
       <div class="hint">${t('upload.pathHint')}</div></label>
     <label class="fld"><span>${t('upload.expiry')}</span>
       <select class="input" id="ulExpiry">
@@ -1543,7 +1542,7 @@ function openUploadLinkModal() {
       <button class="btn btn-primary" id="ulCreate">${t('common.createLink')}</button>
     </div>`;
   $('#uploadModal').hidden = false;
-  const close = () => { $('#uploadModal').hidden = true; modal.querySelector('h3').textContent = '上传文件'; };
+  const close = () => { $('#uploadModal').hidden = true; modal.querySelector('h3').textContent = t('file.uploadTitle'); };
   $('#ulCancel').onclick = close;
   $('#ulUrl').onclick = (e) => { e.target.select(); document.execCommand('copy'); toast(t('msg.copied')); };
   // 去掉滚动条，完整显示
@@ -1553,7 +1552,7 @@ function openUploadLinkModal() {
     const pwd = $('#ulPwd').value;
     try {
       const name = $('#ulName').value.trim();
-      if (!name) { toast('请填写链接名称'); return; }
+      if (!name) { toast(t('upload.needName')); return; }
       const p = await apiPost(`/api/accounts/${state.accountId}/upload-link`, {
         bucket: state.bucket,
         prefix: $('#ulPrefix').value.trim(),
@@ -1577,7 +1576,7 @@ function openUploadLinkModal() {
       try { await navigator.clipboard.writeText(p.url); } catch (e) {}
       loadUploadLinkList();
       loadSideUlLinks();
-    } catch (e) { toast('创建失败：' + e.message); }
+    } catch (e) { toast(t('file.createFailed', {msg: e.message})); }
   };
 }
 async function loadUploadLinkList() {
@@ -1591,8 +1590,8 @@ async function loadUploadLinkList() {
       const exp = new Date(ul.expiresAt * 1000).toLocaleString('zh-CN', { hour12: false });
       const st = ul.expired ? '<span style="color:#dc2626">' + t('common.expired') + '</span>' : `<span style="color:#16a34a">${t('share.validUntil')} ${esc(exp)}</span>`;
       const tags = [];
-      if (ul.hasPassword) tags.push('🔒密码');
-      if (ul.maxUses > 0) tags.push(`${ul.useCount}/${ul.maxUses}次`);
+      if (ul.hasPassword) tags.push(t('share.pwdTag'));
+      if (ul.maxUses > 0) tags.push(t('share.viewCount', {used: ul.useCount, max: ul.maxUses}));
       const tagHtml = tags.length ? ` <span style="font-size:11px;background:#f1f5f9;padding:2px 8px;border-radius:10px">${tags.join(' ')}</span>` : '';
       const nm = ul.name || t('msg.unnamed');
       return `<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #f1f5f9">
@@ -1606,12 +1605,12 @@ async function loadUploadLinkList() {
       navigator.clipboard.writeText(b.dataset.copyUl).then(() => toast(t('msg.copied')));
     });
     box.querySelectorAll('[data-del-ul]').forEach(b => b.onclick = () => {
-      askConfirm('撤销上传链接', '确定撤销这个上传链接吗？', '撤销', async () => {
+      askConfirm(t('share.revokeUpload'), t('share.confirmRevokeUpload'), t('common.revoke'), async () => {
         try { await apiDelete(`/api/upload-links/${b.dataset.delUl}`); toast(t('msg.revoked')); loadUploadLinkList(); if (typeof loadSideUlLinks === 'function') loadSideUlLinks(); }
-        catch (e) { toast('撤销失败：' + e.message); }
+        catch (e) { toast(t('share.revokeFailed', {msg: e.message})); }
       });
     });
-  } catch (e) { box.innerHTML = '<div class="muted">加载失败</div>'; }
+  } catch (e) { box.innerHTML = `<div class="muted">${t('common.loadFailedText')}</div>`; }
 }
 let ulLinks = [];
 async function loadSideUlLinks() {
@@ -1621,7 +1620,7 @@ async function loadSideUlLinks() {
     const d = await apiGet('/api/upload-links');
     // 只显示当前桶的上传链接
     ulLinks = (d.links || []).filter(ul => !state.bucket || ul.bucket === state.bucket);
-    $('#ulCount').textContent = ulLinks.length ? ulLinks.length + '个' : '';
+    $('#ulCount').textContent = ulLinks.length ? t('upload.linkCount', {n: ulLinks.length}) : '';
     if (!ulLinks.length) {
       box.innerHTML = '<div style="font-size:12px;color:var(--muted);padding:4px 12px">' + t('common.none') + '</div>';
       return;
@@ -1630,7 +1629,7 @@ async function loadSideUlLinks() {
       const nm = ul.name || t('msg.unnamed');
       const exp = ul.expiresAt ? new Date(ul.expiresAt * 1000).toLocaleDateString('zh-CN') : '';
       return `
-      <div class="nav-item" data-ul="${i}" style="font-size:13px" title="${esc(nm)}${exp ? '（有效期至 ' + exp + '）' : ''}">
+      <div class="nav-item" data-ul="${i}" style="font-size:13px" title="${esc(nm) + (exp ? t('ul.validUntilTitle', {exp: exp}) : '')}">
         ${ic('link', 15)}<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(nm)}</span>
       </div>`;
     }).join('');
@@ -1640,7 +1639,7 @@ async function loadSideUlLinks() {
         e.preventDefault();
         const ul = ulLinks[parseInt(el.dataset.ul, 10)];
         showCtxMenu(e.clientX, e.clientY, [
-          { label: '复制链接', icon: ic('copy', 15), fn: () => navigator.clipboard.writeText(ul.url).then(() => toast(t('msg.copied'))) },
+          { label: t('share.copyLink'), icon: ic('copy', 15), fn: () => navigator.clipboard.writeText(ul.url).then(() => toast(t('msg.copied'))) },
           { label: t('common.delete'), icon: ic('trash', 15), danger: true, fn: () => delUlLink(ul) },
         ]);
       };
@@ -1652,7 +1651,7 @@ async function openUlLinkView(i) {
   if (!ul) return;
   const main = $('#main');
   main.innerHTML = `<div class="topbar"><h2>${ic('link')} ${esc(ul.name || t('msg.unnamed'))}</h2></div>
-    <div style="margin-bottom:12px;font-size:13px;color:var(--muted)">上传链接 · 共 <span id="ulFileCount">0</span> 个文件 · <button class="btn btn-sm" onclick="nav('files')">${t('common.backToFiles')}</button></div>
+    <div style="margin-bottom:12px;font-size:13px;color:var(--muted)">${t('ul.fileCountHtml', {n: '<span id="ulFileCount">0</span>'})} <button class="btn btn-sm" onclick="nav('files')">${t('common.backToFiles')}</button></div>
     <div id="ulFileGrid" class="fgrid sz-m"><div class="card" style="grid-column:1/-1;text-align:center;color:var(--muted);padding:30px">${t('common.loading')}</div></div>`;
   try {
     const d = await apiGet(`/api/upload-links/${ul.token}/files`);
@@ -1695,7 +1694,7 @@ async function openUlLinkView(i) {
         .catch(() => {});
     }
   } catch (e) {
-    $('#ulFileGrid').innerHTML = `<div class="card" style="grid-column:1/-1;text-align:center;color:#dc2626;padding:30px">加载失败：${esc(e.message)}</div>`;
+    $('#ulFileGrid').innerHTML = `<div class="card" style="grid-column:1/-1;text-align:center;color:#dc2626;padding:30px">${t('common.loadFailed', {msg: esc(e.message)})}</div>`;
   }
 }
 async function ulFileDownload(idx) {
@@ -1707,19 +1706,19 @@ async function ulFileDownload(idx) {
     const a = document.createElement('a');
     a.href = d.url; a.download = name; a.target = '_blank';
     document.body.appendChild(a); a.click(); a.remove();
-  } catch (e) { toast('下载失败：' + e.message); }
+  } catch (e) { toast(t('file.downloadFailedMsg', {msg: e.message})); }
 }
 async function ulFileDelete(idx) {
   const { ul, keys } = window._ulView;
   const k = keys[idx];
-  if (!confirm(`删除 ${k.split('/').pop()}？`)) return;
+  if (!confirm(t('ul.deleteFileConfirm', {name: k.split('/').pop()}))) return;
   try {
     await apiPost(`/api/accounts/${ul.accountId}/delete`, { bucket: ul.bucket, keys: [k] });
     toast(t('msg.deleted'));
     // 从记录中删除
     keys.splice(idx, 1);
     openUlLinkView(ulLinks.indexOf(ul));
-  } catch (e) { toast('删除失败：' + e.message); }
+  } catch (e) { toast(t('file.deleteFailed', {msg: e.message})); }
 }
 
 
@@ -1727,13 +1726,13 @@ async function ulFileDelete(idx) {
 
 
 function delUlLink(ul) {
-  askConfirm('删除上传链接', `确定删除「${ul.name}」吗？`, t('common.delete'), async () => {
+  askConfirm(t('share.deleteUpload'), t('share.confirmDeleteUpload', {name: ul.name}), t('common.delete'), async () => {
     try {
       await apiDelete(`/api/upload-links/${ul.token}`);
       toast(t('msg.deleted'));
       loadSideUlLinks();
       loadUploadLinkList();
-    } catch (e) { toast('删除失败：' + e.message); }
+    } catch (e) { toast(t('file.deleteFailed', {msg: e.message})); }
   });
 }
 async function refreshAccounts() {
@@ -1763,22 +1762,22 @@ async function loadAcctList() {
     $$('[data-test]', box).forEach(b => b.onclick = () => testAccount(parseInt(b.dataset.test, 10)));
     $$('[data-del]', box).forEach(b => b.onclick = () => {
       const a = state.accounts.find(x => x.id === parseInt(b.dataset.del, 10));
-      askConfirm('删除账户', `确定删除账户「${a.name}」吗？只删除本地配置，不影响云端数据。`, t('common.delete'), async () => {
+      askConfirm(t('account.delete'), t('account.confirmDelete', {name: a.name}), t('common.delete'), async () => {
         try {
           await apiDel(`/api/accounts/${a.id}`);
           if (state.accountId === a.id) { state.accountId = null; state.bucket = ''; }
           toast(t('msg.deleted')); loadAcctList();
-        } catch (e) { toast('删除失败：' + e.message); }
+        } catch (e) { toast(t('file.deleteFailed', {msg: e.message})); }
       });
     });
-  } catch (e) { box.innerHTML = `<div class="empty">加载失败：${esc(e.message)}</div>`; }
+  } catch (e) { box.innerHTML = `<div class="empty">${t('common.loadFailed', {msg: esc(e.message)})}</div>`; }
 }
 async function testAccount(id) {
-  toast('测试连接中…');
+  toast(t('wiz.testing'));
   try {
     const d = await apiPost(`/api/accounts/${id}/test`);
-    toast(d.listable ? `连接成功，找到 ${d.buckets.length} 个存储桶` : '连接成功（密钥无权列出全部桶，已用指定桶验证）');
-  } catch (e) { toast('连接失败：' + e.message, 4000); }
+    toast(d.listable ? t('wiz.testOk', {n: d.buckets.length}) : t('wiz.testOkNoList'));
+  } catch (e) { toast(t('wiz.testFailed', {msg: e.message}), 4000); }
 }
 
 /* ---------- add-account wizard ---------- */
@@ -1796,17 +1795,17 @@ function renderWizard() {
   if (!modal) {
     const div = document.createElement('div');
     div.className = 'modal-backdrop'; div.id = 'wizModal';
-    div.innerHTML = `<div class="modal" style="width:520px;position:relative"><button class="modal-x" id="wizX" title="关闭">\u00d7</button><div id="wizBody"></div></div>`;
+    div.innerHTML = `<div class="modal" style="width:520px;position:relative"><button class="modal-x" id="wizX" title="${t('common.close')}">\u00d7</button><div id="wizBody"></div></div>`;
     document.body.appendChild(div);
     modal = div;
   }
   const isEdit = !!wiz.existing;
-  let body = isEdit ? '' : `<div class="wiz-steps">${['选择服务商', '填写密钥', '完成'].map((s, i) =>
+  let body = isEdit ? '' : `<div class="wiz-steps">${[t('wizard.selectProvider'), t('wizard.fillKeys'), t('wizard.done')].map((s, i) =>
     `<div class="ws ${wiz.step === i + 1 ? 'active' : ''}">${s}</div>`).join('')}</div>`;
   if (wiz.step === 1) {
     body += `<h3 style="margin-top:0">${t('wizard.selectProvider')}</h3><div class="prov-grid">` +
       PROVIDERS.map(p => `<div class="prov-card ${wiz.provider === p.id ? 'sel' : ''}" data-prov="${p.id}">
-        <div class="pi">${p.icon}</div><div class="pn">${p.name}</div></div>`).join('') +
+        <div class="pi">${p.icon}</div><div class="pn">${t(p.name)}</div></div>`).join('') +
       `</div><div class="modal-actions">
         <button class="btn" id="wizCancel">${t('common.cancel')}</button>
         <button class="btn btn-primary" id="wizNext">${t('wiz.next')}</button></div>`;
@@ -1820,9 +1819,9 @@ function renderWizard() {
       const m = ex.endpoint.match(/https?:\/\/([^.]+)\.r2\.cloudflarestorage\.com/);
       if (m) acctId = m[1];
     }
-    body += `<h3 style="margin-top:0">${isEdit ? '编辑账户' : p.icon + ' ' + p.name}</h3>${isEdit ? '' : `<p class="muted">${p.hint}</p>`}`;
-    body += `<label class="fld"><span>起个名字（比如"我的 R2"）</span>
-      <input class="input" id="wName" value="${esc(ex.name || '')}" placeholder="我的 R2"></label>`;
+    body += `<h3 style="margin-top:0">${isEdit ? t('account.edit') : p.icon + ' ' + t(p.name)}</h3>${isEdit ? '' : `<p class="muted">${t(p.hint)}</p>`}`;
+    body += `<label class="fld"><span>${t('wiz.nameLabel')}</span>
+      <input class="input" id="wName" value="${esc(ex.name || '')}" placeholder="${t('wiz.namePh')}"></label>`;
     if (wiz.provider === 'r2') body += `<label class="fld"><span>${t('wiz.accountId')}</span>
       <input class="input" id="wAccountId" value="${esc(acctId)}" placeholder="${t('wiz.accountIdPh')}"></label>`;
     if (wiz.provider === 'oss' || wiz.provider === 'cos' || wiz.provider === 'qiniu')
@@ -1830,8 +1829,8 @@ function renderWizard() {
     if (wiz.provider === 'b2')
       body += `<label class="fld"><span>S3 Endpoint</span>
       <input class="input" id="wEndpoint" value="${esc(ex.endpoint || '')}" placeholder="s3.us-west-004.backblazeb2.com">
-      <div class="hint">在 B2 控制台点进桶，复制 Endpoint 那一串填进来</div></label>
-      <button class="btn btn-sm" id="b2HelpBtn" style="margin-bottom:12px">📖 配置说明（CORS 必看）</button>`;
+      <div class="hint">${t('wiz.b2EndpointHint')}</div></label>
+      <button class="btn btn-sm" id="b2HelpBtn" style="margin-bottom:12px">${t('wiz.b2HelpBtn')}</button>`;
     if (wiz.provider === 'minio' || wiz.provider === 'custom')
       body += `<label class="fld"><span>${t('wiz.gateway')}</span>
       <input class="input" id="wEndpoint" value="${esc(ex.endpoint || '')}" placeholder="https://minio.example.com"></label>`;
@@ -1839,12 +1838,12 @@ function renderWizard() {
       <input class="input" id="wAK" value="${esc(ex.accessKey || '')}" autocomplete="off"></label>
       <label class="fld"><span>${t('wiz.secretKey')}</span>
       <input class="input" id="wSK" type="password" autocomplete="new-password"
-        placeholder="${wiz.existing ? '••••••••（已保存，留空不修改）' : ''}"></label>
+        placeholder="${wiz.existing ? t('wiz.savedHint') : ''}"></label>
       <label class="fld"><span>${t('wiz.buckets')}</span>
-      <input class="input" id="wBucket" value="${esc(ex.bucket || '')}" placeholder="pic, assets —— 多个用英文逗号分隔"></label>
+      <input class="input" id="wBucket" value="${esc(ex.bucket || '')}" placeholder="${t('wiz.bucketPh')}"></label>
       <label class="fld"><span>${t('wiz.quota')}</span>
         <div style="display:flex;gap:8px">
-          <input class="input" id="wQuota" type="number" min="0" step="any" placeholder="留空则不显示"
+          <input class="input" id="wQuota" type="number" min="0" step="any" placeholder="${t('wiz.quotaPh')}"
             value="${ex.quotaBytes ? (ex.quotaBytes >= 1099511627776 ? (ex.quotaBytes / 1099511627776).toFixed(2).replace(/\.?0+$/, '') : (ex.quotaBytes / 1073741824).toFixed(2).replace(/\.?0+$/, '')) : ''}" style="flex:1">
           <select class="input" id="wQuotaUnit" style="width:90px;flex:none">
             <option value="1073741824">GB</option>
@@ -1853,17 +1852,17 @@ function renderWizard() {
         </div>
         <div class="hint">${t('wiz.quotaHint')}</div></label>
       <label class="fld"><span>${t('wiz.domain')}</span>
-        <input class="input" id="wPubDomain" placeholder="如 pic.example.com（桶绑定的公开域名）" value="${esc(ex.publicDomain || '')}">
+        <input class="input" id="wPubDomain" placeholder="${t('wiz.domainPh')}" value="${esc(ex.publicDomain || '')}">
         <div class="hint">${t('wiz.domainHint')}</div></label>
       <div id="wizErr" style="color:#ef4444;font-size:13px;min-height:20px"></div>
       <div class="modal-actions">
         ${wiz.existing ? '' : '<button class="btn" id="wizBack">' + t('wiz.prev') + '</button>'}
         <button class="btn" id="wizTest">${t('wiz.test')}</button>
-        <button class="btn btn-primary" id="wizSave">${wiz.existing ? t('common.save') : '添加'}</button></div>`;
+        <button class="btn btn-primary" id="wizSave">${wiz.existing ? t('common.save') : t('common.add')}</button></div>`;
   } else {
     const names = (wiz.createdNames && wiz.createdNames.length ? wiz.createdNames : []).map(esc).join('、');
     body += `<div class="empty"><div class="big">${ic('checkCircle', 56)}</div><h3>${t('wiz.success')}</h3>
-      <p class="muted">${names ? `已添加：${names}<br>` : ''}去左下角切换到新账户，开始管理你的对象存储吧</p></div>
+      <p class="muted">${t('wiz.doneHint', {added: names ? t('wiz.addedNames', {names: names}) + '<br>' : ''})}</p></div>
       <div class="modal-actions"><button class="btn btn-primary" id="wizDone">${t('wiz.start')}</button></div>`;
   }
   $('#wizBody').innerHTML = body;
@@ -1872,12 +1871,12 @@ function renderWizard() {
 }
 function regionOptions(provider, sel) {
   const regions = {
-    oss: [['oss-cn-hangzhou', '华东1（杭州）'], ['oss-cn-shanghai', '华东2（上海）'], ['oss-cn-beijing', '华北2（北京）'], ['oss-cn-shenzhen', '华南1（深圳）'], ['oss-cn-hongkong', '香港']],
-    cos: [['ap-guangzhou', '广州'], ['ap-shanghai', '上海'], ['ap-beijing', '北京'], ['ap-hongkong', '香港'], ['ap-singapore', '新加坡']],
-    qiniu: [['cn-east-1', '华东'], ['cn-north-1', '华北'], ['cn-south-1', '华南']],
-    b2: [['us-west-000', '美西 (凤凰城)'], ['us-west-001', '美西1 (凤凰城)'], ['us-west-002', '美西2 (凤凰城)'], ['us-west-004', '美西4 (凤凰城)'], ['us-east-005', '美东 (雷斯顿)'], ['eu-central-003', '欧洲 (阿姆斯特丹)'], ['ca-east-006', '加拿大 (多伦多)']],
+    oss: [['oss-cn-hangzhou', 'region.ec1hz'], ['oss-cn-shanghai', 'region.ec2sh'], ['oss-cn-beijing', 'region.nc2bj'], ['oss-cn-shenzhen', 'region.sc1sz'], ['oss-cn-hongkong', 'region.hk']],
+    cos: [['ap-guangzhou', 'region.gz'], ['ap-shanghai', 'region.sh'], ['ap-beijing', 'region.bj'], ['ap-hongkong', 'region.hk'], ['ap-singapore', 'region.sg']],
+    qiniu: [['cn-east-1', 'region.ec'], ['cn-north-1', 'region.nc'], ['cn-south-1', 'region.sc']],
+    b2: [['us-west-000', 'region.usw'], ['us-west-001', 'region.usw1'], ['us-west-002', 'region.usw2'], ['us-west-004', 'region.usw4'], ['us-east-005', 'region.use'], ['eu-central-003', 'region.eu'], ['ca-east-006', 'region.ca']],
   }[provider] || [];
-  return regions.map(([v, n]) => `<option value="${v}" ${v === sel ? 'selected' : ''}>${n}</option>`).join('');
+  return regions.map(([v, k]) => `<option value="${v}" ${v === sel ? 'selected' : ''}>${t(k)}</option>`).join('');
 }
 function closeWizard() { $('#wizModal').hidden = true; }
 function bindWizard() {
@@ -1898,24 +1897,7 @@ function bindWizard() {
   const back = $('#wizBack'); if (back) back.onclick = () => { wiz.step = 1; renderWizard(); };
   const b2help = $('#b2HelpBtn');
   if (b2help) b2help.onclick = () => {
-    showModal(`<h3>Backblaze B2 配置说明</h3>
-    <div style="font-size:14px;line-height:1.7">
-    <p><b>1. 创建 Application Key</b><br>
-    B2 控制台 → Application Keys → Add a New Application Key<br>
-    名字随便起，桶选你的桶，权限选 Read and Write。<br>
-    创建后复制 <b>keyID</b>（填 Access Key）和 <b>applicationKey</b>（填 Secret Key）。<br>
-    <span style="color:#ef4444">注意：applicationKey 只显示一次，关掉就看不到了！</span></p>
-    <p><b>2. 复制 Endpoint</b><br>
-    B2 控制台点进你的桶，复制 <b>Endpoint</b> 那一串（如 s3.us-west-004.backblazeb2.com），填到上面的 S3 Endpoint 输入框。</p>
-    <p><b>3. 配置 CORS（否则上传会失败）</b><br>
-    B2 网页版的 CORS 设置对 S3 接口不全，需要用命令行：<br>
-    <code style="background:#f1f5f9;padding:2px 6px;border-radius:4px">pip install b2</code><br>
-    <code style="background:#f1f5f9;padding:2px 6px;border-radius:4px">b2 account authorize</code>（输入 keyID 和 applicationKey）<br>
-    然后执行：<br>
-    <code style="background:#f1f5f9;padding:2px 6px;border-radius:4px;display:block;margin:6px 0;white-space:pre-wrap">b2 bucket update 你的桶名 allPrivate --cors-rules '[{"corsRuleName":"objdock","allowedOrigins":["https://你的ObjDock域名"],"allowedOperations":["s3_get","s3_put","s3_head","s3_post","s3_delete"],"allowedHeaders":["*"],"maxAgeSeconds":3600}]'</code>
-    把 <b>你的桶名</b> 和 <b>你的ObjDock域名</b> 换成实际的。执行完等几分钟再生效。</p>
-    <p><b>4. 回到这里点"测试连接"</b>，通了再点添加。</p>
-    </div>`);
+    showModal(t('wiz.b2helpHtml'));
   };
   const test = $('#wizTest');
   if (test) test.onclick = () => wizardSave(true);
@@ -1951,17 +1933,17 @@ async function wizardSave(testOnly) {
   const errBox = $('#wizErr');
   const payload = wizardPayload();
   const buckets = payload.bucket.split(',').map(b => b.trim()).filter(Boolean);
-  if (!payload.name) { errBox.textContent = '请起个名字'; return; }
-  if (!payload.accessKey) { errBox.textContent = '请填写 Access Key'; return; }
-  if (!buckets.length) { errBox.textContent = '请填写储存桶名称'; const bf=$('#wBucket'); if(bf){bf.style.borderColor='#ef4444';bf.focus();} return; }
-  if (!payload.secretKey && !wiz.existing) { errBox.textContent = '请填写 Secret Key'; return; }
-  errBox.textContent = testOnly ? '测试连接中…' : '保存中…';
+  if (!payload.name) { errBox.textContent = t('wiz.errName'); return; }
+  if (!payload.accessKey) { errBox.textContent = t('wiz.errAK'); return; }
+  if (!buckets.length) { errBox.textContent = t('wiz.errBucket'); const bf=$('#wBucket'); if(bf){bf.style.borderColor='#ef4444';bf.focus();} return; }
+  if (!payload.secretKey && !wiz.existing) { errBox.textContent = t('wiz.errSK'); return; }
+  errBox.textContent = testOnly ? t('wiz.testing') : t('wiz.saving');
   errBox.style.color = '';
   const showResults = (t) => {
     // per-bucket results: ✓ pic  ✗ backup(不存在)
     const parts = (t.results || []).map(r =>
       r.ok ? `${ic('check', 13)} ${esc(r.bucket)}`
-           : `${ic('x', 13)} ${esc(r.bucket)}（${esc(r.error || '失败')}）`);
+           : `${ic('x', 13)} ${esc(r.bucket)}（${esc(r.error || t('common.failed'))}）`);
     return parts.join('&nbsp;&nbsp;');
   };
   try {
@@ -1970,11 +1952,11 @@ async function wizardSave(testOnly) {
       const t = await apiPost('/api/accounts/test', payload);
       if (!t.ok) {
         errBox.style.color = '#ef4444';
-        errBox.innerHTML = '失败：' + showResults(t);
+        errBox.innerHTML = t('common.failedMsg', {msg: showResults(t)});
         return;
       }
       errBox.style.color = '#10b981';
-      errBox.innerHTML = `${ic('check', 14)} 连接成功：` + showResults(t);
+      errBox.innerHTML = `${ic('check', 14)} ${t('wiz.testOkPrefix')}` + showResults(t);
       return;
     }
     // 添加/保存：先落库（编辑的测试仅做提示，不阻塞保存）
@@ -1983,9 +1965,9 @@ async function wizardSave(testOnly) {
       await refreshAccounts();
       try {
         const t = await apiPost(`/api/accounts/${wiz.editId}/test`, {});
-        if (!t.ok) toast('已保存，但连接测试失败：' + (t.results || []).map(r => r.ok ? '' : `${r.bucket}：${r.error}`).filter(Boolean).join('；'));
-        else toast('已保存，连接正常');
-      } catch (e) { toast('已保存，连接测试失败：' + e.message); }
+        if (!t.ok) toast(t('wiz.savedTestFailed', {msg: (t.results || []).map(r => r.ok ? '' : `${r.bucket}：${r.error}`).filter(Boolean).join('；')}));
+        else toast(t('wiz.savedOk'));
+      } catch (e) { toast(t('wiz.savedTestFailed', {msg: e.message})); }
       $('#wizModal').hidden = true;
       if (typeof loadAcctList === 'function' && $('#acctList')) loadAcctList();
       return;
@@ -2001,18 +1983,18 @@ async function wizardSave(testOnly) {
           const d = await apiPost('/api/accounts', p);
           const t = await apiPost(`/api/accounts/${d.account.id}/test`, {});
           if (t.ok) created.push(b);
-          else { failed.push(`${b}（${(t.results || []).map(r => r.error).filter(Boolean).join(',') || '验证失败'}）`); await apiDel(`/api/accounts/${d.account.id}`); }
+          else { failed.push(`${b}（${(t.results || []).map(r => r.error).filter(Boolean).join(',') || t('wiz.verifyFailed')}）`); await apiDel(`/api/accounts/${d.account.id}`); }
         } catch (e) { failed.push(`${b}（${e.message}）`); }
       }
       wiz.createdNames = created;
-      if (!created.length) throw new Error('全部添加失败：' + failed.join('；'));
-      if (failed.length) { errBox.style.color = '#d97706'; errBox.textContent = `已添加 ${created.join('、')}；失败：${failed.join('；')}`; await refreshAccounts(); return; }
+      if (!created.length) throw new Error(t('wiz.allFailed', {msg: failed.join('；')}));
+      if (failed.length) { errBox.style.color = '#d97706'; errBox.textContent = t('wiz.partialOk', {ok: created.join('、'), bad: failed.join('；')}); await refreshAccounts(); return; }
     }
     wiz.step = 3;
     renderWizard();
   } catch (e) {
     errBox.style.color = '#ef4444';
-    errBox.textContent = '失败：' + e.message;
+    errBox.textContent = t('common.failedMsg', {msg: e.message});
   }
 }
 /* ---------- profile ---------- */
@@ -2021,7 +2003,7 @@ function renderProfile() {
   const main = $('#main');
   $$('.nav-item[data-nav]').forEach(el => el.classList.remove('active'));
   main.innerHTML = `
-    <div class="topbar"><h2>${ic('user')}修改登录信息</h2></div>
+    <div class="topbar"><h2>${ic('user')}${t('account.editProfile')}</h2></div>
     <div class="card" style="max-width:480px">
       <label class="fld"><span>${t('user.usernameFixed')}</span><input class="input" value="${esc(u.username)}" disabled></label>
       <h4 style="margin:18px 0 8px">${t('user.changePwd')}</h4>
@@ -2036,7 +2018,7 @@ function renderProfile() {
         currentPassword: $('#pCur').value,
         newPassword: $('#pNew').value,
       });
-      if (d.relogin) { toast('密码已修改，请重新登录'); setTimeout(() => location.reload(), 1200); return; }
+      if (d.relogin) { toast(t('user.pwdChanged')); setTimeout(() => location.reload(), 1200); return; }
       toast(t('msg.saved'));
       renderShell(); await afterLogin();
     } catch (e) { $('#pErr').textContent = e.message; }
@@ -2046,6 +2028,14 @@ function renderProfile() {
 /* ---------- boot ---------- */
 async function boot() {
   initTheme();
+  // 静态文案跟随语言：浏览器标题 + 弹窗固定按钮
+  document.title = t('brand.pageTitle');
+  $('#confirmCancel').textContent = t('common.cancel');
+  $('#promptCancel').textContent = t('common.cancel');
+  $('#promptOk').textContent = t('common.confirm');
+  $('#previewDownload').textContent = t('common.download');
+  $('#previewClose').textContent = t('common.close');
+  $('#uploadClose').textContent = t('common.close');
   try {
     const me = await apiGet('/api/me');
     state.user = me;
