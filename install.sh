@@ -15,6 +15,13 @@ if [ ! -f docker-compose.yml ]; then
 fi
 
 echo "🚀 启动 ObjDock..."
+# 安全检查：本机已有同名容器时直接退出，避免把别人的生产容器重建掉
+# （compose 项目名默认取目录名，二次运行安装脚本会撞名）
+if docker ps -a --format '{{.Names}}' 2>/dev/null | grep -qx 'objdock'; then
+  echo "⚠️ 检测到本机已有一个名为 objdock 的容器，为保护现有部署，本次跳过启动。"
+  echo "   如需重装：请先备份好 .env（里面有加密密钥），再到原部署目录执行 docker compose down，然后重新运行本脚本。"
+  exit 0
+fi
 docker compose up -d --build
 
 IP=$(hostname -I 2>/dev/null | awk '{print $1}')
