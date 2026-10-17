@@ -306,6 +306,7 @@ function toggleTheme() {
   localStorage.setItem('objdock-theme', cur);
 }
 function nav(which) {
+  try { localStorage.setItem('objdock-nav', which); } catch (e) {}
   setTimeout(initDragUpload, 100);
   $$('.nav-item[data-nav]').forEach(el => el.classList.toggle('active', el.dataset.nav === which));
   $('#dropdown').hidden = true;
@@ -761,6 +762,7 @@ function crumbsHtml() {
   return h;
 }
 async function loadFiles() {
+  try { localStorage.setItem('objdock-prefix', state.prefix || ''); } catch (e) {}
   const body = $('#fileBody');
   $('#crumbs').innerHTML = crumbsHtml();
   $$('#crumbs .c').forEach(el => el.onclick = () => { state.prefix = el.dataset.p; loadFiles(); });
@@ -2115,6 +2117,14 @@ async function afterLogin() {
   }
   await loadSideFolders();
   loadSideUlLinks();
-  nav('dash');
+  // 恢复刷新前的页面：F5 后仍停在原页面、原文件夹
+  let lastNav = 'dash', lastPrefix = '';
+  try {
+    lastNav = localStorage.getItem('objdock-nav') || 'dash';
+    lastPrefix = localStorage.getItem('objdock-prefix') || '';
+  } catch (e) {}
+  if (!['dash', 'files', 'settings'].includes(lastNav)) lastNav = 'dash';
+  if (lastNav === 'files') state.prefix = lastPrefix;
+  nav(lastNav);
 }
 document.addEventListener('DOMContentLoaded', boot);
