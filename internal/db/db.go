@@ -596,6 +596,13 @@ func (d *DB) AddShareItem(token, key, name string, size int64) error {
 	return err
 }
 
+// ShareItemCount 返回分享包含的文件数
+func (d *DB) ShareItemCount(token string) (int, error) {
+	var n int
+	err := d.QueryRow(`SELECT COUNT(*) FROM share_items WHERE token=?`, token).Scan(&n)
+	return n, err
+}
+
 func (d *DB) ShareItems(token string) ([]map[string]any, error) {
 	rows, err := d.Query(`SELECT key, name, size FROM share_items WHERE token=? ORDER BY name`, token)
 	if err != nil {

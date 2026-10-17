@@ -123,21 +123,21 @@ func avg(total, n int64) int64 {
 	return total / n
 }
 
-// typeLabel maps file kinds to dashboard labels.
+// typeLabel maps file kinds to stable keys; the frontend renders them per language.
 func typeLabel(kind string) string {
 	switch kind {
 	case "image":
-		return "图片"
+		return "image"
 	case "video":
-		return "视频"
+		return "video"
 	case "audio":
-		return "音频"
+		return "audio"
 	case "pdf", "text", "office":
-		return "文档"
+		return "doc"
 	case "archive":
-		return "压缩包"
+		return "archive"
 	}
-	return "其他"
+	return "other"
 }
 
 type kv struct {

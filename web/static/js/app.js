@@ -250,7 +250,7 @@ function renderShell() {
         <div class="acct-card" id="acctCard">
           <div class="avatar">${esc(u.username[0].toUpperCase())}</div>
           <div style="flex:1"><div class="sname">${esc(u.username)}</div></div>
-          <button id="themeBtn" title="' + t('theme.toggle') + '" style="background:none;border:none;cursor:pointer;padding:6px;display:flex;align-items:center"></button>
+          <button id="themeBtn" title="${t('theme.toggle')}" style="background:none;border:none;cursor:pointer;padding:6px;display:flex;align-items:center"></button>
         </div>
       </div>
     </aside>
@@ -529,9 +529,9 @@ async function loadDash(quota) {
         <svg width="140" height="140" viewBox="0 0 140 140"><circle cx="70" cy="70" r="54" fill="#f1f5f9"/>${segs}
           <text x="70" y="66" text-anchor="middle" font-size="13" font-weight="700">${fmtSize(d.totalSize)}</text>
           <text x="70" y="84" text-anchor="middle" font-size="11" fill="#8a94a6">${t('dash.totalLabel')}</text></svg>
-        <div class="legend">${d.byType.map((t, i) =>
-          `<div class="lr"><span class="dot" style="background:${DONUT_COLORS[i % 8]}"></span>${esc(t.name)}
-           <span class="muted">${fmtSize(t.value)} ${(t.value / typeTotal * 100).toFixed(0)}%</span></div>`).join('')}
+        <div class="legend">${d.byType.map((x, i) =>
+          `<div class="lr"><span class="dot" style="background:${DONUT_COLORS[i % 8]}"></span>${esc(t('type.' + x.name))}
+           <span class="muted">${fmtSize(x.value)} ${(x.value / typeTotal * 100).toFixed(0)}%</span></div>`).join('')}
         </div></div>
       </div>
     </div>
@@ -556,7 +556,7 @@ async function renderFiles() {
   selKeys = new Set();
   main.innerHTML = `
     <div class="topbar"><h2>${ic('folder')}${t('nav.files')}</h2><div class="spacer"></div>
-      <input class="input input-sm" id="searchInput" placeholder="' + t('file.search') + '" style="width:180px">
+      <input class="input input-sm" id="searchInput" placeholder="${t('file.search')}" style="width:180px">
       <select class="input input-sm" id="sortSel" title="${t('common.sort')}">
         <option value="time-desc">${t('sort.timeDesc')}</option>
         <option value="time-asc">${t('sort.timeAsc')}</option>
@@ -1375,6 +1375,13 @@ function renderSettingsTab(tab) {
   }
 }
 // 旧 renderSettings 保留兼容
+// 分享显示名：老数据 "X 等 N 个文件" 与 fileCount>1 都按界面语言渲染
+function shareDisplayName(sh) {
+  const m = /^(.+) 等 (\d+) 个文件$/.exec(sh.name || '');
+  if (m) return t('share.andNFiles', {name: m[1], n: +m[2]});
+  if (sh.fileCount > 1) return t('share.andNFiles', {name: sh.name, n: sh.fileCount});
+  return sh.name || '';
+}
 async function loadShareList() {
   const box = $('#shareList');
   try {
@@ -1388,8 +1395,9 @@ async function loadShareList() {
       if (sh.hasPassword) tags.push(t('share.pwdTag'));
       if (sh.maxViews > 0) tags.push(t('share.viewCount', {used: sh.viewCount, max: sh.maxViews}));
       const tagHtml = tags.length ? ` <span style="font-size:11px;background:#f1f5f9;padding:2px 8px;border-radius:10px">${tags.join(' ')}</span>` : '';
+      const dispName = shareDisplayName(sh);
       return `<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #f1f5f9">
-        <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(sh.key)}">${esc(sh.name)}</span>
+        <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(sh.key)}">${esc(dispName)}</span>
         <span style="font-size:12px;color:#64748b">${st}${tagHtml}</span>
         <button class="btn btn-sm" data-copy-share="${esc(sh.url)}">${t('common.copy')}</button>
         <button class="btn btn-sm" data-del-share="${esc(sh.token)}" style="color:#dc2626">${t('common.revoke')}</button>
@@ -1877,6 +1885,13 @@ function regionOptions(provider, sel) {
     b2: [['us-west-000', 'region.usw'], ['us-west-001', 'region.usw1'], ['us-west-002', 'region.usw2'], ['us-west-004', 'region.usw4'], ['us-east-005', 'region.use'], ['eu-central-003', 'region.eu'], ['ca-east-006', 'region.ca']],
   }[provider] || [];
   return regions.map(([v, k]) => `<option value="${v}" ${v === sel ? 'selected' : ''}>${t(k)}</option>`).join('');
+}
+// 通用信息弹窗（B2 帮助等长文说明用）
+function showModal(html) {
+  $('#infoBody').innerHTML = html;
+  $('#infoOk').textContent = t('common.close');
+  $('#infoOk').onclick = () => { $('#infoModal').hidden = true; };
+  $('#infoModal').hidden = false;
 }
 function closeWizard() { $('#wizModal').hidden = true; }
 function bindWizard() {

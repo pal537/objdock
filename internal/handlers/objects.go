@@ -217,10 +217,8 @@ func (s *Server) handleCreateShare(w http.ResponseWriter, r *http.Request) {
 		pwHash = hex.EncodeToString(sum[:])
 	}
 	firstKey := keys[0]
+	// 只存首文件名；"等 N 个文件"由前端按界面语言渲染（i18n）
 	shareName := firstKey[strings.LastIndex(firstKey, "/")+1:]
-	if len(keys) > 1 {
-		shareName = fmt.Sprintf("%s 等 %d 个文件", shareName, len(keys))
-	}
 	sh := &db.Share{
 		Token:        token,
 		UserID:       u.ID,
@@ -275,8 +273,12 @@ func (s *Server) handleListShares(w http.ResponseWriter, r *http.Request) {
 	base := s.siteBaseURL(r)
 	out := make([]map[string]any, 0, len(shares))
 	for _, sh := range shares {
+		fileCount := 1
+		if n, err := s.DB.ShareItemCount(sh.Token); err == nil && n > 0 {
+			fileCount = n
+		}
 		out = append(out, map[string]any{
-			"token": sh.Token, "name": sh.Name, "bucket": sh.Bucket, "key": sh.Key,
+			"token": sh.Token, "name": sh.Name, "bucket": sh.Bucket, "key": sh.Key, "fileCount": fileCount,
 			"url":       base + "/s/" + sh.Token,
 			"createdAt": sh.CreatedAt, "expiresAt": sh.ExpiresAt,
 			"expired":   time.Now().Unix() > sh.ExpiresAt,
@@ -556,18 +558,19 @@ func (s *Server) handleUploadPage(w http.ResponseWriter, r *http.Request) {
 			http.SetCookie(w, &http.Cookie{Name: "ul_auth_" + token, Value: "1", Path: "/", MaxAge: 3600, HttpOnly: true, SameSite: http.SameSiteLaxMode})
 			authed = true
 		} else {
-			s.renderUploadPage(w, token, true)
+			s.renderUploadPage(w, r, token, true)
 			return
 		}
 	}
 	if !authed {
-		s.renderUploadPage(w, token, false)
+		s.renderUploadPage(w, r, token, false)
 		return
 	}
-	s.renderUploadPage(w, token, false)
+	s.renderUploadPage(w, r, token, false)
 }
 
-func (s *Server) renderUploadPage(w http.ResponseWriter, token string, pwFailed bool) {
+func (s *Server) renderUploadPage(w http.ResponseWriter, r *http.Request, token string, pwFailed bool) {
+	lang := langFromRequest(r)
 	ul, _ := s.DB.UploadLinkByToken(token)
 	needPw := ul != nil && ul.PasswordHash != ""
 	ownerName := ""
@@ -584,11 +587,11 @@ func (s *Server) renderUploadPage(w http.ResponseWriter, token string, pwFailed 
 	</div>`
 	inviteHtml := ""
 	if ownerName != "" {
-		inviteHtml = fmt.Sprintf(`<p class="sub">%s 邀请你上传文件</p>`, ownerName)
+		inviteHtml = fmt.Sprintf(`<p class="sub">`+ptr(lang, "upload.invite")+`</p>`, ownerName)
 	}
 	msg := ""
 	if pwFailed {
-		msg = "<p style='color:#dc2626;font-size:14px'>密码错误，请重试</p>"
+		msg = "<p style='color:#dc2626;font-size:14px'>"+ptr(lang, "upload.pwWrong")+"</p>"
 	}
 	pwSection := ""
 	upSection := ""
@@ -597,11 +600,11 @@ func (s *Server) renderUploadPage(w http.ResponseWriter, token string, pwFailed 
 			<div style="margin-bottom:16px;text-align:center">
 				<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="1.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
 			</div>
-			<h2 style="margin:0 0 8px;font-size:20px">需要密码</h2>
-			<p style="color:#64748b;font-size:14px;margin:0 0 20px">此上传链接受密码保护</p>` + msg + `
-			<input type="password" id="upPw" placeholder="输入密码" autofocus
+			<h2 style="margin:0 0 8px;font-size:20px">` + ptr(lang, "upload.needPw") + `</h2>
+			<p style="color:#64748b;font-size:14px;margin:0 0 20px">` + ptr(lang, "upload.pwProtected") + `</p>` + msg + `
+			<input type="password" id="upPw" placeholder="` + ptr(lang, "upload.pwPh") + `" autofocus
 				style="width:100%;padding:14px;border:2px solid #e2e8f0;border-radius:12px;font-size:15px;box-sizing:border-box;outline:none">
-			<button onclick="unlockUpload()" style="width:100%;margin-top:12px;padding:14px;background:#3b82f6;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer">解锁</button>
+			<button onclick="unlockUpload()" style="width:100%;margin-top:12px;padding:14px;background:#3b82f6;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer"` + ptr(lang, "upload.unlock") + `</button>
 		</div><div id="upWrap" hidden>`
 		upSection = `</div>`
 	} else {
@@ -610,7 +613,7 @@ func (s *Server) renderUploadPage(w http.ResponseWriter, token string, pwFailed 
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Write([]byte(`<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>上传文件 - ObjDock</title>
+<title>` + ptr(lang, "upload.pageTitle") + `</title>
 <style>
 * { box-sizing: border-box; }
 body { font-family: -apple-system, system-ui, sans-serif; background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%); display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 20px; }
@@ -639,20 +642,29 @@ h2 { text-align: center; margin: 0 0 8px; font-size: 22px; }
 	<div class="logo" style="text-align:center;margin-bottom:12px">
 		<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
 	</div>
-	<h2>上传文件</h2>` + inviteHtml + `
-	<p class="sub">无需登录，直接上传到对方的存储空间</p>
+	<h2>` + ptr(lang, "upload.title") + `</h2>` + inviteHtml + `
+	<p class="sub">` + ptr(lang, "upload.noLogin") + `</p>
 	<div class="drop" id="dropZone" onclick="document.getElementById('fileInput').click()">
 		<div style="font-size:40px;margin-bottom:8px">📁</div>
-		<div style="font-weight:600;margin-bottom:4px">点击选择或拖拽文件到这里</div>
-		<div style="font-size:13px;color:#94a3b8">可多次选择，支持多文件</div>
+		<div style="font-weight:600;margin-bottom:4px">` + ptr(lang, "upload.dropTitle") + `</div>
+		<div style="font-size:13px;color:#94a3b8">` + ptr(lang, "upload.dropSub") + `</div>
 		<input type="file" id="fileInput" multiple>
 	</div>
 	<div class="file-list" id="fileList"></div>
-	<button class="btn-up" id="upBtn" onclick="doUpload()" disabled>开始上传</button>
+	<button class="btn-up" id="upBtn" onclick="doUpload()" disabled>` + ptr(lang, "upload.start") + `</button>
 	<div id="doneMsg"></div>` + upSection + `
 </div>
 <script>
 const token = "` + token + `";
+const T = {
+  uploading: "` + jsStr(ptr(lang, "upload.uploading")) + `",
+  start: "` + jsStr(ptr(lang, "upload.start")) + `",
+  okMark: "` + jsStr(ptr(lang, "upload.okMark")) + `",
+  errPresign: "` + jsStr(ptr(lang, "upload.errPresign")) + `",
+  errNet: "` + jsStr(ptr(lang, "upload.errNet")) + `",
+  doneOk: "` + jsStr(ptr(lang, "upload.doneOk")) + `",
+  doneFail: "` + jsStr(ptr(lang, "upload.doneFail")) + `"
+};
 let files = [];
 const dz = document.getElementById('dropZone');
 const fi = document.getElementById('fileInput');
@@ -686,7 +698,7 @@ async function unlockUpload() {
 async function doUpload() {
   if (!files.length) return;
   const btn = document.getElementById('upBtn');
-  btn.disabled = true; btn.textContent = '上传中…';
+  btn.disabled = true; btn.textContent = T.uploading;
   let ok = 0, fail = 0;
   for (let i = 0; i < files.length; i++) {
     const f = files[i];
@@ -696,22 +708,22 @@ async function doUpload() {
     const bar = st.querySelector('.progress > div');
     try {
       const r = await fetch('/api/upload-token/' + token + '/presign?key=' + encodeURIComponent(f.name));
-      if (!r.ok) throw new Error('获取上传地址失败');
+      if (!r.ok) throw new Error(T.errPresign);
       const {url} = await r.json();
       await new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest();
         xhr.open('PUT', url);
         xhr.upload.onprogress = (e) => { if (e.lengthComputable) bar.style.width = (e.loaded/e.total*100) + '%'; };
         xhr.onload = () => xhr.status < 300 ? resolve() : reject(new Error('HTTP ' + xhr.status));
-        xhr.onerror = () => reject(new Error('网络错误'));
+        xhr.onerror = () => reject(new Error(T.errNet));
         xhr.send(f);
       });
-      st.innerHTML = '<span class="ok">✅ 完成</span>'; ok++;
+      st.innerHTML = '<span class="ok">' + T.okMark + '</span>'; ok++;
       el.querySelector('.rm').style.display = 'none';
     } catch (e) { st.innerHTML = '<span class="err">❌ ' + e.message + '</span>'; fail++; }
   }
-  btn.textContent = '开始上传';
-  document.getElementById('doneMsg').innerHTML = '<div class="done-msg">🎉 上传完成！成功 ' + ok + ' 个' + (fail ? '，失败 ' + fail + ' 个' : '') + '</div>';
+  btn.textContent = T.start;
+  document.getElementById('doneMsg').innerHTML = '<div class="done-msg">' + T.doneOk.replace('%d', ok) + (fail ? T.doneFail.replace('%d', fail) : '') + '</div>';
   files = [];
 }
 </script></body></html>`))
@@ -981,11 +993,12 @@ func (s *Server) handleShareRedirect(w http.ResponseWriter, r *http.Request) {
 			strings.HasSuffix(lower, ".webp") || strings.HasSuffix(lower, ".svg")
 		files = append(files, map[string]any{"name": name, "url": url, "isImage": isImg})
 	}
-	s.renderSharePage(w, sh, files)
+	s.renderSharePage(w, r, sh, files)
 }
 
 // renderSharePage 渲染分享页面
-func (s *Server) renderSharePage(w http.ResponseWriter, sh *db.Share, files []map[string]any) {
+func (s *Server) renderSharePage(w http.ResponseWriter, r *http.Request, sh *db.Share, files []map[string]any) {
+	lang := langFromRequest(r)
 	// 简化：直接用 map
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	var fileHtml string
@@ -1003,15 +1016,15 @@ func (s *Server) renderSharePage(w http.ResponseWriter, sh *db.Share, files []ma
 		<div style="background:#f8fafc;border-radius:12px;padding:16px;margin-bottom:12px">
 			%s
 			<div style="font-weight:600;margin-bottom:8px">%s</div>
-			<a href="%s" download style="display:inline-block;padding:10px 20px;background:#3b82f6;color:#fff;text-decoration:none;border-radius:8px;font-size:14px">⬇ 下载</a>
+			<a href="%s" download style="display:inline-block;padding:10px 20px;background:#3b82f6;color:#fff;text-decoration:none;border-radius:8px;font-size:14px"` + ptr(lang, "share.download") + `</a>
 		</div>`, preview, nameEsc, url)
 	}
 	if len(files) == 0 {
-		fileHtml = `<p style="color:#94a3b8;text-align:center">暂无文件</p>`
+		fileHtml = `<p style="color:#94a3b8;text-align:center">` + ptr(lang, "share.noFiles") + `</p>`
 	}
 	title := sh.Name
 	if title == "" {
-		title = "分享文件"
+		title = ptr(lang, "share.title")
 	}
 	ownerName := ""
 	if u, err := s.DB.UserByID(sh.UserID); err == nil {
@@ -1022,14 +1035,14 @@ func (s *Server) renderSharePage(w http.ResponseWriter, sh *db.Share, files []ma
 			<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="3"/><line x1="12" y1="8" x2="12" y2="22"/><path d="M5 12H2a10 10 0 0 0 20 0h-3"/></svg>
 			<span style="font-size:28px;font-weight:800;color:#1e293b;letter-spacing:-0.5px">ObjDock</span>
 		</div>
-		<div style="font-size:13px;color:#94a3b8;margin-top:4px">对象存储分享</div>
+		<div style="font-size:13px;color:#94a3b8;margin-top:4px"` + ptr(lang, "share.brandSub") + `</div>
 	</div>`
 	ownerHtml := ""
 	if ownerName != "" {
-		ownerHtml = fmt.Sprintf(`<p class="sub">来源于 %s 的分享</p>`, ownerName)
+		ownerHtml = fmt.Sprintf(`<p class="sub">`+ptr(lang, "share.fromUser")+`</p>`, ownerName)
 	}
 	w.Write([]byte(`<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>` + title + ` - ObjDock 分享</title>
+<title>` + title + ` - ` + ptr(lang, "share.pageTitle") + `</title>
 <style>
 * { box-sizing: border-box; }
 body { font-family: -apple-system, system-ui, sans-serif; background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%); margin: 0; padding: 20px; min-height: 100vh; }
