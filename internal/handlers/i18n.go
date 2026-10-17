@@ -12,8 +12,7 @@ import (
 func jsStr(s string) string {
 	r := strings.ReplaceAll(s, `\`, `\\`)
 	r = strings.ReplaceAll(r, `"`, `\"`)
-	r = strings.ReplaceAll(r, "
-", `\n`)
+	r = strings.ReplaceAll(r, "\n", `\n`)
 	return r
 }
 
